@@ -130,6 +130,9 @@ try:
                 self.overlay = SessionOverlay(db, config)
             if WeaponSelector and REAL_PARSING_AVAILABLE:
                 self.weapon_selector = WeaponSelector(self.root, db, self.weapon_callback)
+                # Pass weapons to selector immediately
+                if hasattr(self.weapon_selector, 'weapons'):
+                    self.weapon_selector.weapons = self.db.weapons
             if WeaponConfig and REAL_PARSING_AVAILABLE:
                 self.weapon_config = WeaponConfig(self.root, db)
             
