@@ -170,6 +170,12 @@ try:
             self.create_weapon_tab()
             self.create_config_tab()
             
+            # Debug info
+            print(f"DEBUG: WeaponSelector available: {WeaponSelector is not None}")
+            print(f"DEBUG: Database weapons: {len(self.db.weapons)}")
+            if WeaponSelector:
+                print(f"DEBUG: Weapon selector initialized: {self.weapon_selector is not None}")
+            
         def create_loot_tab(self):
             """Create loot tracking tab"""
             loot_frame = ttk.Frame(self.notebook)
@@ -232,17 +238,22 @@ try:
             
         def create_weapon_tab(self):
             """Create weapon selection tab"""
-            if not WeaponSelector:
-                return
-                
             weapon_frame = ttk.Frame(self.notebook)
             self.notebook.add(weapon_frame, text="Weapons")
             
-            if self.weapon_selector:
-                self.weapon_selector.frame.pack(fill='both', expand=True, padx=5, pady=5)
-                # Populate weapons from database
-                self.weapon_selector.weapons = self.db.weapons
-                self.weapon_selector.populate_weapons()
+            # Always show weapon selector interface
+            if WeaponSelector:
+                if self.weapon_selector:
+                    self.weapon_selector.frame.pack(fill='both', expand=True, padx=5, pady=5)
+                    # Populate weapons from database
+                    self.weapon_selector.weapons = self.db.weapons
+                    self.weapon_selector.populate_weapons()
+            else:
+                # Create simple label explaining weapon selector not available
+                label = ttk.Label(weapon_frame, 
+                                    text="Weapon selector not available\n(Real components needed)",
+                                    foreground='red')
+                label.pack(padx=20, pady=20)
             
             # Weapon config section
             if self.weapon_config:
