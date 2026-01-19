@@ -11,13 +11,17 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from decimal import Decimal
 
-# Import real chat reader
+# Import real chat reader and overlay
 try:
     from src.services.chat_reader_real import ChatLogReader, ChatEvent, CombatEvent, LootEvent, SkillEvent, GlobalEvent
+    from overlay import SessionOverlay
+    REAL_PARSING_AVAILABLE = True
 except ImportError:
-    print("Warning: Real chat reader not available, using fallback")
+    print("Warning: Real components not available, using fallback")
     ChatLogReader = None
     ChatEvent = None
+    SessionOverlay = None
+    REAL_PARSING_AVAILABLE = False
 
 # Basic in-memory database for MVP
 class SimpleDB:
@@ -72,6 +76,27 @@ class SimpleDB:
         self.events.append(event_data)
 
 
+class SimpleConfig:
+    def __init__(self):
+        self.data = {
+            'chat_monitoring': {
+                'log_file_path': '',
+                'monitoring_enabled': True
+            }
+        }
+    
+    def get(self, key: str, default=None):
+        """Get config value"""
+        keys = key.split('.')
+        value = self.data
+        for k in keys:
+            if isinstance(value, dict) and k in value:
+                value = value[k]
+            else:
+                return default
+        return value
+
+
 # Simple main window using tkinter (built-in)
 try:
     import tkinter as tk
@@ -83,6 +108,7 @@ try:
             self.config = config
             self.current_session = None
             self.chat_reader = None
+            self.overlay = None
             
             # Create main window
             self.root = tk.Tk()
@@ -93,6 +119,10 @@ try:
             
             # Apply theme
             self.apply_theme("dark")
+            
+            # Initialize overlay if available
+            if SessionOverlay and REAL_PARSING_AVAILABLE:
+                self.overlay = SessionOverlay(db, config)
             
         def setup_ui(self):
             """Setup the UI"""
@@ -113,8 +143,13 @@ try:
             ttk.Label(status_frame, text="Activity:").pack(side='left', padx=(0, 5))
             self.activity_var = tk.StringVar(value="hunting")
             self.activity_combo = ttk.Combobox(status_frame, textvariable=self.activity_var, 
-                                              values=["hunting", "crafting", "mining"], state="readonly")
+                                          values=["hunting", "crafting", "mining"], state="readonly")
             self.activity_combo.pack(side='left')
+            
+            # Overlay button
+            if SessionOverlay and REAL_PARSING_AVAILABLE:
+                self.overlay_btn = ttk.Button(status_frame, text="Show Overlay", command=self.toggle_overlay)
+                self.overlay_btn.pack(side='right', padx=(10, 0))
             
             # Notebook for tabs
             self.notebook = ttk.Notebook(main_frame)
@@ -217,7 +252,6 @@ try:
             # Check if default log exists
             log_exists = os.path.exists(default_log_path)
             status_text = "Found" if log_exists else "Not Found"
-            status_color = "green" if log_exists else "red"
             
             ttk.Label(status_frame, text=f"Default Chat Log: {status_text}").pack(anchor='w', padx=5, pady=2)
             
@@ -231,87 +265,8 @@ try:
             ttk.Label(data_frame, text=f"Weapons loaded: {weapons_count}").pack(anchor='w', padx=5, pady=2)
             ttk.Label(data_frame, text=f"Blueprints loaded: {blueprints_count}").pack(anchor='w', padx=5, pady=2)
             ttk.Label(data_frame, text=f"Chat Reader: {'Available' if ChatLogReader else 'Not Available'}").pack(anchor='w', padx=5, pady=2)
+            ttk.Label(data_frame, text=f"Overlay: {'Available' if SessionOverlay else 'Not Available'}").pack(anchor='w', padx=5, pady=2)
             
-        def start_session(self):
-            """Start tracking session"""
-            if self.current_session:
-                self.stop_session()
-                return
-                
-            session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            activity = self.activity_var.get()
-            
-            self.db.create_session(session_id, activity)
-            self.current_session = session_id
-            
-            self.start_btn.config(text="Stop Session")
-            self.session_label.config(text=f"Active: {session_id[:8]}... - {activity}")
-            
-            # Start real chat monitoring
-            self.start_chat_monitoring()
-            
-        def start_chat_monitoring(self):
-            """Start real chat log monitoring"""
-            if not ChatLogReader:
-                print("Chat reader not available")
-                return
-                
-            # Default Entropia Universe chat log location
-            import os
-            default_log_path = os.path.join(os.path.expanduser("~"), "Documents", "Entropia Universe", "chat.log")
-            
-            # Use configured path or default
-            log_file = self.log_file_var.get() or default_log_path
-            
-            if self.chat_reader:
-                self.chat_reader.stop_monitoring()
-                
-            try:
-                self.chat_reader = ChatLogReader(log_file, self.handle_chat_event)
-                if self.chat_reader.start_monitoring():
-                    self.add_event("SYSTEM", f"Started monitoring: {log_file}", "#7DB8F5")
-                else:
-                    self.add_event("ERROR", f"Failed to start monitoring: {log_file}", "#F44336")
-            except Exception as e:
-                self.add_event("ERROR", f"Chat reader error: {e}", "#F44336")
-                
-        def stop_session(self):
-            """Stop tracking session"""
-            # Stop chat monitoring
-            if self.chat_reader:
-                self.chat_reader.stop_monitoring()
-                self.chat_reader = None
-                
-            self.current_session = None
-            self.start_btn.config(text="Start Session")
-            self.session_label.config(text="No active session")
-            
-        def browse_log_file(self):
-            """Browse for log file"""
-            filename = filedialog.askopenfilename(
-                title="Select Chat Log File",
-                filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
-            )
-            if filename:
-                self.log_file_var.set(filename)
-                
-        def add_event(self, event_type: str, details: str, color="white"):
-            """Add event to display"""
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            
-            # Add to loot feed with color
-            self.loot_text.insert('end', f"[{timestamp}] {event_type}: {details}\n", color)
-            self.loot_text.see('end')
-            self.loot_text.tag_config(color, foreground=color)
-            
-            # Add to tree
-            self.event_tree.insert('', 'end', values=(timestamp, event_type, self.activity_var.get(), details[:50]))
-            
-            # Update event count
-            if self.current_session and self.current_session in self.db.sessions:
-                event_count = len(self.db.sessions[self.current_session]['events'])
-                self.events_label.config(text=f"Events: {event_count}")
-                
         def apply_theme(self, theme_name: str):
             """Apply theme (simple color scheme for tkinter)"""
             themes = {
@@ -334,6 +289,23 @@ try:
             # Apply basic theme (tkinter has limited theming)
             self.root.configure(bg=theme['bg'])
             
+        def add_event(self, event_type: str, details: str, color="white"):
+            """Add event to display"""
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            
+            # Add to loot feed with color
+            self.loot_text.insert('end', f"[{timestamp}] {event_type}: {details}\n", color)
+            self.loot_text.see('end')
+            self.loot_text.tag_config(color, foreground=color)
+            
+            # Add to tree
+            self.event_tree.insert('', 'end', values=(timestamp, event_type, self.activity_var.get(), details[:50]))
+            
+            # Update event count
+            if self.current_session and self.current_session in self.db.sessions:
+                event_count = len(self.db.sessions[self.current_session]['events'])
+                self.events_label.config(text=f"Events: {event_count}")
+                
         def handle_chat_event(self, event):
             """Handle real chat event from ChatLogReader"""
             if not event:
@@ -366,36 +338,104 @@ try:
                 'session_id': self.current_session
             }
             self.db.add_event(event_data)
-        
+            
+            # Update overlay if available
+            if self.overlay:
+                self.overlay.add_event(event_data)
+                
+        def start_chat_monitoring(self):
+            """Start real chat log monitoring"""
+            if not ChatLogReader:
+                print("Chat reader not available")
+                return
+                
+            # Default Entropia Universe chat log location
+            default_log_path = os.path.join(os.path.expanduser("~"), "Documents", "Entropia Universe", "chat.log")
+            
+            # Use configured path or default
+            log_file = self.log_file_var.get() or default_log_path
+            
+            if self.chat_reader:
+                self.chat_reader.stop_monitoring()
+                
+            try:
+                self.chat_reader = ChatLogReader(log_file, self.handle_chat_event)
+                if self.chat_reader.start_monitoring():
+                    self.add_event("SYSTEM", f"Started monitoring: {log_file}", "#7DB8F5")
+                else:
+                    self.add_event("ERROR", f"Failed to start monitoring: {log_file}", "#F44336")
+            except Exception as e:
+                self.add_event("ERROR", f"Chat reader error: {e}", "#F44336")
+                
+        def toggle_overlay(self):
+            """Toggle overlay window"""
+            if not self.overlay:
+                return
+                
+            if hasattr(self.overlay, 'visible') and self.overlay.visible:
+                self.overlay.hide()
+                self.overlay_btn.config(text="Show Overlay")
+            else:
+                # Show in a separate thread to avoid blocking
+                import threading
+                def show_overlay():
+                    self.overlay.show()
+                threading.Thread(target=show_overlay, daemon=True).start()
+                self.overlay_btn.config(text="Hide Overlay")
+                
+        def start_session(self):
+            """Start tracking session"""
+            if self.current_session:
+                self.stop_session()
+                return
+                
+            session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            activity = self.activity_var.get()
+            
+            self.db.create_session(session_id, activity)
+            self.current_session = session_id
+            
+            self.start_btn.config(text="Stop Session")
+            self.session_label.config(text=f"Active: {session_id[:8]}... - {activity}")
+            
+            # Start real chat monitoring
+            self.start_chat_monitoring()
+            
+            # Start overlay session
+            if self.overlay:
+                self.overlay.start_session(session_id, activity)
+                
+        def stop_session(self):
+            """Stop tracking session"""
+            # Stop chat monitoring
+            if self.chat_reader:
+                self.chat_reader.stop_monitoring()
+                self.chat_reader = None
+                
+            # Stop overlay session
+            if self.overlay:
+                self.overlay.stop_session()
+                
+            self.current_session = None
+            self.start_btn.config(text="Start Session")
+            self.session_label.config(text="No active session")
+            
+        def browse_log_file(self):
+            """Browse for log file"""
+            filename = filedialog.askopenfilename(
+                title="Select Chat Log File",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+            )
+            if filename:
+                self.log_file_var.set(filename)
+                
         def run(self):
             """Start the GUI"""
             self.root.mainloop()
 
-
 except ImportError:
     print("tkinter not available, using console mode")
     SimpleMainWindow = None
-
-
-class SimpleConfig:
-    def __init__(self):
-        self.data = {
-            'chat_monitoring': {
-                'log_file_path': '',
-                'monitoring_enabled': True
-            }
-        }
-    
-    def get(self, key: str, default=None):
-        """Get config value"""
-        keys = key.split('.')
-        value = self.data
-        for k in keys:
-            if isinstance(value, dict) and k in value:
-                value = value[k]
-            else:
-                return default
-        return value
 
 
 async def main():
@@ -420,7 +460,7 @@ async def main():
         print("GUI not available, running in console mode")
         print("Weapons database sample:")
         for i, (weapon_id, info) in enumerate(list(db.weapons.items())[:5]):
-            print(f"  {i+1}. {weapon_id}: {info}")
+            print(f"  {i+1}. {weapon_id}: Type={info.get('type')}, Ammo={info.get('ammo')}, Decay={info.get('decay')}")
         
         # Interactive mode
         while True:
