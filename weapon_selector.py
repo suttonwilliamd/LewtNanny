@@ -1,5 +1,5 @@
 """
-Weapon selector for damage calculation and cost tracking - Fixed version
+Weapon selector for damage calculation and cost tracking - Final fixed version
 """
 
 import tkinter as tk
@@ -99,6 +99,7 @@ class WeaponSelector:
             weapon_list.append(f"{weapon_id} ({weapon_type})")
             count += 1
 
+        # Populate the dropdown
         self.weapon_combo['values'] = sorted(weapon_list)
 
         # Set default to first pistol
@@ -266,7 +267,7 @@ class WeaponConfig:
             import json
             with open("weapon_markups.json", 'w') as f:
                 # Convert Decimal to float for JSON
-                serializable = {k: float(v) if isinstance(v, Decimal) else v 
+                serializable = {k: float(v) if isinstance(v, Decimal) else v
                               for k, v in self.markup_values.items()}
                 json.dump(serializable, f, indent=2)
         except Exception:
@@ -309,6 +310,8 @@ if __name__ == "__main__":
         print(f"Callback: {event_type} - {data}")
 
     selector = WeaponSelector(root, MockDB(), test_callback)
+    selector.weapons = MockDB().weapons  # Set weapons for testing
+    selector.populate_weapons()
     selector.frame.pack(padx=10, pady=10)
 
     root.mainloop()
