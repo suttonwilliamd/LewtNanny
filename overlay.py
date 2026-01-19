@@ -1,6 +1,5 @@
 """
-Real-time session overlay for LewtNanny
-Transparent window that displays live session statistics while gaming
+Real-time session overlay for LewtNanny - Simplified version
 """
 
 import sys
@@ -30,10 +29,7 @@ class SessionOverlay:
         self.config = config_manager
         self.session_id = None
         self.session_start = None
-        
-        # Create overlay window
-        self.overlay = tk.Tk()
-        self.setup_overlay_window()
+        self.minimized = False
         
         # Session stats
         self.stats = {
@@ -45,25 +41,22 @@ class SessionOverlay:
             'skills_gained': 0
         }
         
+        self.setup_overlay()
         self.create_widgets()
         
-    def setup_overlay_window(self):
+    def setup_overlay(self):
         """Setup transparent, always-on-top overlay"""
+        self.overlay = tk.Tk()
         self.overlay.title("LewtNanny Overlay")
         self.overlay.overrideredirect(True)  # Remove window decorations
         self.overlay.attributes('-topmost', True)  # Keep on top
         
-        # Make window transparent (Windows)
-        try:
-            self.overlay.attributes('-transparentcolor', 'black')
-            self.overlay.configure(bg='black')
-        except tk.TclError:
-            # Fallback for other systems
-            self.overlay.attributes('-alpha', 0.9)
-            
-        # Set initial position and size
-        self.overlay.geometry("300x400+50+50")
+        # Make window semi-transparent
+        self.overlay.attributes('-alpha', 0.9)
         self.overlay.configure(bg='#1a1a1a')
+        
+        # Set initial position and size
+        self.overlay.geometry("320x450+100+100")
         
         # Make window draggable
         self.bind_mouse_events()
@@ -83,84 +76,110 @@ class SessionOverlay:
                 y = self.overlay.winfo_y() + event.y - self.start_y
                 self.overlay.geometry(f"+{x}+{y}")
                 
-        def bind_all(widget):
-            widget.bind('<Button-1>', on_start_drag)
-            widget.bind('<B1-Motion>', on_drag)
-            for child in widget.winfo_children():
-                bind_all(child)
-                
-        bind_all(self.overlay)
+        self.overlay.bind('<Button-1>', on_start_drag)
+        self.overlay.bind('<B1-Motion>', on_drag)
         
     def create_widgets(self):
         """Create overlay widgets"""
-        # Title
-        title_frame = tk.Frame(self.overlay, bg='#1a1a1a')
-        title_frame.pack(fill='x', padx=10, pady=(10, 5))
+        # Title bar
+        self.title_frame = tk.Frame(self.overlay, bg='#0a0a0a', height=40)
+        self.title_frame.pack(fill='x')
+        self.title_frame.pack_propagate(False)
         
-        title_label = tk.Label(title_frame, text="🎯 LEWTNANNY", 
-                           font=('Arial', 12, 'bold'), 
-                           fg='#00ff00', bg='#1a1a1a')
-        title_label.pack()
+        title_label = tk.Label(self.title_frame, text="🎯 LEWTNANNY", 
+                           font=('Arial', 14, 'bold'), 
+                           fg='#00ff00', bg='#0a0a0a')
+        title_label.pack(pady=8)
         
-        # Session info
-        self.session_label = tk.Label(title_frame, 
+        # Session label
+        self.session_label = tk.Label(self.title_frame, 
                                   text="No Active Session",
-                                  font=('Arial', 10),
-                                  fg='#ffcc00', bg='#1a1a1a')
+                                  font=('Arial', 11),
+                                  fg='#ffcc00', bg='#0a0a0a')
         self.session_label.pack()
         
-        # Stats container
-        stats_frame = tk.Frame(self.overlay, bg='#2a2a2a', relief='ridge', bd=2)
-        stats_frame.pack(fill='both', expand=True, padx=10, pady=5)
+        # Main content area
+        self.content_frame = tk.Frame(self.overlay, bg='#1a1a1a')
+        self.content_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         # Stats display
+        self.create_stats_display()
+        
+        # Control bar
+        self.control_frame = tk.Frame(self.overlay, bg='#0a0a0a', height=40)
+        self.control_frame.pack(fill='x', side='bottom')
+        self.control_frame.pack_propagate(False)
+        
+        self.create_controls()
+        
+    def create_stats_display(self):
+        """Create stats display widgets"""
+        stats_container = tk.Frame(self.content_frame, bg='#2a2a2a', relief='ridge', bd=2)
+        stats_container.pack(fill='both', expand=True)
+        
         self.stats_labels = {}
         
         stats_to_show = [
-            ('events', 'Events:', '#00ff00'),
-            ('total_damage', 'Total Damage:', '#ff9900'),
-            ('critical_hits', 'Critical Hits:', '#ff00ff'),
-            ('misses', 'Misses:', '#ff6666'),
-            ('total_loot_value', 'Loot Value:', '#00ccff'),
-            ('skills_gained', 'Skills Gained:', '#ffff00'),
-            ('dpp', 'DPP:', '#ffffff'),
-            ('session_time', 'Session Time:', '#cccccc')
+            ('events', 'Events', '#00ff00'),
+            ('total_damage', 'Total Damage', '#ff9900'),
+            ('critical_hits', 'Critical Hits', '#ff00ff'),
+            ('misses', 'Misses', '#ff6666'),
+            ('total_loot_value', 'Loot Value', '#00ccff'),
+            ('skills_gained', 'Skills Gained', '#ffff00'),
+            ('dpp', 'DPP', '#ffffff'),
+            ('session_time', 'Session Time', '#cccccc')
         ]
         
         for i, (key, label, color) in enumerate(stats_to_show):
-            row_frame = tk.Frame(stats_frame, bg='#2a2a2a')
-            row_frame.pack(fill='x', padx=5, pady=2)
+            row_frame = tk.Frame(stats_container, bg='#2a2a2a')
+            row_frame.pack(fill='x', padx=10, pady=4)
             
-            tk.Label(row_frame, text=label, font=('Arial', 9),
-                    fg='#cccccc', bg='#2a2a2a', width=15, anchor='w').pack(side='left')
+            tk.Label(row_frame, text=label + ":", font=('Arial', 10),
+                    fg='#aaaaaa', bg='#2a2a2a', width=12, anchor='w').pack(side='left')
             
-            value_label = tk.Label(row_frame, text="0", font=('Arial', 9, 'bold'),
+            value_label = tk.Label(row_frame, text="0", font=('Arial', 10, 'bold'),
                                fg=color, bg='#2a2a2a', anchor='e')
             value_label.pack(side='right')
             
             self.stats_labels[key] = value_label
+            
+    def create_controls(self):
+        """Create control buttons"""
+        button_frame = tk.Frame(self.control_frame, bg='#0a0a0a')
+        button_frame.pack(pady=5)
         
-        # Control buttons
-        control_frame = tk.Frame(self.overlay, bg='#1a1a1a')
-        control_frame.pack(fill='x', padx=10, pady=(5, 10))
+        # Minimize/Restore button
+        self.minimize_btn = tk.Button(button_frame, text="—", font=('Arial', 10, 'bold'),
+                                   command=self.toggle_minimize, bg='#3a3a3a', fg='white',
+                                   bd=1, width=4)
+        self.minimize_btn.pack(side='left', padx=5)
         
-        # Minimize/Close buttons
-        button_frame = tk.Frame(control_frame, bg='#1a1a1a')
-        button_frame.pack(side='right')
-        
-        minimize_btn = tk.Button(button_frame, text="—", font=('Arial', 8, 'bold'),
-                             command=self.minimize, bg='#3a3a3a', fg='white',
-                             bd=0, width=3)
-        minimize_btn.pack(side='left', padx=2)
-        
-        close_btn = tk.Button(button_frame, text="×", font=('Arial', 8, 'bold'),
+        # Close button
+        close_btn = tk.Button(button_frame, text="×", font=('Arial', 10, 'bold'),
                            command=self.close, bg='#ff3333', fg='white',
-                           bd=0, width=3)
-        close_btn.pack(side='left', padx=2)
+                           bd=1, width=4)
+        close_btn.pack(side='left', padx=5)
         
-        # Visibility toggle
-        self.visible = True
-        self.minimized = False
+    def toggle_minimize(self):
+        """Toggle between minimized and restored states"""
+        if self.minimized:
+            # Restore
+            self.overlay.geometry("320x450+100+100")
+            self.content_frame.pack(fill='both', expand=True, padx=10, pady=10)
+            self.minimized = False
+            self.minimize_btn.config(text="—")
+        else:
+            # Minimize
+            self.overlay.geometry("320x100+100+100")
+            self.content_frame.pack_forget()
+            self.minimized = True
+            self.minimize_btn.config(text="□")
+            
+        # Update session label when minimized
+        if self.minimized:
+            self.session_label.config(text=f"MINIMIZED\nSession Active")
+        else:
+            self.update_session_label()
         
     def start_session(self, session_id: str, activity_type: str):
         """Start tracking a new session"""
@@ -178,14 +197,21 @@ class SessionOverlay:
         }
         
         # Update display
-        self.session_label.config(text=f"Session Active\n{activity_type.title()}")
+        self.update_session_label()
         self.update_display()
+        
+    def update_session_label(self):
+        """Update session label based on current state"""
+        if self.session_id:
+            self.session_label.config(text="Session Active")
+        else:
+            self.session_label.config(text="No Active Session")
         
     def stop_session(self):
         """Stop current session"""
         self.session_id = None
         self.session_start = None
-        self.session_label.config(text="No Active Session")
+        self.update_session_label()
         
     def add_event(self, event_data: Dict[str, Any]):
         """Update stats with new event"""
@@ -195,20 +221,22 @@ class SessionOverlay:
         self.stats['events'] += 1
         
         event_type = event_data.get('event_type', '').lower()
+        parsed_data = event_data.get('parsed_data', {})
         
         if event_type == 'combat':
-            parsed_data = event_data.get('parsed_data', {}).get('event_data', {})
-            if hasattr(parsed_data, 'damage'):
-                self.stats['total_damage'] += Decimal(str(parsed_data.damage))
-                if hasattr(parsed_data, 'critical') and parsed_data.critical:
+            combat_data = parsed_data.get('event_data', {})
+            if hasattr(combat_data, 'damage'):
+                self.stats['total_damage'] += Decimal(str(combat_data.damage))
+                if hasattr(combat_data, 'critical') and combat_data.critical:
                     self.stats['critical_hits'] += 1
-                elif hasattr(parsed_data, 'miss') and parsed_data.miss:
+                elif hasattr(combat_data, 'miss') and combat_data.miss:
                     self.stats['misses'] += 1
                     
         elif event_type == 'loot':
-            parsed_data = event_data.get('parsed_data', {}).get('event_data', {})
-            if hasattr(parsed_data, 'total_value'):
-                self.stats['total_loot_value'] += Decimal(str(parsed_data.total_value))
+            loot_data = parsed_data.get('event_data', {})
+            if hasattr(loot_data, 'items'):
+                total_value = sum(float(item[2]) for item in loot_data.items)
+                self.stats['total_loot_value'] += Decimal(str(total_value))
                 
         elif event_type == 'skill':
             self.stats['skills_gained'] += 1
@@ -217,6 +245,9 @@ class SessionOverlay:
         
     def update_display(self):
         """Update overlay display with current stats"""
+        if self.minimized:
+            return
+            
         # Update basic stats
         self.stats_labels['events'].config(text=str(self.stats['events']))
         self.stats_labels['total_damage'].config(text=f"{self.stats['total_damage']:.1f}")
@@ -241,17 +272,6 @@ class SessionOverlay:
         else:
             self.stats_labels['session_time'].config(text="00:00:00")
             
-    def minimize(self):
-        """Minimize overlay"""
-        if self.minimized:
-            # Restore
-            self.overlay.geometry("300x400")
-            self.minimized = False
-        else:
-            # Minimize
-            self.overlay.geometry("300x60")
-            self.minimized = True
-            
     def close(self):
         """Close overlay"""
         self.overlay.quit()
@@ -259,18 +279,10 @@ class SessionOverlay:
     def show(self):
         """Show the overlay"""
         self.overlay.mainloop()
-        
-    def hide(self):
-        """Hide the overlay"""
-        self.overlay.withdraw()
-        
-    def unhide(self):
-        """Show the overlay"""
-        self.overlay.deiconify()
 
 
 def main():
-    """Test the overlay standalone"""
+    """Test overlay standalone"""
     if not TKINTER_AVAILABLE:
         print("tkinter not available")
         return
@@ -296,27 +308,31 @@ def main():
     def simulate_events():
         import time
         time.sleep(2)
-        # Create mock objects
-        class MockCombatEvent:
-            def __init__(self, damage, critical=False, miss=False):
-                self.damage = damage
-                self.critical = critical
-                self.miss = miss
-                
-        class MockLootEvent:
-            def __init__(self, total_value):
-                self.total_value = total_value
-        
-        overlay.add_event({'event_type': 'combat', 'parsed_data': {'event_data': MockCombatEvent(25.5, False)}})
-        overlay.update_display()
+        event_data = {
+            'event_type': 'combat',
+            'parsed_data': {
+                'event_data': type('Mock', (), {'damage': 25.5, 'critical': False})()
+            }
+        }
+        overlay.add_event(event_data)
         
         time.sleep(1)
-        overlay.add_event({'event_type': 'combat', 'parsed_data': {'event_data': MockCombatEvent(45.0, True)}})
-        overlay.update_display()
+        event_data = {
+            'event_type': 'combat', 
+            'parsed_data': {
+                'event_data': type('Mock', (), {'damage': 45.0, 'critical': True})()
+            }
+        }
+        overlay.add_event(event_data)
         
         time.sleep(1)
-        overlay.add_event({'event_type': 'loot', 'parsed_data': {'event_data': MockLootEvent(5.25)}})
-        overlay.update_display()
+        event_data = {
+            'event_type': 'loot',
+            'parsed_data': {
+                'event_data': type('Mock', (), {'items': [('Animal Oil', 5, 1.25)]})()
+            }
+        }
+        overlay.add_event(event_data)
         
     threading.Thread(target=simulate_events, daemon=True).start()
     

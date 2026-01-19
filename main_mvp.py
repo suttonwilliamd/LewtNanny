@@ -1,5 +1,5 @@
 """
-Simple MVP version without external dependencies for initial testing
+Updated MVP with weapon selection and proper parsing
 """
 
 import sys
@@ -8,19 +8,22 @@ import asyncio
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from decimal import Decimal
 
 # Import real chat reader and overlay
 try:
     from src.services.chat_reader_real import ChatLogReader, ChatEvent, CombatEvent, LootEvent, SkillEvent, GlobalEvent
     from overlay import SessionOverlay
+    from weapon_selector import WeaponSelector, WeaponConfig
     REAL_PARSING_AVAILABLE = True
 except ImportError:
     print("Warning: Real components not available, using fallback")
     ChatLogReader = None
     ChatEvent = None
     SessionOverlay = None
+    WeaponSelector = None
+    WeaponConfig = None
     REAL_PARSING_AVAILABLE = False
 
 # Basic in-memory database for MVP
@@ -109,6 +112,8 @@ try:
             self.current_session = None
             self.chat_reader = None
             self.overlay = None
+            self.weapon_selector = None
+            self.weapon_config = None
             
             # Create main window
             self.root = tk.Tk()
@@ -123,6 +128,10 @@ try:
             # Initialize overlay if available
             if SessionOverlay and REAL_PARSING_AVAILABLE:
                 self.overlay = SessionOverlay(db, config)
+            if WeaponSelector and REAL_PARSING_AVAILABLE:
+                self.weapon_selector = WeaponSelector(self.root, db, self.weapon_callback)
+            if WeaponConfig and REAL_PARSING_AVAILABLE:
+                self.weapon_config = WeaponConfig(self.root, db)
             
         def setup_ui(self):
             """Setup the UI"""
@@ -158,6 +167,7 @@ try:
             # Create tabs
             self.create_loot_tab()
             self.create_analysis_tab()
+            self.create_weapon_tab()
             self.create_config_tab()
             
         def create_loot_tab(self):
@@ -220,6 +230,21 @@ try:
             vsb.pack(side='right', fill='y')
             hsb.pack(side='bottom', fill='x')
             
+        def create_weapon_tab(self):
+            """Create weapon selection tab"""
+            if not WeaponSelector:
+                return
+                
+            weapon_frame = ttk.Frame(self.notebook)
+            self.notebook.add(weapon_frame, text="Weapons")
+            
+            if self.weapon_selector:
+                self.weapon_selector.frame.pack(fill='both', expand=True, padx=5, pady=5)
+            
+            # Weapon config section
+            if self.weapon_config:
+                self.weapon_config.frame.pack(fill='x', padx=5, pady=5)
+            
         def create_config_tab(self):
             """Create config tab"""
             config_frame = ttk.Frame(self.notebook)
@@ -266,6 +291,7 @@ try:
             ttk.Label(data_frame, text=f"Blueprints loaded: {blueprints_count}").pack(anchor='w', padx=5, pady=2)
             ttk.Label(data_frame, text=f"Chat Reader: {'Available' if ChatLogReader else 'Not Available'}").pack(anchor='w', padx=5, pady=2)
             ttk.Label(data_frame, text=f"Overlay: {'Available' if SessionOverlay else 'Not Available'}").pack(anchor='w', padx=5, pady=2)
+            ttk.Label(data_frame, text=f"Weapon Selector: {'Available' if WeaponSelector else 'Not Available'}").pack(anchor='w', padx=5, pady=2)
             
         def apply_theme(self, theme_name: str):
             """Apply theme (simple color scheme for tkinter)"""
@@ -288,6 +314,26 @@ try:
             
             # Apply basic theme (tkinter has limited theming)
             self.root.configure(bg=theme['bg'])
+            
+        def weapon_callback(self, event_type: str, data):
+            """Handle weapon-related callbacks"""
+            if event_type == 'weapon_selected':
+                if self.overlay:
+                    self.overlay.add_event({
+                        'event_type': 'system',
+                        'parsed_data': {'weapon_data': data},
+                        'raw_message': f"Selected: {data.get('id', 'Unknown')}",
+                        'session_id': self.current_session
+                    })
+                    
+            elif event_type == 'ammo_used':
+                if self.overlay:
+                    self.overlay.add_event({
+                        'event_type': 'cost',
+                        'parsed_data': {'ammo_used': data},
+                        'raw_message': f"Ammo used: {data}",
+                        'session_id': self.current_session
+                    })
             
         def add_event(self, event_type: str, details: str, color="white"):
             """Add event to display"""
@@ -342,7 +388,23 @@ try:
             # Update overlay if available
             if self.overlay:
                 self.overlay.add_event(event_data)
-                
+            
+            # Track ammo for weapon selector
+            if self.weapon_selector and event_type == 'COMBAT':
+                parsed_data = event_data.get('parsed_data', {}).get('event_data', {})
+                if hasattr(parsed_data, 'damage'):
+                    current_weapon = self.weapon_selector.get_current_weapon()
+                    if current_weapon:
+                        ammo_per_shot = current_weapon.get('ammo', 1)
+                        self.weapon_selector.add_combat_event(float(parsed_data.damage), hasattr(parsed_data, 'critical'))
+                        
+            # Track loot
+            if self.overlay and event_type == 'LOOT':
+                parsed_data = event_data.get('parsed_data', {}).get('event_data', {})
+                if hasattr(parsed_data, 'items'):
+                    total_value = sum(float(item[2]) for item in parsed_data.items)
+                    # Update loot value in overlay
+                    
         def start_chat_monitoring(self):
             """Start real chat log monitoring"""
             if not ChatLogReader:
@@ -372,16 +434,12 @@ try:
             if not self.overlay:
                 return
                 
-            if hasattr(self.overlay, 'visible') and self.overlay.visible:
-                self.overlay.hide()
-                self.overlay_btn.config(text="Show Overlay")
-            else:
-                # Show in a separate thread to avoid blocking
-                import threading
-                def show_overlay():
-                    self.overlay.show()
-                threading.Thread(target=show_overlay, daemon=True).start()
-                self.overlay_btn.config(text="Hide Overlay")
+            # Always show overlay in separate thread to avoid blocking
+            import threading
+            def show_overlay():
+                self.overlay.show()
+            threading.Thread(target=show_overlay, daemon=True).start()
+            self.overlay_btn.config(text="Overlay Running")
                 
         def start_session(self):
             """Start tracking session"""
@@ -404,6 +462,10 @@ try:
             # Start overlay session
             if self.overlay:
                 self.overlay.start_session(session_id, activity)
+                
+            # Reset weapon selector session
+            if self.weapon_selector:
+                self.weapon_selector.reset_session()
                 
         def stop_session(self):
             """Stop tracking session"""
