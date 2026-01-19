@@ -240,6 +240,9 @@ try:
             
             if self.weapon_selector:
                 self.weapon_selector.frame.pack(fill='both', expand=True, padx=5, pady=5)
+                # Populate weapons from database
+                self.weapon_selector.weapons = self.db.weapons
+                self.weapon_selector.populate_weapons()
             
             # Weapon config section
             if self.weapon_config:
