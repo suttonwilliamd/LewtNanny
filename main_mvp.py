@@ -261,6 +261,15 @@ try:
             # Weapon config section
             if self.weapon_config:
                 self.weapon_config.frame.pack(fill='x', padx=5, pady=5)
+                
+            # Refresh button for weapons
+            refresh_frame = ttk.Frame(weapon_frame)
+            refresh_frame.pack(fill='x', pady=(10, 0))
+            
+            ttk.Label(refresh_frame, text="If weapons don't appear, click 'Refresh Weapons'").pack()
+            
+            refresh_btn = ttk.Button(refresh_frame, text="Refresh Weapons", command=self.refresh_weapons)
+            refresh_btn.pack(pady=5)
             
         def create_config_tab(self):
             """Create config tab"""
@@ -404,6 +413,33 @@ try:
             
             # Update overlay if available
             if self.overlay:
+                self.overlay.add_event(event_data)
+                
+    def refresh_weapons(self):
+        """Force refresh weapons in the weapon selector"""
+        if self.weapon_selector and WeaponSelector:
+            print("Refreshing weapons...")
+            # Force weapons assignment
+            self.weapon_selector.weapons = self.db.weapons
+            self.weapon_selector.populate_weapons()
+            print(f"Weapons updated: {len(self.weapon_selector.weapons) if self.weapon_selector.weapons else 0}")
+        else:
+            print("Weapon selector not available")
+            
+    def refresh_weapons(self):
+        """Force refresh weapons in the weapon selector"""
+        if self.weapon_selector and WeaponSelector:
+            print("Refreshing weapons...")
+            # Force weapons assignment
+            self.weapon_selector.weapons = self.db.weapons
+            self.weapon_selector.populate_weapons()
+            print(f"Weapons updated: {len(self.weapon_selector.weapons) if self.weapon_selector.weapons else 0}")
+        else:
+            print("Weapon selector not available")
+            
+    def update_overlay_if_available(self):
+        """Update overlay if available"""
+        if self.overlay:
                 self.overlay.add_event(event_data)
             
             # Track ammo for weapon selector
