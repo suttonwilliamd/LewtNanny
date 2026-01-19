@@ -396,50 +396,23 @@ try:
             color = colors.get(event.event_type.upper(), 'white')
             
             # Add to display
-            self.add_event(event_type, details, color)
+            self.add_event(event_type, event_raw_message, color)
             
             # Also add to database
             event_data = {
                 'event_type': event.event_type,
                 'activity_type': self.activity_var.get(),
-                'raw_message': event.raw_message,
+                'raw_message': event_raw_message,
                 'parsed_data': {
-                    'timestamp': event.timestamp.isoformat(),
+                    'timestamp': event_timestamp.isoformat(),
                     'event_data': event.__dict__ if hasattr(event, '__dict__') else {}
                 },
                 'session_id': self.current_session
             }
             self.db.add_event(event_data)
             
-            # Update overlay if available
+# Update overlay if available
             if self.overlay:
-                self.overlay.add_event(event_data)
-                
-    def refresh_weapons(self):
-        """Force refresh weapons in the weapon selector"""
-        if self.weapon_selector and WeaponSelector:
-            print("Refreshing weapons...")
-            # Force weapons assignment
-            self.weapon_selector.weapons = self.db.weapons
-            self.weapon_selector.populate_weapons()
-            print(f"Weapons updated: {len(self.weapon_selector.weapons) if self.weapon_selector.weapons else 0}")
-        else:
-            print("Weapon selector not available")
-            
-    def refresh_weapons(self):
-        """Force refresh weapons in the weapon selector"""
-        if self.weapon_selector and WeaponSelector:
-            print("Refreshing weapons...")
-            # Force weapons assignment
-            self.weapon_selector.weapons = self.db.weapons
-            self.weapon_selector.populate_weapons()
-            print(f"Weapons updated: {len(self.weapon_selector.weapons) if self.weapon_selector.weapons else 0}")
-        else:
-            print("Weapon selector not available")
-            
-    def update_overlay_if_available(self):
-        """Update overlay if available"""
-        if self.overlay:
                 self.overlay.add_event(event_data)
             
             # Track ammo for weapon selector
@@ -456,7 +429,6 @@ try:
                 parsed_data = event_data.get('parsed_data', {}).get('event_data', {})
                 if hasattr(parsed_data, 'items'):
                     total_value = sum(float(item[2]) for item in parsed_data.items)
-                    # Update loot value in overlay
                     
         def start_chat_monitoring(self):
             """Start real chat log monitoring"""
