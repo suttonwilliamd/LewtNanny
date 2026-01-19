@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "chat_monitoring": {
+    "log_file_path": "",
+    "auto_detect": true,
+    "monitoring_enabled": true
+  },
+  "ocr": {
+    "enabled": true,
+    "tesseract_path": "",
+    "confidence_threshold": 60,
+    "auto_screenshot": true,
+    "screenshot_hotkey": "F12"
+  },
+  "ui": {
+    "theme": "dark",
+    "window_size": [
+      1200,
+      800
+    ],
+    "window_position": [
+      100,
+      100
+    ],
+    "always_on_top": false
+  },
+  "twitch": {
+    "enabled": false,
+    "channel_name": "",
+    "bot_token": "",
+    "overlay_enabled": false,
+    "overlay_position": [
+      10,
+      10
+    ]
+  },
+  "database": {
+    "backup_enabled": true,
+    "backup_interval_hours": 24,
+    "max_sessions": 1000
+  },
+  "markups": {
+    "auto_update": true,
+    "custom_values": {}
+  }
+}

@@ -32,14 +32,31 @@ def main():
     print("\nStarting application...")
     
     try:
-        # Import and start the main application
-        from main_mvp import main as main_app
-        import asyncio
-        asyncio.run(main_app())
+        # Try to import and start the new PyQt6 application
+        from main import main as main_app
+        main_app()
+    except ImportError as e:
+        print(f"[WARN] PyQt6 not available: {e}")
+        print("Falling back to Tkinter version...")
+        try:
+            from main_mvp import main as fallback_app
+            import asyncio
+            asyncio.run(fallback_app())
+        except ImportError as e2:
+            print(f"[ERROR] Neither PyQt6 nor fallback available: {e2}")
+            print("Please install required dependencies:")
+            print("  pip install PyQt6 qasync")
+            sys.exit(1)
     except KeyboardInterrupt:
         print("\n\n[OK] LewtNanny stopped by user")
     except Exception as e:
         print(f"\n[ERROR] Error starting LewtNanny: {e}")
+        print("\nTroubleshooting:")
+        print("1. Ensure all dependencies are installed:")
+        print("   pip install -r requirements.txt")
+        print("2. Try running with specific UI framework:")
+        print("   python main.py --ui pyqt6")
+        print("   python main.py --ui tkinter")
         sys.exit(1)
 
 if __name__ == "__main__":

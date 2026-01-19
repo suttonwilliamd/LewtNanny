@@ -1,0 +1,305 @@
+{
+  "updated": "20240119T190400",
+  "data": {
+    "Alekz Precision Scope": {
+      "ammo": 0,
+      "decay": "0.00029",
+      "type": "Scope"
+    },
+    "Alekz Precision Scope (L)": {
+      "ammo": 0,
+      "decay": "0.00029",
+      "type": "Scope"
+    },
+    "AOP-Series Scope": {
+      "ammo": 0,
+      "decay": "0.0005",
+      "type": "Scope"
+    },
+    "AOP-Series Scope (L)": {
+      "ammo": 0,
+      "decay": "0.0005",
+      "type": "Scope"
+    },
+    "Bullseye 1": {
+      "ammo": 0,
+      "decay": "0.0004",
+      "type": "Sight"
+    },
+    "Bullseye 1 (L)": {
+      "ammo": 0,
+      "decay": "0.0004",
+      "type": "Sight"
+    },
+    "Bullseye 2": {
+      "ammo": 0,
+      "decay": "0.0008",
+      "type": "Sight"
+    },
+    "Bullseye 2 (L)": {
+      "ammo": 0,
+      "decay": "0.0008",
+      "type": "Sight"
+    },
+    "Bullseye 3": {
+      "ammo": 0,
+      "decay": "0.0012",
+      "type": "Sight"
+    },
+    "Bullseye 3 (L)": {
+      "ammo": 0,
+      "decay": "0.0012",
+      "type": "Sight"
+    },
+    "Bullseye 4": {
+      "ammo": 0,
+      "decay": "0.0016",
+      "type": "Sight"
+    },
+    "Bullseye 4 (L)": {
+      "ammo": 0,
+      "decay": "0.0016",
+      "type": "Sight"
+    },
+    "Bullseye 5": {
+      "ammo": 0,
+      "decay": "0.002",
+      "type": "Sight"
+    },
+    "Bullseye 5 (L)": {
+      "ammo": 0,
+      "decay": "0.002",
+      "type": "Sight"
+    },
+    "Bullseye 6": {
+      "ammo": 0,
+      "decay": "0.0024",
+      "type": "Sight"
+    },
+    "Bullseye 6 (L)": {
+      "ammo": 0,
+      "decay": "0.0024",
+      "type": "Sight"
+    },
+    "Bullseye 7": {
+      "ammo": 0,
+      "decay": "0.0028",
+      "type": "Sight"
+    },
+    "Bullseye 7 (L)": {
+      "ammo": 0,
+      "decay": "0.0028",
+      "type": "Sight"
+    },
+    "Bullseye 8": {
+      "ammo": 0,
+      "decay": "0.0032",
+      "type": "Sight"
+    },
+    "Bullseye 8 (L)": {
+      "ammo": 0,
+      "decay": "0.0032",
+      "type": "Sight"
+    },
+    "DLX-4 Scope": {
+      "ammo": 0,
+      "decay": "0.0006",
+      "type": "Scope"
+    },
+    "DLX-4 Scope (L)": {
+      "ammo": 0,
+      "decay": "0.0006",
+      "type": "Scope"
+    },
+    "Ek-6000 Scope": {
+      "ammo": 0,
+      "decay": "0.0006",
+      "type": "Scope"
+    },
+    "Ek-6000 Scope (L)": {
+      "ammo": 0,
+      "decay": "0.0006",
+      "type": "Scope"
+    },
+    "Kurto's Scope": {
+      "ammo": 0,
+      "decay": "0.0006",
+      "type": "Scope"
+    },
+    "Kurto's Scope (L)": {
+      "ammo": 0,
+      "decay": "0.0006",
+      "type": "Scope"
+    },
+    "Lazor Sight": {
+      "ammo": 0,
+      "decay": "0.0006",
+      "type": "Sight"
+    },
+    "Lazor Sight (L)": {
+      "ammo": 0,
+      "decay": "0.0006",
+      "type": "Sight"
+    },
+    "Opalo Scope": {
+      "ammo": 0,
+      "decay": "0.0002",
+      "type": "Scope"
+    },
+    "Opalo Scope (L)": {
+      "ammo": 0,
+      "decay": "0.0002",
+      "type": "Scope"
+    },
+    "Ranger 1": {
+      "ammo": 0,
+      "decay": "0.0008",
+      "type": "Scope"
+    },
+    "Ranger 1 (L)": {
+      "ammo": 0,
+      "decay": "0.0008",
+      "type": "Scope"
+    },
+    "Ranger 2": {
+      "ammo": 0,
+      "decay": "0.0012",
+      "type": "Scope"
+    },
+    "Ranger 2 (L)": {
+      "ammo": 0,
+      "decay": "0.0012",
+      "type": "Scope"
+    },
+    "Ranger 3": {
+      "ammo": 0,
+      "decay": "0.0016",
+      "type": "Scope"
+    },
+    "Ranger 3 (L)": {
+      "ammo": 0,
+      "decay": "0.0016",
+      "type": "Scope"
+    },
+    "Ranger 4": {
+      "ammo": 0,
+      "decay": "0.002",
+      "type": "Scope"
+    },
+    "Ranger 4 (L)": {
+      "ammo": 0,
+      "decay": "0.002",
+      "type": "Scope"
+    },
+    "Ranger 5": {
+      "ammo": 0,
+      "decay": "0.0024",
+      "type": "Scope"
+    },
+    "Ranger 5 (L)": {
+      "ammo": 0,
+      "decay": "0.0024",
+      "type": "Scope"
+    },
+    "Sight-1": {
+      "ammo": 0,
+      "decay": "0.0006",
+      "type": "Sight"
+    },
+    "Sight-1 (L)": {
+      "ammo": 0,
+      "decay": "0.0006",
+      "type": "Sight"
+    },
+    "Sight-2": {
+      "ammo": 0,
+      "decay": "0.001",
+      "type": "Sight"
+    },
+    "Sight-2 (L)": {
+      "ammo": 0,
+      "decay": "0.001",
+      "type": "Sight"
+    },
+    "Sight-3": {
+      "ammo": 0,
+      "decay": "0.0014",
+      "type": "Sight"
+    },
+    "Sight-3 (L)": {
+      "ammo": 0,
+      "decay": "0.0014",
+      "type": "Sight"
+    },
+    "Sight-4": {
+      "ammo": 0,
+      "decay": "0.0018",
+      "type": "Sight"
+    },
+    "Sight-4 (L)": {
+      "ammo": 0,
+      "decay": "0.0018",
+      "type": "Sight"
+    },
+    "Sight-5": {
+      "ammo": 0,
+      "decay": "0.0022",
+      "type": "Sight"
+    },
+    "Sight-5 (L)": {
+      "ammo": 0,
+      "decay": "0.0022",
+      "type": "Sight"
+    },
+    "Sight-6": {
+      "ammo": 0,
+      "decay": "0.0026",
+      "type": "Sight"
+    },
+    "Sight-6 (L)": {
+      "ammo": 0,
+      "decay": "0.0026",
+      "type": "Sight"
+    },
+    "Sight-7": {
+      "ammo": 0,
+      "decay": "0.003",
+      "type": "Sight"
+    },
+    "Sight-7 (L)": {
+      "ammo": 0,
+      "decay": "0.003",
+      "type": "Sight"
+    },
+    "Sight-8": {
+      "ammo": 0,
+      "decay": "0.0034",
+      "type": "Sight"
+    },
+    "Sight-8 (L)": {
+      "ammo": 0,
+      "decay": "0.0034",
+      "type": "Sight"
+    },
+    "Sight-9": {
+      "ammo": 0,
+      "decay": "0.0038",
+      "type": "Sight"
+    },
+    "Sight-9 (L)": {
+      "ammo": 0,
+      "decay": "0.0038",
+      "type": "Sight"
+    },
+    "Sight-10": {
+      "ammo": 0,
+      "decay": "0.0042",
+      "type": "Sight"
+    },
+    "Sight-10 (L)": {
+      "ammo": 0,
+      "decay": "0.0042",
+      "type": "Sight"
+    }
+  }
+}

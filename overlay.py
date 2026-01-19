@@ -41,11 +41,14 @@ class SessionOverlay:
             'skills_gained': 0
         }
         
-        self.setup_overlay()
-        self.create_widgets()
+        self.overlay = None
+        self.minimized = False
         
     def setup_overlay(self):
         """Setup transparent, always-on-top overlay"""
+        if not TKINTER_AVAILABLE:
+            return
+            
         self.overlay = tk.Tk()
         self.overlay.title("LewtNanny Overlay")
         self.overlay.overrideredirect(True)  # Remove window decorations
@@ -177,7 +180,23 @@ class SessionOverlay:
             
         # Update session label when minimized
         if self.minimized:
-            self.session_label.config(text=f"MINIMIZED\nSession Active")
+            # Show useful info when minimized
+            elapsed = ""
+            if self.session_start:
+                elapsed_time = datetime.now() - self.session_start
+                hours, remainder = divmod(elapsed_time.seconds, 3600)
+                minutes, seconds = divmod(remainder, 60)
+                elapsed = f"\n⏱ {hours:02d}:{minutes:02d}:{seconds:02d}"
+            
+            profit = ""
+            if hasattr(self, 'stats') and self.stats.get('total_loot_value'):
+                profit = f"\n💰 {self.stats.get('total_loot_value', 0):.2f} PED"
+            
+            events = ""
+            if hasattr(self, 'stats') and self.stats.get('events'):
+                events = f"\n📊 {self.stats.get('events', 0)} events"
+                
+            self.session_label.config(text=f"MINIMIZED{elapsed}{profit}{events}")
         else:
             self.update_session_label()
         
@@ -202,10 +221,11 @@ class SessionOverlay:
         
     def update_session_label(self):
         """Update session label based on current state"""
-        if self.session_id:
-            self.session_label.config(text="Session Active")
-        else:
-            self.session_label.config(text="No Active Session")
+        if self.overlay and hasattr(self, 'session_label'):
+            if self.session_id:
+                self.session_label.config(text="Session Active")
+            else:
+                self.session_label.config(text="No Active Session")
         
     def stop_session(self):
         """Stop current session"""
@@ -273,12 +293,32 @@ class SessionOverlay:
             self.stats_labels['session_time'].config(text="00:00:00")
             
     def close(self):
-        """Close overlay"""
-        self.overlay.quit()
+        """Close overlay (hide, not quit to avoid closing main program)"""
+        if self.overlay:
+            self.overlay.withdraw()
+            # Mark overlay as closed
+            self.overlay = None
         
     def show(self):
         """Show the overlay"""
-        self.overlay.mainloop()
+        if not self.overlay:
+            self.setup_overlay()
+            self.create_widgets()
+        
+        if self.overlay:
+            # Configure overlay properties
+            self.overlay.attributes('-topmost', True)
+            self.overlay.attributes('-alpha', 0.9)
+            
+            # Start overlay in separate thread to avoid blocking
+            import threading
+            def run_overlay():
+                if self.overlay:
+                    self.overlay.mainloop()
+            
+            # Don't block main thread
+            overlay_thread = threading.Thread(target=run_overlay, daemon=True)
+            overlay_thread.start()
 
 
 def main():

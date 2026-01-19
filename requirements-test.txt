@@ -1,0 +1,19 @@
+"""
+Test requirements for LewtNanny
+"""
+
+pytest>=7.0.0
+pytest-qt>=4.0.0
+pytest-cov>=4.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0
+
+# Development dependencies
+black>=22.0.0
+flake8>=5.0.0
+mypy>=1.0.0
+isort>=5.10.0
+
+# Test reporting
+pytest-html>=3.1.0
+pytest-xdist>=3.0.0

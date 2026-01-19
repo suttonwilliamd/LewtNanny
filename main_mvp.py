@@ -12,19 +12,38 @@ from typing import Dict, Any, Optional, Tuple
 from decimal import Decimal
 
 # Import real chat reader and overlay
+REAL_PARSING_AVAILABLE = False
+ChatLogReader = None
+ChatEvent = None
+CombatEvent = None
+LootEvent = None
+SkillEvent = None
+GlobalEvent = None
+SessionOverlay = None
+WeaponSelector = None
+WeaponConfig = None
+
 try:
     from src.services.chat_reader_real import ChatLogReader, ChatEvent, CombatEvent, LootEvent, SkillEvent, GlobalEvent
-    from overlay import SessionOverlay
-    from weapon_selector import WeaponSelector, WeaponConfig
     REAL_PARSING_AVAILABLE = True
-except ImportError:
-    print("Warning: Real components not available, using fallback")
-    ChatLogReader = None
-    ChatEvent = None
-    SessionOverlay = None
-    WeaponSelector = None
-    WeaponConfig = None
-    REAL_PARSING_AVAILABLE = False
+    print("[OK] Real chat reader components loaded")
+except ImportError as e:
+    print(f"[WARN] Real chat reader not available: {e}")
+
+try:
+    from overlay import SessionOverlay
+    print("[OK] Overlay component loaded")
+except ImportError as e:
+    print(f"[WARN] Overlay not available: {e}")
+
+try:
+    from weapon_selector import WeaponSelector, WeaponConfig
+    print("[OK] Weapon selector components loaded")
+except ImportError as e:
+    print(f"[WARN] Weapon selector not available: {e}")
+
+if not REAL_PARSING_AVAILABLE:
+    print("[INFO] Application will run in fallback mode without real-time parsing")
 
 # Basic in-memory database for MVP
 class SimpleDB:
@@ -39,18 +58,32 @@ class SimpleDB:
         # Load weapons
         weapons_path = Path("weapons.json")
         if weapons_path.exists():
-            with open(weapons_path, 'r', encoding='utf-8') as f:
-                weapons_data = json.load(f)
-                for weapon_id, info in weapons_data.get('data', {}).items():
-                    self.weapons[weapon_id] = info
+            try:
+                with open(weapons_path, 'r', encoding='utf-8') as f:
+                    weapons_data = json.load(f)
+                    for weapon_id, info in weapons_data.get('data', {}).items():
+                        self.weapons[weapon_id] = info
+                    print(f"[OK] Loaded {len(self.weapons)} weapons from {weapons_path}")
+            except (json.JSONDecodeError, IOError, UnicodeDecodeError) as e:
+                print(f"[ERROR] Failed to load weapons from {weapons_path}: {e}")
+                self.weapons = {}
+        else:
+            print(f"[WARN] Weapons file not found: {weapons_path}")
         
         # Load crafting
         crafting_path = Path("crafting.json")
         if crafting_path.exists():
-            with open(crafting_path, 'r', encoding='utf-8') as f:
-                crafting_data = json.load(f)
-                for blueprint_id, materials in crafting_data.get('data', {}).items():
-                    self.blueprints[blueprint_id] = materials
+            try:
+                with open(crafting_path, 'r', encoding='utf-8') as f:
+                    crafting_data = json.load(f)
+                    for blueprint_id, materials in crafting_data.get('data', {}).items():
+                        self.blueprints[blueprint_id] = materials
+                    print(f"[OK] Loaded {len(self.blueprints)} blueprints from {crafting_path}")
+            except (json.JSONDecodeError, IOError, UnicodeDecodeError) as e:
+                print(f"[ERROR] Failed to load blueprints from {crafting_path}: {e}")
+                self.blueprints = {}
+        else:
+            print(f"[WARN] Crafting file not found: {crafting_path}")
     
     def search_weapons(self, query: str, limit: int = 10):
         """Search weapons by name"""
@@ -120,21 +153,49 @@ try:
             self.root.title("LewtNanny - Entropia Universe Loot Tracker")
             self.root.geometry("1200x800")
             
+            # Initialize components FIRST
+            self.initialize_components(db, config)
+            
+            # Setup UI after components are ready
+            self.setup_ui()
+            
+            # Initialize components BEFORE UI setup
+            self.initialize_components(db, config)
+            
+            # Setup UI after components are ready
             self.setup_ui()
             
             # Apply theme
             self.apply_theme("dark")
             
-            # Initialize overlay if available
-            if SessionOverlay and REAL_PARSING_AVAILABLE:
-                self.overlay = SessionOverlay(db, config)
-            if WeaponSelector and REAL_PARSING_AVAILABLE:
-                self.weapon_selector = WeaponSelector(self.root, db, self.weapon_callback)
-                # Pass weapons to selector immediately
-                if hasattr(self.weapon_selector, 'weapons'):
+        def initialize_components(self, db, config):
+            """Initialize all components before UI setup"""
+            try:
+                if SessionOverlay:
+                    self.overlay = SessionOverlay(db, config)
+            except Exception as e:
+                print(f"Failed to initialize overlay: {e}")
+                self.overlay = None
+                
+            try:
+                if WeaponSelector:
+                    # Initialize with main window root
+                    self.weapon_selector = WeaponSelector(self.root, db, self.weapon_callback)
+                    # Pass weapons to selector immediately
                     self.weapon_selector.weapons = self.db.weapons
-            if WeaponConfig and REAL_PARSING_AVAILABLE:
-                self.weapon_config = WeaponConfig(self.root, db)
+                    self.weapon_selector.populate_weapons()
+                else:
+                    print("Weapon selector not available")
+            except Exception as e:
+                print(f"Failed to initialize weapon selector: {e}")
+                self.weapon_selector = None
+                
+            try:
+                if WeaponConfig:
+                    self.weapon_config = WeaponConfig(self.root, db)
+            except Exception as e:
+                print(f"Failed to initialize weapon config: {e}")
+                self.weapon_config = None
             
         def setup_ui(self):
             """Setup the UI"""
@@ -173,11 +234,7 @@ try:
             self.create_weapon_tab()
             self.create_config_tab()
             
-            # Debug info
-            print(f"DEBUG: WeaponSelector available: {WeaponSelector is not None}")
-            print(f"DEBUG: Database weapons: {len(self.db.weapons)}")
-            if WeaponSelector:
-                print(f"DEBUG: Weapon selector initialized: {self.weapon_selector is not None}")
+
             
         def create_loot_tab(self):
             """Create loot tracking tab"""
@@ -244,13 +301,21 @@ try:
             weapon_frame = ttk.Frame(self.notebook)
             self.notebook.add(weapon_frame, text="Weapons")
             
-            # Always show weapon selector interface
-            if WeaponSelector:
-                if self.weapon_selector:
+            # Reuse existing weapon selector frame in this tab
+            if self.weapon_selector and self.weapon_selector.frame:
+                try:
+                    # Move the existing frame to this tab's parent
+                    self.weapon_selector.frame.pack_forget()  # Remove from current parent
+                    self.weapon_selector.frame.master = weapon_frame
                     self.weapon_selector.frame.pack(fill='both', expand=True, padx=5, pady=5)
-                    # Populate weapons from database
-                    self.weapon_selector.weapons = self.db.weapons
-                    self.weapon_selector.populate_weapons()
+                    print(f"Moved weapon selector to weapons tab with {len(self.weapon_selector.weapons)} weapons")
+                except Exception as e:
+                    print(f"Error setting up weapon selector: {e}")
+                    # Fallback to simple label
+                    label = ttk.Label(weapon_frame, 
+                                        text=f"Error loading weapons\n{e}",
+                                        foreground='red')
+                    label.pack(padx=20, pady=20)
             else:
                 # Create simple label explaining weapon selector not available
                 label = ttk.Label(weapon_frame, 
@@ -396,15 +461,15 @@ try:
             color = colors.get(event.event_type.upper(), 'white')
             
             # Add to display
-            self.add_event(event_type, event_raw_message, color)
+            self.add_event(event_type, details, color)
             
             # Also add to database
             event_data = {
                 'event_type': event.event_type,
                 'activity_type': self.activity_var.get(),
-                'raw_message': event_raw_message,
+                'raw_message': details,
                 'parsed_data': {
-                    'timestamp': event_timestamp.isoformat(),
+                    'timestamp': event.timestamp.isoformat() if hasattr(event, 'timestamp') else datetime.now().isoformat(),
                     'event_data': event.__dict__ if hasattr(event, '__dict__') else {}
                 },
                 'session_id': self.current_session
@@ -418,17 +483,19 @@ try:
             # Track ammo for weapon selector
             if self.weapon_selector and event_type == 'COMBAT':
                 parsed_data = event_data.get('parsed_data', {}).get('event_data', {})
-                if hasattr(parsed_data, 'damage'):
+                if isinstance(parsed_data, dict) and 'damage' in parsed_data:
                     current_weapon = self.weapon_selector.get_current_weapon()
                     if current_weapon:
                         ammo_per_shot = current_weapon.get('ammo', 1)
-                        self.weapon_selector.add_combat_event(float(parsed_data.damage), hasattr(parsed_data, 'critical'))
+                        self.weapon_selector.add_combat_event(float(parsed_data['damage']), parsed_data.get('critical', False))
                         
             # Track loot
             if self.overlay and event_type == 'LOOT':
                 parsed_data = event_data.get('parsed_data', {}).get('event_data', {})
-                if hasattr(parsed_data, 'items'):
-                    total_value = sum(float(item[2]) for item in parsed_data.items)
+                if isinstance(parsed_data, dict) and 'items' in parsed_data:
+                    items = parsed_data['items']
+                    if isinstance(items, list):
+                        total_value = sum(float(item[2]) if len(item) > 2 else 0.0 for item in items)
                     
         def start_chat_monitoring(self):
             """Start real chat log monitoring"""
@@ -459,12 +526,30 @@ try:
             if not self.overlay:
                 return
                 
-            # Always show overlay in separate thread to avoid blocking
-            import threading
-            def show_overlay():
-                self.overlay.show()
-            threading.Thread(target=show_overlay, daemon=True).start()
-            self.overlay_btn.config(text="Overlay Running")
+            # Check if overlay is already running
+            if hasattr(self.overlay, 'overlay') and self.overlay.overlay:
+                # Overlay is running, stop it
+                try:
+                    self.overlay.close()
+                    self.overlay_btn.config(text="Show Overlay")
+                    self.add_event("SYSTEM", "Overlay stopped", "#7DB8F5")
+                except Exception as e:
+                    self.add_event("ERROR", f"Failed to stop overlay: {e}", "#F44336")
+            else:
+                # Overlay is not running, start it
+                def show_overlay():
+                    try:
+                        if self.overlay:
+                            self.overlay.show()
+                            # Update button text safely from main thread
+                            self.root.after(0, lambda: self.overlay_btn.config(text="Stop Overlay"))
+                    except Exception as exc:
+                        error_msg = f"Overlay failed: {exc}"
+                        self.root.after(0, lambda: self.add_event("ERROR", error_msg, "#F44336"))
+                
+                # Run overlay in separate thread
+                import threading
+                threading.Thread(target=show_overlay, daemon=True).start()
                 
         def start_session(self):
             """Start tracking session"""
@@ -516,6 +601,17 @@ try:
             if filename:
                 self.log_file_var.set(filename)
                 
+        def refresh_weapons(self):
+            """Refresh weapons display"""
+            if self.weapon_selector:
+                # Re-populate weapons from database
+                self.weapon_selector.weapons = self.db.weapons
+                self.weapon_selector.populate_weapons()
+                weapon_count = len(self.weapon_selector.weapons)
+                self.add_event("SYSTEM", f"Weapons list refreshed: {weapon_count} weapons", "#7DB8F5")
+            else:
+                self.add_event("ERROR", "Weapon selector not available", "#F44336")
+                
         def run(self):
             """Start the GUI"""
             self.root.mainloop()
@@ -539,7 +635,7 @@ async def main():
     config = SimpleConfig()
     
     # Start GUI if available
-    if SimpleMainWindow:
+    if SimpleMainWindow is not None:
         app = SimpleMainWindow(db, config)
         app.run()
     else:

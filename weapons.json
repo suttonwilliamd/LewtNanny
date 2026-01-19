@@ -1,6 +1,26 @@
 { "updated": "20230928T190400",
   "data":
-{
+  {
+    "Frontier Combat Knife": {
+      "ammo": 49,
+      "decay": "0.018",
+      "type": "Shortblades"
+    },
+    "Frontier Combat Knife, Adjusted": {
+      "ammo": 98,
+      "decay": "0.018",
+      "type": "Shortblades"
+    },
+    "Frontier Hunting Rifle": {
+      "ammo": 100,
+      "decay": "0.020",
+      "type": "Rifle"
+    },
+    "Frontier Hunting Rifle, Adjusted": {
+      "ammo": 180,
+      "decay": "0.020",
+      "type": "Rifle"
+    },
   "0x0F382C8C91E58C8273C0 (L)": {
     "ammo": 1764,
     "decay": "0.05111",
