@@ -247,6 +247,85 @@ class MainWindow(QMainWindow):
             self.current_weapon_label.setText("No Weapon Selected")
             self.current_weapon_label.setProperty("class", "weapon-label")
         # Trigger style update - let theme handle styling
+        
+    def filter_weapons(self, search_text):
+        """Filter weapons based on search text and active filters"""
+        try:
+            from pathlib import Path
+            import json
+            
+            # Load weapons data
+            weapons_path = Path(__file__).parent.parent / "weapons.json"
+            with open(weapons_path, 'r') as f:
+                weapons_data = json.load(f)
+            
+            weapons_list = list(weapons_data.get('data', {}).items())
+            
+            # Apply filters
+            filtered_weapons = []
+            active_filters = []
+            
+            # Check active filters
+            if self.rifle_filter_btn.isChecked():
+                active_filters.append('rifle')
+            if self.pistol_filter_btn.isChecked():
+                active_filters.append('pistol')
+            if self.shortblade_filter_btn.isChecked():
+                active_filters.append('shortblade')
+            if self.amplifier_filter_btn.isChecked():
+                active_filters.append('amplifier')
+            
+            for weapon_name, stats in weapons_list:
+                # Check if weapon matches search and filters
+                weapon_lower = weapon_name.lower()
+                search_lower = search_text.lower() if search_text else ""
+                
+                # Basic search match
+                if search_lower in weapon_lower:
+                    match = True
+                else:
+                    match = False
+                
+                # Check weapon type filters
+                weapon_type = stats.get('type', '').lower()
+                if active_filters:
+                    type_match = any(filter_type in weapon_type for filter_type in active_filters)
+                    match = match and type_match
+                else:
+                    match = match or (not active_filters)
+                
+                if match:
+                    filtered_weapons.append(weapon_name)
+            
+            # Update combo box with filtered results
+            self.weapon_combo.clear()
+            self.weapon_combo.addItem("Select Weapon...", None)
+            
+            # Sort and add filtered weapons
+            for weapon in sorted(filtered_weapons):
+                self.weapon_combo.addItem(weapon, weapon)
+            
+            print(f"Filtered to {len(filtered_weapons)} weapons from {len(weapons_list)} total")
+            
+        except Exception as e:
+            print(f"Error filtering weapons: {e}")
+        
+    def apply_filter(self, filter_type):
+        """Apply weapon type filter"""
+        sender = self.sender()
+        # Toggle button check state manually
+        current_state = sender.property("checked")
+        new_state = not current_state if current_state is not None else True
+        sender.setProperty("checked", new_state)
+        
+        # Update button appearance
+        if new_state:
+            sender.setStyleSheet("background-color: #1E88E5; color: white;")
+        else:
+            sender.setStyleSheet("background-color: #455364; color: #E8EAED;")
+        
+        # Trigger filter update
+        self.filter_weapons(self.weapon_search.text())
     
     def save_weapon_config(self):
         """Save weapon configuration"""
@@ -823,6 +902,34 @@ class MainWindow(QMainWindow):
         
         # Add placeholder
         self.weapon_combo.addItem("Select Weapon...", None)
+        
+        # Add search functionality
+        self.weapon_search = QLineEdit()
+        self.weapon_search.setPlaceholderText("Search weapons...")
+        self.weapon_search.textChanged.connect(self.filter_weapons)
+        
+        # Add filter buttons
+        filter_layout = QHBoxLayout()
+        
+        # Weapon type filters
+        self.rifle_filter_btn = QPushButton("Rifle")
+        self.pistol_filter_btn = QPushButton("Pistol")
+        self.shortblade_filter_btn = QPushButton("Shortblade")
+        self.amplifier_filter_btn = QPushButton("Amplifier")
+        
+        filter_layout.addWidget(QLabel("Filter:"))
+        filter_layout.addWidget(self.rifle_filter_btn)
+        filter_layout.addWidget(self.pistol_filter_btn)
+        filter_layout.addWidget(self.shortblade_filter_btn)
+        filter_layout.addWidget(self.amplifier_filter_btn)
+        
+        # Add search and filter to weapon selection
+        weapon_layout = QVBoxLayout()
+        weapon_layout.addWidget(self.weapon_search)
+        weapon_layout.addLayout(filter_layout)
+        weapon_layout.addWidget(self.weapon_combo)
+        
+        form_layout.addRow("Weapon:", weapon_layout)
         
         # Load weapons from weapons.json database
         weapons_data: Dict[str, Any] = {}
