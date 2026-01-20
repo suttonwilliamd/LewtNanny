@@ -863,11 +863,6 @@ class MainWindow(QMainWindow):
             
         self.weapon_combo.addItem("Custom...", None)
         self.weapon_combo.currentTextChanged.connect(self.on_weapon_changed)
-    
-    def on_weapon_changed(self, weapon_text):
-        """Handle weapon selection change"""
-        weapon = self.get_selected_weapon()
-        self.update_weapon_display()
         
         # Update overlay if it exists and session is active
         if hasattr(self, 'overlay_window') and self.overlay_window:
