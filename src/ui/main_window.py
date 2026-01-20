@@ -104,10 +104,35 @@ class MainWindow(QMainWindow):
         toolbar_layout.addWidget(self.session_label)
         toolbar_layout.addStretch()
         toolbar_layout.addWidget(activity_label)
-        toolbar_layout.addWidget(self.activity_combo)
         toolbar_layout.addWidget(self.current_weapon_label)
         toolbar_layout.addWidget(self.weapon_config_btn)
         toolbar_layout.addWidget(self.start_session_btn)
+        
+        # Session controls
+        self.start_session_btn = QPushButton("Start Session")
+        self.start_session_btn.clicked.connect(self.start_session)
+        self.start_session_btn.setMinimumWidth(120)
+        
+        def start_session(self):
+            """Start a new tracking session"""
+            print(f"Session started at {datetime.now()}")
+            self.session_active = True
+            
+            # Generate session ID
+            import uuid
+            session_id = str(uuid.uuid())[:8]
+            
+            # Update UI
+            activity = self.activity_combo.currentText()
+            weapon = self.get_selected_weapon()
+            
+            self.session_label.setText(f"Session Active - {activity}")
+            self.current_weapon_label.setText(f"Weapon: {weapon}" if weapon else "No Weapon Selected")
+            self.current_weapon_label.setProperty("class", "weapon-label-active" if weapon else "weapon-label")
+            
+            # Update overlay if visible
+            if hasattr(self, 'overlay_window') and self.overlay_window:
+                self.overlay_window.update_session_info(session_id, activity, None, weapon)
         
         # Theme toggle
         self.theme_toggle_btn = QPushButton("🌓 Theme")
