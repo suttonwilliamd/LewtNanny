@@ -4,10 +4,6 @@ Main window for LewtNanny PyQt6 GUI
 
 import sys
 from datetime import datetime
-from typing import Dict, Any, Optional
-from pathlib import Path
-import json
-
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QTabWidget, QTextEdit, QLabel, QPushButton,
@@ -814,52 +810,28 @@ class MainWindow(QMainWindow):
     
     def load_weapons(self):
         """Load weapons from database"""
-        from pathlib import Path
-        import json
-        from typing import Dict, Any
-        
         # Clear existing items
         self.weapon_combo.clear()
         
         # Add placeholder
         self.weapon_combo.addItem("Select Weapon...", None)
         
-        # Load weapons from weapons.json database
-        weapons_data: Dict[str, Any] = {}
-        try:
-            weapons_path = Path(__file__).parent.parent / "weapons.json"
-            if weapons_path.exists():
-                with open(weapons_path, 'r') as f:
-                    weapons_data = json.load(f)
-                    print(f"Loaded weapons database with {len(weapons_data.get('data', {}))} weapons")
-                
-        except Exception as e:
-            print(f"Error loading weapons database: {e}")
-            weapons_data = {'data': {}}
+        # Add common weapons
+        weapons = [
+            "Korss H400 (L)",
+            "P5a (L)", 
+            "H400 (L)",
+            "ME(L)",
+            "Karwapak (L)",
+            "Adj. M107a",
+            "ML-35",
+            "ISIS LR-53 (L)",
+            "Mod Merc",
+            "MM Beast"
+        ]
         
-        # Add weapons to combo box with real stats
-        added_weapons = []
-        for weapon_name, stats in weapons_data.get('data', {}).items():
-            self.weapon_combo.addItem(weapon_name, weapon_name)
-            added_weapons.append(weapon_name)
-            
-        # Add fallback weapons if database is empty
-        if not added_weapons:
-            fallback_weapons = [
-                "Korss H400 (L)",
-                "P5a (L)", 
-                "H400 (L)",
-                "ME(L)",
-                "Karwapak (L)",
-                "Adj. M107a",
-                "ML-35"
-            ]
-            
-            for weapon in fallback_weapons:
-                self.weapon_combo.addItem(weapon, weapon)
-                
-        self.weapon_combo.addItem("Custom...", None)
-        self.weapon_combo.currentTextChanged.connect(self.on_weapon_changed)
+        for weapon in sorted(weapons):
+            self.weapon_combo.addItem(weapon, weapon)
             
         self.weapon_combo.addItem("Custom...", None)
         self.weapon_combo.currentTextChanged.connect(self.on_weapon_changed)
@@ -894,46 +866,6 @@ class MainWindow(QMainWindow):
                 return current_text  # Custom typed weapon
         else:
             return current_data
-    
-    def get_weapon_stats(self, weapon_name):
-        """Get detailed stats for selected weapon"""
-        if not weapon_name:
-            weapon_name = self.get_selected_weapon()
-            if not weapon_name:
-                return {}
-        
-        from pathlib import Path
-        import json
-        
-        try:
-            weapons_path = Path(__file__).parent.parent / "weapons.json"
-            if weapons_path.exists():
-                with open(weapons_path, 'r') as f:
-                    weapons_data = json.load(f)
-                    return weapons_data.get('data', {}).get(weapon_name, {})
-        except Exception:
-            return {}
-        
-    def get_full_weapon_config(self):
-        """Get complete weapon configuration for calculations"""
-        weapon_name = self.get_selected_weapon()
-        base_stats = self.get_weapon_stats(weapon_name)
-        
-        # Add configuration panel values
-        config_stats = {
-            'attachment': getattr(self, 'attachment_combo', type('', (), {'currentText': lambda: 'None'})).currentText(),
-            'scope': getattr(self, 'scope_combo', type('', (), {'currentText': lambda: 'None'})).currentText(),
-            'enhancers': {
-                'damage': getattr(self, 'enhancer_inputs', {}).get('dmg_enh', type('', (), {'value': lambda: 0})).value(),
-                'range': getattr(self, 'enhancer_inputs', {}).get('range_enh', type('', (), {'value': lambda: 0})).value(),
-                'accuracy': getattr(self, 'enhancer_inputs', {}).get('acc_enh', type('', (), {'value': lambda: 0})).value(),
-                'economy': getattr(self, 'enhancer_inputs', {}).get('eco_enh', type('', (), {'value': lambda: 0})).value()
-            },
-            'damage_input': getattr(self, 'dmg_spinbox', type('', (), {'value': lambda: 0.0})).value(),
-            'ammo_input': getattr(self, 'ammo_spinbox', type('', (), {'value': lambda: 0.0})).value()
-        }
-        
-        return {**base_stats, **config_stats}
     
     def get_full_weapon_config(self):
         """Get complete weapon configuration for calculations"""
