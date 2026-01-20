@@ -108,32 +108,6 @@ class MainWindow(QMainWindow):
         toolbar_layout.addWidget(self.weapon_config_btn)
         toolbar_layout.addWidget(self.start_session_btn)
         
-        # Session controls
-        self.start_session_btn = QPushButton("Start Session")
-        self.start_session_btn.clicked.connect(self.start_session)
-        self.start_session_btn.setMinimumWidth(120)
-        
-        def start_session(self):
-            """Start a new tracking session"""
-            print(f"Session started at {datetime.now()}")
-            self.session_active = True
-            
-            # Generate session ID
-            import uuid
-            session_id = str(uuid.uuid())[:8]
-            
-            # Update UI
-            activity = self.activity_combo.currentText()
-            weapon = self.get_selected_weapon()
-            
-            self.session_label.setText(f"Session Active - {activity}")
-            self.current_weapon_label.setText(f"Weapon: {weapon}" if weapon else "No Weapon Selected")
-            self.current_weapon_label.setProperty("class", "weapon-label-active" if weapon else "weapon-label")
-            
-            # Update overlay if visible
-            if hasattr(self, 'overlay_window') and self.overlay_window:
-                self.overlay_window.update_session_info(session_id, activity, None, weapon)
-        
         # Theme toggle
         self.theme_toggle_btn = QPushButton("🌓 Theme")
         self.theme_toggle_btn.clicked.connect(self.toggle_theme)
@@ -147,6 +121,149 @@ class MainWindow(QMainWindow):
         toolbar_layout.addWidget(self.overlay_btn)
         
         self.main_layout.addWidget(toolbar_widget)
+        
+    def start_session(self):
+        """Start a new tracking session"""
+        print(f"Session started at {datetime.now()}")
+        self.session_active = True
+        
+        # Generate session ID
+        import uuid
+        session_id = str(uuid.uuid4())[:8]
+        
+        # Update UI
+        activity = self.activity_combo.currentText()
+        weapon = self.get_selected_weapon()
+        
+        self.session_label.setText(f"Session Active - {activity}")
+        self.current_weapon_label.setText(f"Weapon: {weapon}" if weapon else "No Weapon Selected")
+        self.current_weapon_label.setProperty("class", "weapon-label-active" if weapon else "weapon-label")
+        
+        # Update overlay if visible
+        if hasattr(self, 'overlay_window') and self.overlay_window:
+            self.overlay_window.update_session_info(session_id, activity, None, weapon)
+    
+    def change_activity(self, activity):
+        """Handle activity type change"""
+        print(f"Activity changed to: {activity}")
+        # Update session label if session is active
+        if hasattr(self, 'session_active') and self.session_active:
+            self.session_label.setText(f"Session Active - {activity}")
+        # Update overlay if visible and session is active
+        if hasattr(self, 'overlay_window') and self.overlay_window and hasattr(self, 'session_active') and self.session_active:
+            weapon = self.get_selected_weapon()
+            self.overlay_window.update_session_info("active", activity, None, weapon)
+    
+    def toggle_overlay(self):
+        """Toggle overlay window visibility"""
+        if not hasattr(self, 'overlay_window') or self.overlay_window is None:
+            print("Overlay window not initialized")
+            return
+        
+        if self.overlay_window.isVisible():
+            self.overlay_window.hide()
+            self.overlay_btn.setText("Toggle Overlay")
+        else:
+            self.overlay_window.show()
+            self.overlay_btn.setText("Hide Overlay")
+    
+    def load_weapons(self):
+        """Load weapons from database"""
+        # Load weapons from weapons.json database
+        weapons_data: Dict[str, Any] = {}
+        try:
+            weapons_path = Path(__file__).parent.parent / "weapons.json"
+            if weapons_path.exists():
+                with open(weapons_path, 'r') as f:
+                    weapons_data = json.load(f)
+                    print(f"Loaded weapons database with {len(weapons_data.get('data', {}))} weapons")
+                
+        except Exception as e:
+            print(f"Error loading weapons database: {e}")
+            weapons_data = {'data': {}}
+        
+        # Add weapons to combo box with real stats
+        added_weapons = []
+        for weapon_name, stats in weapons_data.get('data', {}).items():
+            self.weapon_combo.addItem(weapon_name, weapon_name)
+            added_weapons.append(weapon_name)
+            
+        # Add fallback weapons if database is empty
+        if not added_weapons:
+            fallback_weapons = [
+                "Korss H400 (L)",
+                "P5a (L)", 
+                "H400 (L)",
+                "ME(L)",
+                "Karwapak (L)",
+                "Adj. M107a",
+                "ML-35"
+            ]
+            
+            for weapon in fallback_weapons:
+                self.weapon_combo.addItem(weapon, weapon)
+                
+        self.weapon_combo.addItem("Custom...", None)
+        self.weapon_combo.currentTextChanged.connect(self.update_weapon_display)
+    
+    def create_loot_tab(self):
+        """Create loot tracking tab"""
+        loot_widget = QWidget()
+        loot_layout = QVBoxLayout(loot_widget)
+        
+        # Add a simple text widget for now
+        loot_text = QTextEdit()
+        loot_text.setPlaceholderText("Loot tracking will be implemented here...")
+        loot_layout.addWidget(loot_text)
+        
+        self.tab_widget.addTab(loot_widget, "Loot")
+    
+    def create_analysis_tab(self):
+        """Create analysis tab"""
+        analysis_widget = QWidget()
+        analysis_layout = QVBoxLayout(analysis_widget)
+        
+        # Add a simple text widget for now
+        analysis_text = QTextEdit()
+        analysis_text.setPlaceholderText("Analysis features will be implemented here...")
+        analysis_layout.addWidget(analysis_text)
+        
+        self.tab_widget.addTab(analysis_widget, "Analysis")
+    
+    def create_config_tab(self):
+        """Create configuration tab"""
+        config_widget = QWidget()
+        config_layout = QVBoxLayout(config_widget)
+        
+        # Add a simple text widget for now
+        config_text = QTextEdit()
+        config_text.setPlaceholderText("Configuration options will be implemented here...")
+        config_layout.addWidget(config_text)
+        
+        self.tab_widget.addTab(config_widget, "Config")
+    
+    def setup_status_bar(self):
+        """Setup status bar"""
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
+        self.status_bar.showMessage("Ready")
+    
+    def setup_timer(self):
+        """Setup update timer"""
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self.update_status)
+        self.update_timer.start(1000)  # Update every second
+    
+    def update_status(self):
+        """Update status periodically"""
+        if hasattr(self, 'session_active') and self.session_active:
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.status_bar.showMessage(f"Session Active - {current_time}")
+    
+    def filter_weapons(self, search_text):
+        """Filter weapons based on search text"""
+        # TODO: Implement weapon filtering
+        print(f"Filtering weapons: {search_text}")
         
     def setup_weapon_config(self):
         """Setup comprehensive weapon configuration panel"""
