@@ -1,4 +1,4 @@
-/* Light Theme for LewtNanny - Professional Theme */
+/* Light Theme for LewtNanny - Evolution of LootNanny Theme */
 
 * {
     padding: 0px;
@@ -10,26 +10,26 @@
 }
 
 QWidget {
-    background-color: #F8F9FA;
-    border: 0px solid #DADCE0;
+    background-color: #FFFFFF;
+    border: 0px solid #E1E4E8;
     padding: 0px;
-    color: #202124;
-    selection-background-color: #1E88E5;
-    selection-color: #F8F9FA;
+    color: #24292F;
+    selection-background-color: #0969DA;
+    selection-color: #FFFFFF;
 }
 
 QMainWindow {
-    background-color: #F8F9FA;
+    background-color: #FFFFFF;
 }
 
 QFrame {
-    border: 1px solid #DADCE0;
-    border-radius: 4px;
-    background-color: #F8F9FA;
+    border: 1px solid #D0D7DE;
+    border-radius: 6px;
+    background-color: #F6F8FA;
 }
 
 QLabel {
-    color: #202124;
+    color: #24292F;
     background-color: transparent;
 }
 

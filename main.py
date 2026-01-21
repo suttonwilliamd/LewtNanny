@@ -1,41 +1,32 @@
 """
 LewtNanny - Entropia Universe Loot Tracking and Financial Analytics
-Main application entry point with feature flags and UI framework selection
+Main application entry point with PyQt6 UI
 """
 
 import sys
+import logging
 import asyncio
+
 from pathlib import Path
 from typing import Optional
 
-# Import configuration
+from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtCore import Qt, QTimer
+
 from cli import main as cli_main, AppConfig
 from src.core.app_config import app_config as default_config
 
-# Import PyQt6 components
-try:
-    from PyQt6.QtWidgets import QApplication
-    from PyQt6.QtCore import QTimer
-    import qasync
-    PYQT6_AVAILABLE = True
-except ImportError:
-    PYQT6_AVAILABLE = False
-    print("PyQt6 not available. Install with: pip install PyQt6 qasync")
-
-# Import Tkinter components (fallback)
-try:
-    import tkinter as tk
-    from tkinter import messagebox
-    TKINTER_AVAILABLE = True
-except ImportError:
-    TKINTER_AVAILABLE = False
-
-# Import application components
-from src.ui.main_window import MainWindow
+from src.ui.main_window_tabbed import TabbedMainWindow as MainWindow
 from src.core.database import DatabaseManager
 from src.services.config_manager import ConfigManager
 from src.services.chat_reader import ChatReader
 from src.utils.logger import setup_logger
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 class LewtNannyApp:
@@ -47,171 +38,93 @@ class LewtNannyApp:
         self.config_manager = None
         self.chat_reader = None
         
-    async def initialize(self):
-        """Initialize all application components"""
-        # Setup logging
-        setup_logger()  # TODO: Update logger to support verbose flag
+        logger.info("LewtNannyApp initialized")
+    
+    async def initialize_db(self):
+        """Initialize database and config (can run before QApplication)"""
+        logger.info("Initializing database and config...")
         
-        # Initialize database
+        setup_logger()
+        
         self.db_manager = DatabaseManager()
         await self.db_manager.initialize()
+        logger.info("Database initialized")
         
-        # Initialize configuration
         self.config_manager = ConfigManager()
         await self.config_manager.initialize()
+        logger.info("Config manager initialized")
+    
+    def initialize_ui(self):
+        """Initialize UI components (must run after QApplication)"""
+        logger.info("Initializing UI components...")
         
-        # Initialize UI based on framework choice
-        if self.config.ui_framework == "pyqt6" and PYQT6_AVAILABLE:
-            await self._initialize_pyqt6()
-        elif self.config.ui_framework == "tkinter" and TKINTER_AVAILABLE:
-            await self._initialize_tkinter()
-        else:
-            # Fallback logic
-            if PYQT6_AVAILABLE:
-                await self._initialize_pyqt6()
-            elif TKINTER_AVAILABLE:
-                await self._initialize_tkinter()
-            else:
-                raise RuntimeError("No UI framework available. Install PyQt6 or ensure Tkinter is available.")
+        self.main_window = MainWindow(self.db_manager, self.config_manager)
+        logger.info("Main window created")
         
-        # Initialize chat reader if enabled
-        if self.config.enable_chat_monitoring:
-            self.chat_reader = ChatReader(
+        self._init_chat_reader()
+        
+        logger.info("UI initialization complete")
+    
+    def _init_chat_reader(self):
+        """Initialize chat reader"""
+        logger.info("[MAIN] _init_chat_reader called")
+        try:
+            chat_reader = ChatReader(
                 self.db_manager, 
                 self.config_manager
             )
             
-            # Connect signals
-            self.chat_reader.new_event.connect(
+            logger.info("[MAIN] Connecting chat_reader.new_event to main_window.handle_new_event")
+            chat_reader.new_event.connect(
                 self.main_window.handle_new_event
             )
+            
+            # Pass chat_reader to main_window for session management
+            self.main_window.chat_reader = chat_reader
+            
+            logger.info("[MAIN] Chat reader initialized and connected successfully")
+        
+        except Exception as e:
+            logger.error(f"[MAIN] Error initializing chat reader: {e}", exc_info=True)
     
-    async def _initialize_pyqt6(self):
-        """Initialize PyQt6 UI"""
-        # Initialize main window
-        self.main_window = MainWindow(
-            self.db_manager, 
-            self.config_manager
-        )
-        
-        # Apply window size
-        if self.config.window_size:
-            self.main_window.setGeometry(100, 100, *self.config.window_size)
-    
-    async def _initialize_tkinter(self):
-        """Initialize Tkinter UI (fallback)"""
-        # For now, show a message box indicating PyQt6 is preferred
-        if PYQT6_AVAILABLE:
-            print("PyQt6 is available but Tkinter was selected. Consider using --ui pyqt6 for better experience.")
-        
-        # Create simple Tkinter interface as fallback
-        self.app = tk.Tk()
-        self.app.title("LewtNanny - Tkinter Fallback")
-        self.app.geometry(f"{self.config.window_size[0]}x{self.config.window_size[1]}")
-        
-        label = tk.Label(
-            self.app, 
-            text="LewtNanny\nTkinter Fallback Interface\n\nUse --ui pyqt6 for full features",
-            justify=tk.CENTER,
-            font=("Arial", 14)
-        )
-        label.pack(pady=50)
-        
-        # Simple status display
-        status_label = tk.Label(self.app, text="Status: Ready (Limited Functionality)")
-        status_label.pack(pady=10)
-        
-        # Note: Tkinter version has limited functionality
-        # Full features available with PyQt6
-        
     def run(self):
         """Start the application"""
-        if self.config.ui_framework == "pyqt6" and PYQT6_AVAILABLE:
-            return self._run_pyqt6()
-        elif self.config.ui_framework == "tkinter" or not PYQT6_AVAILABLE:
-            return self._run_tkinter()
-        else:
-            raise RuntimeError(f"UI framework '{self.config.ui_framework}' not available")
-    
-    def _run_pyqt6(self):
-        """Run PyQt6 application"""
-        import asyncio
-        from pathlib import Path
+        logger.info("Starting LewtNanny application...")
         
-        # Initialize synchronously first
         self.app = QApplication(sys.argv)
         
-        # Load theme (default to dark theme)
-        theme_name = getattr(self.config, 'theme', 'dark')
-        self._load_theme(theme_name)
+        self.app.setStyle('Fusion')
         
-        # Create main window
-        self.main_window = MainWindow(
-            self.db_manager, 
-            self.config_manager
-        )
-        
-        # Apply window size
-        if self.config.window_size:
-            self.main_window.setGeometry(100, 100, *self.config.window_size)
+        self.initialize_ui()
         
         self.main_window.show()
         
-        # Initialize async components synchronously for now
-        # asyncio.create_task(self._async_init_components())
+        logger.info("Application window shown")
         
         return self.app.exec()
-    
-    def _load_theme(self, theme_name):
-        """Load theme stylesheet"""
-        try:
-            theme_path = Path(__file__).parent / "themes" / f"{theme_name}.qss"
-            if theme_path.exists():
-                with open(theme_path, 'r') as f:
-                    stylesheet = f.read()
-                self.app.setStyleSheet(stylesheet)
-                print(f"Loaded {theme_name} theme successfully")
-            else:
-                print(f"Theme file not found: {theme_path}")
-        except Exception as e:
-            print(f"Error loading theme {theme_name}: {e}")
-    
-    async def _async_init_components(self):
-        """Initialize async components after UI is shown"""
-        try:
-            # Initialize chat reader if enabled
-            if self.config.enable_chat_monitoring:
-                from src.core.chat_reader import ChatReader
-                self.chat_reader = ChatReader(
-                    self.db_manager, 
-                    self.config_manager
-                )
-                
-                # Connect signals
-                if self.chat_reader and self.main_window:
-                    self.chat_reader.new_event.connect(
-                        self.main_window.handle_new_event
-                    )
-        except Exception as e:
-            print(f"Error initializing async components: {e}")
-    
-    def _run_tkinter(self):
-        """Run Tkinter application"""
-        asyncio.create_task(self.initialize())
-        self.app.mainloop()
-        return 0
 
 
 def main():
     """Main entry point"""
-    # Parse command line arguments
+    logger.info("LewtNanny starting...")
+    
     config = cli_main()
     if not config:
+        logger.error("Failed to parse command line arguments")
         sys.exit(1)
     
-    # Create and run application
     app = LewtNannyApp(config)
-    sys.exit(app.run())
+    
+    try:
+        asyncio.run(app.initialize_db())
+        exit_code = app.run()
+        logger.info(f"Application exited with code: {exit_code}")
+        sys.exit(exit_code)
+    
+    except Exception as e:
+        logger.error(f"Application error: {e}", exc_info=True)
+        QMessageBox.critical(None, "Error", f"Application error:\n{e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -6,14 +6,14 @@ import sys
 import os
 from pathlib import Path
 
-# Add src to path for imports
-sys.path.append(str(Path(__file__).parent))
+# Add project root to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from src.services.chat_reader_real import ChatLogReader
     print("[OK] ChatLogReader imported successfully")
 except ImportError as e:
-    print(f"✗ Failed to import ChatLogReader: {e}")
+    print(f"X Failed to import ChatLogReader: {e}")
     sys.exit(1)
 
 
@@ -23,7 +23,7 @@ def test_chat_parsing():
     print("=" * 40)
     
     # Use sample chat file
-    sample_log = Path("sample_chat.log")
+    sample_log = Path(__file__).parent / "sample_chat.log"
     
     events_received = []
     

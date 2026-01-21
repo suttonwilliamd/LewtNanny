@@ -16,12 +16,17 @@ class EventType(Enum):
     SKILL_GAIN = "skill_gain"
     GLOBAL = "global"
     HOF = "hof"
+    SYSTEM = "system"
+    TRADE = "trade"
+    LOCATION = "location"
 
 
 class ActivityType(Enum):
     HUNTING = "hunting"
     CRAFTING = "crafting"
     MINING = "mining"
+    TRADING = "trading"
+    EXPLORING = "exploring"
 
 
 @dataclass

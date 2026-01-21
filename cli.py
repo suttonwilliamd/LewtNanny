@@ -18,7 +18,7 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py                    # Start with default settings
+  python main.py                    # Start GUI with default settings
   python main.py --debug            # Enable debug mode
   python main.py --no-ocr           # Disable OCR feature
   python main.py --ui tkinter       # Use Tkinter UI instead of PyQt6
@@ -163,7 +163,7 @@ def create_config_from_args(args: argparse.Namespace) -> AppConfig:
 
 
 def main() -> Optional[AppConfig]:
-    """Main CLI entry point"""
+    """Main CLI entry point for GUI launcher"""
     parser = create_parser()
     args = parser.parse_args()
     

@@ -1,5 +1,5 @@
 """
-Real-time chat log reader with patterns learned from inspiration files
+Real-time chat log reader with patterns from LootNanny
 """
 
 import asyncio
@@ -13,19 +13,16 @@ from collections import namedtuple
 from decimal import Decimal
 
 
-# Log line structure
 LogLine = namedtuple("LogLine", ["time", "channel", "speaker", "msg"])
 
-# Parse log line format: "2024-01-01 12:00:00 [System] [You] Message"
 LOG_LINE_REGEX = re.compile(r"([\d\-]+ [\d:]+) \[(\w+)\] \[(.*)\] (.*)")
 
-# Chat event patterns from inspiration
 CHAT_PATTERNS = {
     'damage_critical': re.compile(r"Critical hit - Additional damage! You inflicted (\d+\.\d+) points of damage"),
     'damage_normal': re.compile(r"You inflicted (\d+\.\d+) points of damage"),
     'heal': re.compile(r"You healed yourself (\d+\.\d+) points"),
     'deflect': re.compile(r"Damage deflected!"),
-    'evade': re.compile(r"You Evaded attack"),
+    'evade': re.compile(r"You Evaded the attack"),
     'miss_you': re.compile(r"You missed"),
     'miss_target': re.compile(r"The target (Dodged|Evaded|Jammed) your attack"),
     'damage_taken': re.compile(r"You took (\d+\.\d+) points of damage"),
@@ -36,13 +33,12 @@ CHAT_PATTERNS = {
     'loot_item': re.compile(r"You received (.*) x \((\d+)\) Value: (\d+\.\d+) PED"),
 }
 
-# Global/HOF patterns
 GLOBAL_PATTERNS = {
-    'hof_creature': re.compile(r"([\w\s\'\(\)]+) killed a creature \(([\w\s\(\),]+)\) with a value of (\d+) PED! A record has been added to Hall of Fame!"),
+    'hof_creature': re.compile(r"([\w\s\'\(\)]+) killed a creature \(([\w\s\(\),]+)\) with a value of (\d+) PED! A record has been added to the Hall of Fame!"),
     'global_creature': re.compile(r"([\w\s\'\(\)]+) killed a creature \(([\w\s\(\),]+)\) with a value of (\d+) PED!"),
-    'hof_crafting': re.compile(r"([\w\s\'\(\)]+) constructed an item \(([\w\s\(\),]+)\) worth (\d+) PED! A record has been added to Hall of Fame!"),
+    'hof_crafting': re.compile(r"([\w\s\'\(\)]+) constructed an item \(([\w\s\(\),]+)\) worth (\d+) PED! A record has been added to the Hall of Fame!"),
     'global_crafting': re.compile(r"([\w\s\'\(\)]+) constructed an item \(([\w\s\(\),]+)\) worth (\d+) PED!"),
-    'hof_mining': re.compile(r"([\w\s\'\(\)]+) found a deposit \(([\w\s\(\)]+)\) with a value of (\d+) PED! A record has been added to Hall of Fame!"),
+    'hof_mining': re.compile(r"([\w\s\'\(\)]+) found a deposit \(([\w\s\(\)]+)\) with a value of (\d+) PED! A record has been added to the Hall of Fame!"),
     'global_mining': re.compile(r"([\w\s\'\(\)]+) found a deposit \(([\w\s\(\)]+)\) with a value of (\d+) PED!"),
     'global_location': re.compile(r"([\w\s\'\(\)]+) killed a creature \(([\w\s\(\),]+)\) with a value of (\d+) PED at ([\s\w\W]+)!"),
 }

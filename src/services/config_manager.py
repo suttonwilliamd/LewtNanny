@@ -17,6 +17,18 @@ class ConfigManager:
     async def initialize(self):
         """Load configuration from file"""
         await self.load_config()
+    
+    def load(self):
+        """Load configuration from file synchronously"""
+        if self.config_path.exists():
+            try:
+                with open(self.config_path, 'r', encoding='utf-8') as f:
+                    self.config = json.load(f)
+            except Exception as e:
+                print(f"Error loading config: {e}")
+                self.config = asyncio.run(self.get_default_config())
+        else:
+            self.config = asyncio.run(self.get_default_config())
         
     async def load_config(self):
         """Load configuration from JSON file"""

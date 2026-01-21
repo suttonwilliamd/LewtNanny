@@ -147,7 +147,11 @@ class WeaponCalculator:
         
         # Calculate performance metrics
         dps = enhanced_damage / base_weapon.reload_time if base_weapon.reload_time > 0 else Decimal('0')
-        damage_per_ped = enhanced_damage / total_cost_per_shot if total_cost_per_shot > 0 else Decimal('0')
+        
+        # Calculate DPP (Damage per PEC) - 100 PEC = 1 PED
+        # DPP = Total Damage / Total Cost in PEC
+        total_cost_pec = total_cost_per_shot * Decimal('100')  # Convert PED to PEC
+        damage_per_pec = enhanced_damage / total_cost_pec if total_cost_pec > 0 else Decimal('0')
         
         return EnhancedWeaponStats(
             base_weapon=base_weapon,
@@ -156,7 +160,7 @@ class WeaponCalculator:
             decay=enhanced_decay,
             total_cost_per_shot=total_cost_per_shot,
             dps=dps,
-            damage_per_ped=damage_per_ped,
+            damage_per_ped=damage_per_pec,
             effective_range=effective_range
         )
     
