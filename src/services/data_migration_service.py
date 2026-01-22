@@ -18,9 +18,13 @@ logger = logging.getLogger(__name__)
 class DataMigrationService:
     """Handles all data migration from JSON to SQLite"""
 
-    def __init__(self, db_path: str = "data/lewtnanny.db"):
-        self.db_path = Path(db_path)
-        self.data_path = self.db_path.parent
+    def __init__(self, db_path: str = None):
+        from src.utils.paths import ensure_user_data_dir, get_user_data_dir
+        if db_path:
+            self.db_path = Path(db_path)
+        else:
+            self.db_path = ensure_user_data_dir() / "lewtnanny.db"
+        self.data_path = Path(__file__).parent.parent.parent / "data"
         self.json_files = {
             'weapons': self.data_path / 'weapons.json',
             'attachments': self.data_path / 'attachments.json',

@@ -6,12 +6,15 @@ import json
 import asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional
+from src.utils.paths import get_user_data_dir, ensure_user_data_dir
 
 
 class ConfigManager:
-    def __init__(self, config_path: str = "data/config.json"):
-        self.config_path = Path(config_path)
-        self.config_path.parent.mkdir(exist_ok=True)
+    def __init__(self, config_path: str = None):
+        if config_path:
+            self.config_path = Path(config_path)
+        else:
+            self.config_path = ensure_user_data_dir() / "config.json"
         self.config = {}
         
     async def initialize(self):

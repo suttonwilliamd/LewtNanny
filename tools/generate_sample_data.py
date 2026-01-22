@@ -4,6 +4,7 @@ Run this script to populate the database with realistic sample hunting sessions.
 """
 
 import asyncio
+import aiosqlite
 import random
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -100,10 +101,11 @@ async def clear_sample_data(db_manager: DatabaseManager):
 async def main():
     """Main function"""
     import aiosqlite
-    
-    db_path = "data/lewtnanny.db"
-    Path(db_path).parent.mkdir(exist_ok=True)
-    
+    from src.utils.paths import get_user_data_dir, ensure_user_data_dir
+
+    db_path = str(get_user_data_dir() / "lewtnanny.db")
+    ensure_user_data_dir()
+
     db_manager = DatabaseManager(db_path)
     await db_manager.initialize()
     

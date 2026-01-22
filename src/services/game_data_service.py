@@ -14,6 +14,7 @@ from src.models.game_data import (
     Weapon, Attachment, Resource, Blueprint, BlueprintMaterial,
     WeaponStats, AttachmentStats, EnhancedWeaponStats
 )
+from src.utils.paths import get_user_data_dir, ensure_user_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +22,11 @@ logger = logging.getLogger(__name__)
 class GameDataService:
     """Async data access service for game data"""
 
-    def __init__(self, db_path: str = "data/lewtnanny.db"):
-        self.db_path = Path(db_path)
+    def __init__(self, db_path: str = None):
+        if db_path:
+            self.db_path = Path(db_path)
+        else:
+            self.db_path = ensure_user_data_dir() / "lewtnanny.db"
 
     async def get_counts(self) -> Dict[str, int]:
         """Get counts of all data tables"""

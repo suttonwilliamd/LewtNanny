@@ -14,15 +14,20 @@ import json
 from decimal import Decimal
 
 from src.models.models import Weapon, CraftingBlueprint
+from src.utils.paths import get_user_data_dir, ensure_user_data_dir
 
 logger = logging.getLogger(__name__)
 
 
 class DatabaseManager:
-    def __init__(self, db_path: str = "data/lewtnanny.db"):
-        self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(exist_ok=True)
-        
+    def __init__(self, db_path: str = None):
+        if db_path:
+            self.db_path = Path(db_path)
+        else:
+            user_data_dir = ensure_user_data_dir()
+            self.db_path = user_data_dir / "lewtnanny.db"
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
         logger.info(f"DatabaseManager initialized with path: {self.db_path}")
     
     async def initialize(self):

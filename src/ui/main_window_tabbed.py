@@ -1512,10 +1512,12 @@ class TabbedMainWindow(QMainWindow):
         try:
             import shutil
             from pathlib import Path
+            from src.utils.paths import ensure_user_data_dir
 
-            db_path = Path("data/lewtnanny.db")
+            data_dir = ensure_user_data_dir()
+            db_path = data_dir / "lewtnanny.db"
             if db_path.exists():
-                backup_path = f"data/backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+                backup_path = data_dir / f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
                 shutil.copy(db_path, backup_path)
                 logger.info(f"Database backed up to: {backup_path}")
                 self.status_bar.showMessage(f"Database backed up")

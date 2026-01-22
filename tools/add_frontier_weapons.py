@@ -7,10 +7,15 @@ Example: "decay": "0.018" means 0.018 PED per shot
 import asyncio
 import aiosqlite
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.utils.paths import get_user_data_dir
+
 
 async def add_frontier_weapons():
     """Add Frontier weapons to the database"""
-    
+
     weapons = [
         {
             "id": "frontier_combat_knife",
@@ -61,8 +66,8 @@ async def add_frontier_weapons():
             "reload_time": 1.5
         }
     ]
-    
-    db_path = Path("data/lewtnanny.db")
+
+    db_path = get_user_data_dir() / "lewtnanny.db"
     
     async with aiosqlite.connect(db_path) as db:
         for weapon in weapons:

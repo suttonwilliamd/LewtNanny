@@ -18,6 +18,7 @@ from src.core.app_config import app_config, AppConfig
 from src.core.database import DatabaseManager
 from src.services.game_data_service import GameDataService, WeaponCalculator
 from src.services.loadout_service import LoadoutService, WeaponLoadout
+from src.utils.paths import get_user_data_dir, ensure_user_data_dir
 
 logging.basicConfig(
     level=logging.INFO,
@@ -538,8 +539,8 @@ async def cmd_session(args: argparse.Namespace, output: CLIOutput) -> int:
 async def cmd_db(args: argparse.Namespace, output: CLIOutput) -> int:
     """Database management commands"""
     try:
-        db_path = Path("data/lewtnanny.db")
-        
+        db_path = get_user_data_dir() / "lewtnanny.db"
+
         if args.subcommand == "info":
             if db_path.exists():
                 size_kb = db_path.stat().st_size / 1024
@@ -567,7 +568,8 @@ async def cmd_db(args: argparse.Namespace, output: CLIOutput) -> int:
             
         elif args.subcommand == "backup":
             import shutil
-            backup_path = f"data/lewtnanny_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+            data_dir = ensure_user_data_dir()
+            backup_path = data_dir / f"lewtnanny_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
             shutil.copy(db_path, backup_path)
             output.print(f"Backup created: {backup_path}")
             
@@ -737,9 +739,8 @@ def cmd_gui(args: argparse.Namespace, output: CLIOutput) -> int:
 async def cmd_monitor(args: argparse.Namespace, output: CLIOutput) -> int:
     """Chat log monitoring"""
     import json
-    
-    # Get chat log path from config or default
-    config_path = Path("data/config.json")
+
+    config_path = get_user_data_dir() / "config.json"
     if config_path.exists():
         with open(config_path) as f:
             config = json.load(f)
@@ -787,7 +788,7 @@ async def cmd_monitor_run(args: argparse.Namespace, output: CLIOutput, chat_path
     print("LewtNanny Chat Monitor - Continuous Mode")
     print("=" * 70)
     print(f"Chat Log: {chat_path}")
-    print(f"Database: data/lewtnanny.db")
+    print(f"Database: {get_user_data_dir() / 'lewtnanny.db'}")
     
     # Get loadout info if specified
     loadout_name = args.loadout

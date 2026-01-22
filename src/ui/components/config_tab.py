@@ -51,7 +51,8 @@ class ConfigTab(QWidget):
         self.signals = ConfigSignals()
         self._theme = "dark"
 
-        self.db_path = "data/lewtnanny.db"
+        from src.utils.paths import ensure_user_data_dir
+        self.db_path = str(ensure_user_data_dir() / "lewtnanny.db")
         self._loadouts: List[WeaponLoadout] = []
         self._selected_loadout_index: Optional[int] = None
 
