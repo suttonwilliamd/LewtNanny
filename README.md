@@ -19,10 +19,7 @@ python main_mvp.py
 
 ### Full Version (Requires Dependencies)
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Run the application
 python main.py
 ```
 
@@ -33,53 +30,31 @@ LewtNanny/
 ├── main.py              # Full application entry point
 ├── main_mvp.py          # MVP version (no external deps)
 ├── requirements.txt     # Python dependencies
-├── Plan.md             # Detailed project plan
-├── weapons.json        # Weapon database
-├── crafting.json       # Crafting blueprints
-├── src/
-│   ├── core/           # Core functionality
-│   ├── models/         # Data models
-│   ├── services/       # Business logic
-│   ├── ui/             # User interface
-│   └── utils/          # Utilities
-└── data/               # Runtime data storage
+├── cli.py               # CLI interface
+├── cli_commands.py      # CLI commands
+├── weapon_selector.py   # Weapon selection UI
+├── overlay.py           # In-game overlay
+├── weapons.json         # Weapon database (290KB)
+├── crafting.json        # Crafting blueprints (920KB)
+├── src/                 # Source code
+│   ├── core/            # Core functionality
+│   ├── models/          # Data models
+│   ├── services/        # Business logic
+│   ├── ui/              # User interface
+│   └── utils/           # Utilities
+├── config/              # Configuration files
+├── data/                # Runtime data storage
+├── themes/              # UI themes
+├── tools/               # Utility scripts
+└── tests/               # Test suite
 ```
 
-## Data Sources
+## Running Tests
 
-The application uses JSON databases for:
-- **Weapons**: Damage, decay, ammo consumption, eco stats
-- **Crafting**: Blueprints, material requirements, costs
-- **Sessions**: Tracking data and analytics
-
-## Development Status
-
-This is the MVP version featuring:
-- ✅ Basic GUI with tabbed interface
-- ✅ Weapon and crafting database loading
-- ✅ Event simulation for testing
-- ✅ Session management
-- ✅ Configuration system
-
-## Next Steps
-
-- [ ] Real chat log parsing
-- [ ] OCR integration for screenshot analysis
-- [ ] Advanced financial calculations
-- [ ] Twitch streaming integration
-- [ ] Data visualization graphs
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+```bash
+pytest tests/
+```
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Support
-
-For issues and feature requests, please use the GitHub issue tracker.
+MIT License - see LICENSE file for details.

@@ -1,6 +1,7 @@
 """
 Add Frontier weapons to the database
-PEC decay values need to be converted - divide by 10
+Decay values in weapons.json are already in PED (not PEC), so no division is needed.
+Example: "decay": "0.018" means 0.018 PED per shot
 """
 
 import asyncio
@@ -15,7 +16,7 @@ async def add_frontier_weapons():
             "id": "frontier_combat_knife",
             "name": "Frontier Combat Knife",
             "ammo": 49,
-            "decay": 0.18,  # 0.018 PEC / 10 = 0.18
+            "decay": 0.00018,  # 0.018 PEC / 100 = 0.00018 PED
             "weapon_type": "Shortblades",
             "damage": 12.5,
             "dps": 15.0,
@@ -27,7 +28,7 @@ async def add_frontier_weapons():
             "id": "frontier_combat_knife_adj",
             "name": "Frontier Combat Knife, Adjusted",
             "ammo": 98,
-            "decay": 0.18,  # 0.018 PEC / 10 = 0.18
+            "decay": 0.00018,  # 0.018 PEC / 100 = 0.00018 PED
             "weapon_type": "Shortblades",
             "damage": 12.5,
             "dps": 15.0,
@@ -39,7 +40,7 @@ async def add_frontier_weapons():
             "id": "frontier_hunting_rifle",
             "name": "Frontier Hunting Rifle",
             "ammo": 100,
-            "decay": 0.20,  # 0.020 PEC / 10 = 0.20
+            "decay": 0.020,  # 0.020 PEC (already in PED terms, no division needed)
             "weapon_type": "Rifle",
             "damage": 18.0,
             "dps": 12.0,
@@ -51,7 +52,7 @@ async def add_frontier_weapons():
             "id": "frontier_hunting_rifle_adj",
             "name": "Frontier Hunting Rifle, Adjusted",
             "ammo": 180,
-            "decay": 0.20,  # 0.020 PEC / 10 = 0.20
+            "decay": 0.020,  # 0.020 PEC (already in PED terms, no division needed)
             "weapon_type": "Rifle",
             "damage": 18.0,
             "dps": 12.0,
