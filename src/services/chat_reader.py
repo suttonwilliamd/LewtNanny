@@ -120,6 +120,10 @@ class ChatReader(QObject):
         loot_match = self.patterns['loot'].search(line)
         if loot_match:
             loot_info = loot_match.groups()
+            # Exclude Universal Ammo (not actual loot, appears when converting shrapnel at 101%)
+            if loot_info[0] == 'Universal Ammo':
+                logger.info(f"[CHAT_READER] Skipping Universal Ammo (shrapnel conversion)")
+                return None
             logger.info(f"[CHAT_READER] Detected LOOT event: {loot_info}")
             event_data = {
                 'event_type': EventType.LOOT.value,
