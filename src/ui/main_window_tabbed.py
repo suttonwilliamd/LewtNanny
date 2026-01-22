@@ -27,7 +27,6 @@ from PyQt6.QtGui import QFont, QAction, QIcon, QColor, QPixmap, QPainter, QRadia
 from src.models.models import ActivityType, EventType
 from src.ui.overlay import SessionOverlay
 from src.ui.components.config_tab import ConfigTab
-from src.ui.components.analysis_charts import ComprehensiveChartWidget
 from src.ui.components.combat_tab import CombatTabWidget
 from src.services.game_data_service import GameDataService
 from src.ui.components.crafting_tab import CraftingTabWidget
@@ -140,6 +139,8 @@ class TabbedMainWindow(QMainWindow):
         self.create_bottom_control_bar()
 
         logger.debug("Main UI setup complete")
+
+        QTimer.singleShot(500, self._load_past_runs_on_startup)
 
     def create_top_tab_bar(self):
         """Create the top tab bar with buttons for all tabs"""
@@ -502,21 +503,22 @@ class TabbedMainWindow(QMainWindow):
         self.run_log_table = QTableWidget()
         self.run_log_table.setColumnCount(7)
         self.run_log_table.setHorizontalHeaderLabels([
-            "#", "Notes", "Start Time", "End Time", "Spend", "Enhancers", "Extra Spend"
+            "Status", "Start Time", "Duration", "Cost", "Return", "ROI", "Items"
         ])
         self.run_log_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.run_log_table.setAlternatingRowColors(True)
         self.run_log_table.setSortingEnabled(True)
         self.run_log_table.setShowGrid(True)
-        self.run_log_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.run_log_table.itemSelectionChanged.connect(self._on_run_log_selection_changed)
 
         header = self.run_log_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
 
         layout.addWidget(self.run_log_table)
 
@@ -563,65 +565,15 @@ class TabbedMainWindow(QMainWindow):
         return section
 
     def create_analysis_tab(self):
-        """Create the Analysis tab with graphs"""
-        from src.ui.components.analysis_charts import ComprehensiveChartWidget
+        """Create the Analysis tab with 2 core charts"""
+        from src.ui.components.simple_analysis import SimpleAnalysisWidget
 
-        analysis_widget = QWidget()
-        analysis_layout = QVBoxLayout(analysis_widget)
-        analysis_layout.setContentsMargins(8, 8, 8, 8)
-        analysis_layout.setSpacing(8)
-
-        top_chart = ComprehensiveChartWidget()
-        top_chart.set_db_manager(self.db_manager)
-        top_chart.chart.set_chart_type("return_percentage")
-        top_chart.chart_type_combo.setCurrentText("Run TT Return (%)")
-        analysis_layout.addWidget(top_chart)
-
-        bottom_chart = ComprehensiveChartWidget()
-        bottom_chart.set_db_manager(self.db_manager)
-        bottom_chart.chart.set_chart_type("cost_vs_return")
-        bottom_chart.chart_type_combo.setCurrentText("Cost to Kill vs Return")
-        analysis_layout.addWidget(bottom_chart)
-
-        self.analysis_charts = [top_chart, bottom_chart]
+        analysis_widget = SimpleAnalysisWidget()
+        analysis_widget.set_db_manager(self.db_manager)
+        self.analysis_widget = analysis_widget
 
         self.content_stack.addWidget(analysis_widget)
-        logger.info("Analysis tab created")
-
-    def create_analysis_graph_panel(self, title: str):
-        """Create a graph panel for Analysis tab"""
-        panel = QGroupBox(title)
-        panel.setStyleSheet("""
-            QGroupBox {
-                background-color: #161B22;
-                border: 1px solid #30363D;
-                border-radius: 6px;
-                padding: 8px;
-                font-weight: bold;
-            }
-            QGroupBox::title {
-                color: #8B949E;
-                font-size: 11px;
-            }
-        """)
-
-        layout = QVBoxLayout()
-        layout.setContentsMargins(4, 4, 4, 4)
-
-        placeholder = QLabel(f"[{title} Chart Placeholder]")
-        placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        placeholder.setStyleSheet("""
-            color: #484F58;
-            font-size: 14px;
-            background-color: #0D1117;
-            border: 1px dashed #30363D;
-            border-radius: 4px;
-        """)
-        placeholder.setMinimumHeight(150)
-        layout.addWidget(placeholder)
-
-        panel.setLayout(layout)
-        return panel
+        logger.info("Analysis tab created with 2 core charts")
 
     def create_skills_tab(self):
         """Create the Skills tab with skill gain tracking"""
@@ -1141,25 +1093,24 @@ class TabbedMainWindow(QMainWindow):
         """Update the total cost display based on shots taken and cost per attack"""
         try:
             if self.cost_per_attack <= 0:
-                # Try to calculate cost if not already calculated
                 self.cost_per_attack = self._calculate_cost_per_attack()
+                logger.debug(f"Calculated cost_per_attack: {self.cost_per_attack}")
                 if self.overlay:
                     self.overlay.set_cost_per_attack(self.cost_per_attack)
             
             if self.cost_per_attack <= 0:
-                # Can't update yet, cost not available
+                logger.debug("Cannot update total cost: cost_per_attack is still 0")
                 return
                 
             total_cost = self.total_shots_taken * self.cost_per_attack
+            logger.debug(f"Updating total cost: {total_cost:.2f} PED (shots={self.total_shots_taken}, cpa={self.cost_per_attack})")
             self.loot_summary_labels["Total Cost"].setText(f"{total_cost:.2f} PED")
             
-            # Sync cost to overlay
             if self.overlay:
                 self.overlay._shots_taken = self.total_shots_taken
                 self.overlay._stats['total_cost'] = Decimal(str(total_cost))
                 self.overlay._update_stats_display()
             
-            # Also update % Return if we have cost and return values
             total_return_str = self.loot_summary_labels["Total Return"].text().replace(",", "").split()[0]
             total_return = float(total_return_str)
             
@@ -1168,6 +1119,8 @@ class TabbedMainWindow(QMainWindow):
                 self.loot_summary_labels["% Return"].setText(f"{return_pct:.1f}%")
             elif total_return > 0:
                 self.loot_summary_labels["% Return"].setText("100.0%")
+            
+            self._update_analysis_realtime()
                 
         except Exception as e:
             logger.error(f"Error updating total cost display: {e}")
@@ -1283,48 +1236,11 @@ class TabbedMainWindow(QMainWindow):
                 }
             """)
 
-            # Start chat log monitoring if configured
-            if hasattr(self, 'chat_reader') and self.chat_reader:
-                logger.info(f"[UI] Chat reader available")
-                # Get chat log path from config widget
-                chat_path = None
-                if hasattr(self, 'config_widget') and self.config_widget:
-                    if hasattr(self.config_widget, 'chat_location_text'):
-                        chat_path = self.config_widget.chat_location_text.text().strip()
-                        logger.info(f"[UI] Got chat_location_text from config_widget: {chat_path}")
-                    else:
-                        logger.warning(f"[UI] config_widget doesn't have chat_location_text")
-                elif hasattr(self, 'chat_log_path') and self.chat_log_path:
-                    chat_path = self.chat_log_path.text().strip()
-                    logger.info(f"[UI] Got chat_log_path from main window: {chat_path}")
-                
-                if chat_path and Path(chat_path).exists():
-                    logger.info(f"[UI] Starting chat monitoring with: {chat_path}")
+            self.db_manager.create_session_sync(self.current_session_id, "hunting")
 
-                    # Start monitoring synchronously - now uses QTimer for Qt integration
-                    success = self.chat_reader.start_monitoring(chat_path)
-
-                    if success:
-                        self.status_bar.showMessage(f"Session started - Monitoring: {chat_path}")
-                        logger.info(f"[UI] Chat monitoring started successfully")
-                    else:
-                        self.status_bar.showMessage(f"Session started - Failed to start monitoring")
-                        logger.error(f"[UI] Failed to start chat monitoring")
-                else:
-                    self.status_bar.showMessage("Session started - No valid chat.log path")
-                    logger.warning(f"[UI] No valid chat.log path configured: {chat_path}")
-            else:
-                self.status_bar.showMessage("Session started - Chat reader not available")
-                logger.warning(f"[UI] Chat reader not available")
-
-            if self.overlay:
-                self.overlay.start_session(self.current_session_id, "hunting")
-                self.overlay.set_cost_per_attack(self.cost_per_attack)
-
-            logger.info(f"Session started: {self.current_session_id}")
+            self._add_current_run_entry()
 
             self.item_breakdown_table.setRowCount(0)
-            self.run_log_table.setRowCount(0)
 
             self.loot_summary_labels["Creatures Looted"].setText("0")
             self.loot_summary_labels["Total Cost"].setText("0.00 PED")
@@ -1333,9 +1249,55 @@ class TabbedMainWindow(QMainWindow):
             self.loot_summary_labels["Globals"].setText("0")
             self.loot_summary_labels["HOFs"].setText("0")
 
+            if hasattr(self, 'chat_reader') and self.chat_reader:
+                chat_path = None
+                if hasattr(self, 'config_widget') and self.config_widget:
+                    if hasattr(self.config_widget, 'chat_location_text'):
+                        chat_path = self.config_widget.chat_location_text.text().strip()
+                elif hasattr(self, 'chat_log_path') and self.chat_log_path:
+                    chat_path = self.chat_log_path.text().strip()
+                
+                if chat_path and Path(chat_path).exists():
+                    success = self.chat_reader.start_monitoring(chat_path)
+                    if success:
+                        self.status_bar.showMessage(f"Session started - Monitoring: {chat_path}")
+                    else:
+                        self.status_bar.showMessage(f"Session started - Failed to start monitoring")
+                else:
+                    self.status_bar.showMessage("Session started - No valid chat.log path")
+            else:
+                self.status_bar.showMessage("Session started - Chat reader not available")
+
+            if self.overlay:
+                self.overlay.start_session(self.current_session_id, "hunting", self.current_session_start)
+                self.overlay.set_cost_per_attack(self.cost_per_attack)
+
+            self._refresh_analysis_data()
+
+            logger.info(f"Session started: {self.current_session_id}")
+            self.status_bar.showMessage(f"Session started: {self.current_session_id}")
+
         except Exception as e:
             logger.error(f"Error starting session: {e}", exc_info=True)
             self.status_bar.showMessage(f"Error starting session: {e}")
+
+    def _add_current_run_entry(self):
+        """Add a (Current run) entry to the run log"""
+        row = 0
+        self.run_log_table.insertRow(row)
+
+        start_time = self.current_session_start.strftime("%Y-%m-%d %H:%M")
+
+        self.run_log_table.setItem(row, 0, QTableWidgetItem("(Current run)"))
+        self.run_log_table.setItem(row, 1, QTableWidgetItem(start_time))
+        self.run_log_table.setItem(row, 2, QTableWidgetItem("-"))
+        self.run_log_table.setItem(row, 3, QTableWidgetItem("0.00"))
+        self.run_log_table.setItem(row, 4, QTableWidgetItem("0.00"))
+        self.run_log_table.setItem(row, 5, QTableWidgetItem("0.0%"))
+        self.run_log_table.setItem(row, 6, QTableWidgetItem("0"))
+
+        self.run_log_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, "current")
+        self.run_log_table.item(row, 0).setForeground(QColor("#3FB950"))
 
     def stop_session(self):
         """Stop current session"""
@@ -1343,14 +1305,18 @@ class TabbedMainWindow(QMainWindow):
             if self.current_session_id:
                 session_id = self.current_session_id
 
-                # Stop chat log monitoring
                 if hasattr(self, 'chat_reader') and self.chat_reader:
-                    logger.info(f"[UI] Stopping chat monitoring...")
                     self.chat_reader.stop_monitoring()
-                    logger.info(f"[UI] Chat monitoring stopped")
 
                 if self.overlay:
                     self.overlay.stop_session()
+
+                total_cost = float(self.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0])
+                total_return = float(self.loot_summary_labels["Total Return"].text().replace(",", "").split()[0])
+
+                asyncio.run(self.db_manager.update_session_totals(session_id, total_cost, total_return, 0))
+
+                self._convert_current_run_to_completed(session_id, total_cost, total_return)
 
                 self.current_session_id = None
                 self.current_session_start = None
@@ -1382,6 +1348,38 @@ class TabbedMainWindow(QMainWindow):
             logger.error(f"Error stopping session: {e}", exc_info=True)
             self.status_bar.showMessage(f"Error stopping session: {e}")
 
+    def _convert_current_run_to_completed(self, session_id: str, total_cost: float, total_return: float):
+        """Convert the (Current run) entry to a completed run entry"""
+        for row in range(self.run_log_table.rowCount()):
+            item = self.run_log_table.item(row, 0)
+            if item and item.data(Qt.ItemDataRole.UserRole) == "current":
+                end_time = datetime.now()
+                delta = end_time - self.current_session_start
+                hours, remainder = divmod(int(delta.total_seconds()), 3600)
+                minutes, seconds = divmod(remainder, 60)
+                duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+                roi = (total_return / total_cost * 100) if total_cost > 0 else 0
+
+                self.run_log_table.setItem(row, 0, QTableWidgetItem("Completed"))
+                self.run_log_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, session_id)
+                self.run_log_table.item(row, 0).setForeground(QColor("#E6EDF3"))
+
+                start_time_str = self.run_log_table.item(row, 1).text()
+                self.run_log_table.setItem(row, 2, QTableWidgetItem(duration))
+                self.run_log_table.setItem(row, 3, QTableWidgetItem(f"{total_cost:.2f}"))
+                self.run_log_table.setItem(row, 4, QTableWidgetItem(f"{total_return:.2f}"))
+                self.run_log_table.setItem(row, 5, QTableWidgetItem(f"{roi:.1f}%"))
+
+                item_count = self.item_breakdown_table.rowCount()
+                self.run_log_table.setItem(row, 6, QTableWidgetItem(str(item_count)))
+                break
+
+        self.run_log_table.sortItems(1, Qt.SortOrder.DescendingOrder)
+
+        if hasattr(self, 'analysis_widget') and self.analysis_widget:
+            self.analysis_widget.refresh()
+
     def toggle_pause_logging(self):
         """Pause or resume logging"""
         self.is_logging_paused = not self.is_logging_paused
@@ -1399,7 +1397,7 @@ class TabbedMainWindow(QMainWindow):
             self.overlay.show()
             self.overlay.set_cost_per_attack(self.cost_per_attack)
             if self.current_session_id:
-                self.overlay.start_session(self.current_session_id, "hunting")
+                self.overlay.start_session(self.current_session_id, "hunting", self.current_session_start)
             logger.info("Streamer overlay shown")
         else:
             self.overlay.hide()
@@ -1427,6 +1425,42 @@ class TabbedMainWindow(QMainWindow):
             logger.warning(f"Theme file not found: themes/{self.current_theme}.qss")
 
         logger.info(f"Theme applied: {theme_name}")
+
+    def _refresh_analysis_data(self):
+        """Refresh analysis tab data"""
+        if hasattr(self, 'analysis_widget') and self.analysis_widget and self.db_manager:
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(self.analysis_widget.load_data())
+                loop.close()
+                logger.debug("Analysis data refreshed")
+            except Exception as e:
+                logger.debug(f"Error refreshing analysis data: {e}")
+
+    def _update_analysis_realtime(self):
+        """Update analysis tab with current session data in real-time"""
+        if not hasattr(self, 'analysis_widget') or not self.analysis_widget:
+            return
+
+        if not self.current_session_id:
+            return
+
+        total_cost = float(self.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0])
+        total_return = float(self.loot_summary_labels["Total Return"].text().replace(",", "").split()[0])
+        total_markup = 0
+
+        current_session_data = {
+            'id': self.current_session_id,
+            'start_time': self.current_session_start.strftime("%Y-%m-%d %H:%M:%S") if self.current_session_start else '',
+            'end_time': '',
+            'activity_type': 'hunting',
+            'total_cost': total_cost,
+            'total_return': total_return,
+            'total_markup': total_markup
+        }
+
+        self.analysis_widget.update_with_current_session(current_session_data)
 
     def open_settings(self):
         """Open settings dialog"""
@@ -1678,15 +1712,6 @@ class TabbedMainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"[UI] ERROR updating loot summary: {e}", exc_info=True)
 
-        # Update Run Log
-        logger.info(f"[UI] ===========================================")
-        logger.info(f"[UI] Updating RUN LOG...")
-        try:
-            self._add_event_to_run_log(event_data)
-            logger.info(f"[UI] Run log updated")
-        except Exception as e:
-            logger.error(f"[UI] ERROR updating run log: {e}", exc_info=True)
-
         # Process loot event
         if event_type == 'loot':
             logger.info(f"[UI] ===========================================")
@@ -1696,6 +1721,8 @@ class TabbedMainWindow(QMainWindow):
                 logger.info(f"[UI] Loot event processed")
             except Exception as e:
                 logger.error(f"[UI] ERROR processing loot event: {e}", exc_info=True)
+
+        self._update_analysis_realtime()
 
         logger.info(f"[UI] ===========================================")
         logger.info(f"[UI] <<< Event handling complete: {event_type} >>>")
@@ -1727,9 +1754,8 @@ class TabbedMainWindow(QMainWindow):
             if miss:
                 pass
             elif damage and damage > 0:
-                # Track shots taken for cost calculation
                 self.total_shots_taken += 1
-                # Update total cost display
+                logger.debug(f"Combat hit: damage={damage}, total_shots={self.total_shots_taken}, cost_per_attack={self.cost_per_attack}")
                 self._update_total_cost_display()
 
         elif event_type == 'skill':
@@ -1738,51 +1764,38 @@ class TabbedMainWindow(QMainWindow):
         total_return = float(self.loot_summary_labels["Total Return"].text().replace(",", "").split()[0])
         total_cost = float(self.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0])
 
-        # Sync stats to overlay
-        if self.overlay:
-            self.overlay._stats['total_return'] = Decimal(str(total_return))
-            self.overlay._stats['total_cost'] = Decimal(str(total_cost))
-            self.overlay._update_stats_display()
-
         if total_cost > 0:
             return_pct = (total_return / total_cost) * 100
             self.loot_summary_labels["% Return"].setText(f"{return_pct:.1f}%")
         elif total_return > 0:
             self.loot_summary_labels["% Return"].setText("100.0%")
 
-    def _add_event_to_run_log(self, event_data: Dict[str, Any]):
-        """Add event to run log table"""
-        event_type = event_data.get('event_type', 'unknown')
-        parsed_data = event_data.get('parsed_data', {})
+        self._update_current_run_entry(total_cost, total_return)
 
-        row = self.run_log_table.rowCount()
-        self.run_log_table.insertRow(row)
+        if self.overlay:
+            self.overlay._stats['total_return'] = Decimal(str(total_return))
+            self.overlay._stats['total_cost'] = Decimal(str(total_cost))
+            self.overlay._update_stats_display()
 
-        self.run_log_table.setItem(row, 0, QTableWidgetItem(str(row + 1)))
+        self._update_analysis_realtime()
 
-        if event_type == 'loot':
-            items = parsed_data.get('items', '')
-            value = parsed_data.get('value', 0)
-            if isinstance(items, str):
-                self.run_log_table.setItem(row, 1, QTableWidgetItem(f"Loot: {items} ({value} PED)"))
-            else:
-                self.run_log_table.setItem(row, 1, QTableWidgetItem(f"Loot ({value} PED)"))
-        elif event_type == 'combat':
-            damage = parsed_data.get('damage', 0)
-            critical = parsed_data.get('critical', False)
-            miss = parsed_data.get('miss', False)
-            if miss:
-                self.run_log_table.setItem(row, 1, QTableWidgetItem("Miss"))
-            elif critical:
-                self.run_log_table.setItem(row, 1, QTableWidgetItem(f"CRIT: {damage}"))
-            else:
-                self.run_log_table.setItem(row, 1, QTableWidgetItem(f"Hit: {damage}"))
-        elif event_type == 'skill':
-            skill = parsed_data.get('skill', '')
-            exp = parsed_data.get('experience', 0)
-            self.run_log_table.setItem(row, 1, QTableWidgetItem(f"Skill: {skill} +{exp}"))
-        else:
-            self.run_log_table.setItem(row, 1, QTableWidgetItem(event_type))
+    def _update_current_run_entry(self, total_cost: float, total_return: float):
+        """Update the current run entry in the run log table"""
+        if not self.current_session_id:
+            return
+
+        for row in range(self.run_log_table.rowCount()):
+            item = self.run_log_table.item(row, 0)
+            if item and item.data(Qt.ItemDataRole.UserRole) == "current":
+                roi = (total_return / total_cost * 100) if total_cost > 0 else 0
+
+                self.run_log_table.setItem(row, 3, QTableWidgetItem(f"{total_cost:.2f}"))
+                self.run_log_table.setItem(row, 4, QTableWidgetItem(f"{total_return:.2f}"))
+                self.run_log_table.setItem(row, 5, QTableWidgetItem(f"{roi:.1f}%"))
+
+                item_count = self.item_breakdown_table.rowCount()
+                self.run_log_table.setItem(row, 6, QTableWidgetItem(str(item_count)))
+                break
 
     def _process_loot_event(self, parsed_data: Dict[str, Any]):
         """Process loot event and add to item breakdown"""
@@ -1815,3 +1828,128 @@ class TabbedMainWindow(QMainWindow):
             self.item_breakdown_table.setItem(row, 2, QTableWidgetItem(f"{item_value:.4f}"))
             self.item_breakdown_table.setItem(row, 3, QTableWidgetItem(f"{markup_percent}%"))
             self.item_breakdown_table.setItem(row, 4, QTableWidgetItem(f"{total_value:.4f}"))
+
+        if self.current_session_id:
+            asyncio.create_task(self.db_manager.save_session_loot_item(
+                self.current_session_id, item_name, quantity, total_value, markup_percent
+            ))
+
+    def _on_run_log_selection_changed(self):
+        """Handle run log row selection - update item breakdown"""
+        selected_rows = self.run_log_table.selectedItems()
+        if not selected_rows:
+            return
+
+        row = selected_rows[0].row()
+        session_id = self.run_log_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+
+        if not session_id:
+            return
+
+        if session_id == "current":
+            self._update_item_breakdown_current_run()
+        else:
+            self._load_item_breakdown_for_session(session_id)
+
+    def _update_item_breakdown_current_run(self):
+        """Update item breakdown with current run data from the table"""
+        self.item_breakdown_table.setRowCount(0)
+
+    def _load_item_breakdown_for_session(self, session_id: str):
+        """Load item breakdown for a specific session"""
+        self.item_breakdown_table.setRowCount(0)
+
+        def load_items():
+            async def inner():
+                items = await self.db_manager.get_session_loot_items(session_id)
+                for item in items:
+                    row = self.item_breakdown_table.rowCount()
+                    self.item_breakdown_table.insertRow(row)
+                    self.item_breakdown_table.setItem(row, 0, QTableWidgetItem(item['item_name']))
+                    self.item_breakdown_table.setItem(row, 1, QTableWidgetItem(str(item['quantity'])))
+                    item_value = item['total_value'] / item['quantity'] if item['quantity'] > 0 else 0
+                    self.item_breakdown_table.setItem(row, 2, QTableWidgetItem(f"{item_value:.4f}"))
+                    self.item_breakdown_table.setItem(row, 3, QTableWidgetItem(f"{item['markup_percent']:.0f}%"))
+                    self.item_breakdown_table.setItem(row, 4, QTableWidgetItem(f"{item['total_value']:.4f}"))
+
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(inner())
+                loop.close()
+            except Exception as e:
+                logger.error(f"Error loading item breakdown: {e}")
+
+    async def _load_past_runs(self):
+        """Load past runs from database into run log table"""
+        sessions = await self.db_manager.get_all_sessions()
+
+        for session in sessions:
+            self._add_run_to_run_log(session)
+
+    def _load_past_runs_on_startup(self):
+        """Load past runs when application starts"""
+        import threading
+
+        def load():
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    sessions = loop.run_until_complete(self.db_manager.get_all_sessions())
+                    for session in sessions:
+                        self._add_run_to_run_log(session)
+                finally:
+                    loop.close()
+            except Exception as e:
+                logger.error(f"Error loading past runs: {e}")
+
+        threading.Thread(target=load, daemon=True).start()
+
+    def _add_run_to_run_log(self, session: Dict[str, Any]):
+        """Add a run entry to the run log table"""
+        row = self.run_log_table.rowCount()
+        self.run_log_table.insertRow(row)
+
+        start_time = session.get('start_time', '')
+        if isinstance(start_time, str):
+            try:
+                dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                start_time = dt.strftime("%Y-%m-%d %H:%M")
+            except:
+                pass
+
+        duration = ""
+        end_time = session.get('end_time')
+        if end_time:
+            if isinstance(end_time, str):
+                try:
+                    end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+                    start_dt = datetime.fromisoformat(session.get('start_time', '').replace('Z', '+00:00'))
+                    delta = end_dt - start_dt
+                    hours, remainder = divmod(int(delta.total_seconds()), 3600)
+                    minutes, seconds = divmod(remainder, 60)
+                    duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                except:
+                    duration = "-"
+            else:
+                delta = end_time - session.get('start_time', datetime.now())
+                hours, remainder = divmod(int(delta.total_seconds()), 3600)
+                minutes, seconds = divmod(remainder, 60)
+                duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        else:
+            duration = "-"
+
+        total_cost = session.get('total_cost', 0) or 0
+        total_return = session.get('total_return', 0) or 0
+        roi = (total_return / total_cost * 100) if total_cost > 0 else 0
+
+        self.run_log_table.setItem(row, 0, QTableWidgetItem("Completed"))
+        self.run_log_table.setItem(row, 1, QTableWidgetItem(start_time))
+        self.run_log_table.setItem(row, 2, QTableWidgetItem(duration))
+        self.run_log_table.setItem(row, 3, QTableWidgetItem(f"{total_cost:.2f}"))
+        self.run_log_table.setItem(row, 4, QTableWidgetItem(f"{total_return:.2f}"))
+        self.run_log_table.setItem(row, 5, QTableWidgetItem(f"{roi:.1f}%"))
+        self.run_log_table.setItem(row, 6, QTableWidgetItem("-"))
+
+        self.run_log_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, session['id'])

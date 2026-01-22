@@ -102,11 +102,25 @@ class DatabaseManager:
                 markup_value REAL
             )
         """)
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS session_loot_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT,
+                item_name TEXT,
+                quantity INTEGER,
+                total_value REAL,
+                markup_percent REAL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES sessions (id)
+            )
+        """)
         
         await db.execute("CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp)")
         await db.execute("CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id)")
         await db.execute("CREATE INDEX IF NOT EXISTS idx_sessions_activity ON sessions(activity_type)")
-        
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_session_loot_session ON session_loot_items(session_id)")
+
         await db.execute("CREATE INDEX IF NOT EXISTS idx_weapons_name ON weapons(name)")
         
         logger.debug("Database tables created")
@@ -618,3 +632,62 @@ class DatabaseManager:
     async def close(self):
         """Close database connection (placeholder for future connection pooling)"""
         logger.info("Database connection closed")
+
+    async def save_session_loot_item(self, session_id: str, item_name: str, quantity: int, total_value: float, markup_percent: float):
+        """Save or update a loot item for a session"""
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                await db.execute("""
+                    INSERT OR REPLACE INTO session_loot_items (session_id, item_name, quantity, total_value, markup_percent)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (session_id, item_name, quantity, total_value, markup_percent))
+                await db.commit()
+            logger.debug(f"Saved loot item: {item_name} for session {session_id}")
+        except Exception as e:
+            logger.error(f"Error saving session loot item: {e}")
+
+    async def get_session_loot_items(self, session_id: str) -> List[Dict[str, Any]]:
+        """Get all loot items for a session"""
+        items = []
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                cursor = await db.execute("""
+                    SELECT id, item_name, quantity, total_value, markup_percent
+                    FROM session_loot_items
+                    WHERE session_id = ?
+                    ORDER BY total_value DESC
+                """, (session_id,))
+
+                async for row in cursor:
+                    items.append({
+                        'id': row[0],
+                        'item_name': row[1],
+                        'quantity': row[2],
+                        'total_value': row[3],
+                        'markup_percent': row[4]
+                    })
+        except Exception as e:
+            logger.error(f"Error getting session loot items: {e}")
+        return items
+
+    async def delete_session_loot_items(self, session_id: str):
+        """Delete all loot items for a session"""
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                await db.execute("DELETE FROM session_loot_items WHERE session_id = ?", (session_id,))
+                await db.commit()
+        except Exception as e:
+            logger.error(f"Error deleting session loot items: {e}")
+
+    async def update_session_totals(self, session_id: str, total_cost: float, total_return: float, total_markup: float):
+        """Update session totals"""
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                await db.execute("""
+                    UPDATE sessions SET total_cost = ?, total_return = ?, total_markup = ?, end_time = ?
+                    WHERE id = ?
+                """, (total_cost, total_return, total_markup, datetime.now(), session_id))
+                await db.commit()
+            logger.debug(f"Session totals updated: {session_id}")
+        except Exception as e:
+            logger.error(f"Error updating session totals: {e}")
