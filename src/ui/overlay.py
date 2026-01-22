@@ -1,10 +1,10 @@
 """
 Streamer Overlay for LewtNanny
 Transparent, always-on-top overlay for live session stats streaming
-Modern redesign with accurate data integration
 """
 
 import logging
+import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 from decimal import Decimal
@@ -13,10 +13,46 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
     QPushButton
 )
-from PyQt6.QtCore import Qt, QTimer, QPoint
-from PyQt6.QtGui import QFont, QPainter, QColor, QPen
+from PyQt6.QtCore import Qt, QTimer, QPoint, QThread
+from PyQt6.QtGui import QFont, QPainter, QColor, QPen, QScreen, QGuiApplication
 
 logger = logging.getLogger(__name__)
+
+
+class ScreenshotWorker(QThread):
+    """Background worker to take screenshot after delay"""
+
+    def __init__(self, delay_ms: int, screenshot_dir: str, event_type: str, value: float, player: str):
+        super().__init__()
+        self.delay_ms = delay_ms
+        self.screenshot_dir = screenshot_dir
+        self.event_type = event_type
+        self.value = value
+        self.player = player
+
+    def run(self):
+        import time
+        time.sleep(self.delay_ms / 1000.0)
+        self.take_screenshot()
+
+    def take_screenshot(self):
+        try:
+            screen = QGuiApplication.primaryScreen()
+            if screen is None:
+                logger.error("[OVERLAY] No primary screen found for screenshot")
+                return
+
+            os.makedirs(self.screenshot_dir, exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{self.event_type}_{self.player}_{self.value:.2f}ped_{timestamp}.png"
+            filepath = os.path.join(self.screenshot_dir, filename)
+
+            pixmap = screen.grabWindow(0)
+            pixmap.save(filepath)
+            logger.info(f"[OVERLAY] Screenshot saved: {filepath}")
+        except Exception as e:
+            logger.error(f"[OVERLAY] Error taking screenshot: {e}")
 
 
 class StreamerOverlayWidget(QWidget):
@@ -34,6 +70,7 @@ class StreamerOverlayWidget(QWidget):
 
         self.dragging = False
         self.drag_position = QPoint()
+        self.character_name = ""
 
         self._stats = {
             'globals': 0,
@@ -42,24 +79,32 @@ class StreamerOverlayWidget(QWidget):
             'total_cost': Decimal('0'),
             'total_return': Decimal('0'),
         }
-        self._weapon = {
-            'name': '',
-            'amp': '',
-            'decay': ''
-        }
+        self._shots_taken = 0
+        self._cost_per_attack = Decimal('0')
 
         self.setup_ui()
         self.setup_timers()
 
         logger.debug("StreamerOverlayWidget initialized")
 
+    def set_character_name(self, name: str):
+        """Set the character name for filtering globals/HOFs"""
+        self.character_name = name
+        logger.debug(f"[OVERLAY] Character name set to: {name}")
+
+    def set_cost_per_attack(self, cost: float):
+        """Set the cost per attack for calculating total spent"""
+        self._cost_per_attack = Decimal(str(cost))
+        logger.debug(f"[OVERLAY] Cost per attack set to: {self._cost_per_attack}")
+        self._update_stats_display()
+
     def setup_ui(self):
-        """Setup the overlay UI with modern design"""
-        self.setFixedSize(300, 420)
+        """Setup the overlay UI"""
+        self.setFixedSize(320, 200)
         self.move(100, 100)
 
         container = QFrame(self)
-        container.setGeometry(0, 0, 300, 420)
+        container.setGeometry(0, 0, 320, 200)
         container.setStyleSheet("""
             QFrame {
                 background-color: rgba(15, 15, 20, 245);
@@ -70,172 +115,44 @@ class StreamerOverlayWidget(QWidget):
         self.container = container
 
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(10)
 
-        self.create_header(layout)
-        self.create_timer(layout)
-        self.create_stats_grid(layout)
-        self.create_weapon_section(layout)
-        self.create_activity_ticker(layout)
+        self.create_main_display(layout)
 
         self.session_start_time = None
         self.session_active = False
 
-    def create_header(self, layout):
-        """Create header with title"""
-        header_layout = QHBoxLayout()
+    def create_main_display(self, layout):
+        """Create main display with large % Return"""
+        self.return_percentage_label = QLabel("100%")
+        self.return_percentage_label.setFont(QFont("Consolas", 48, QFont.Weight.Bold))
+        self.return_percentage_label.setStyleSheet("color: #ffffff;")
+        self.return_percentage_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.return_percentage_label)
 
-        title_label = QLabel("LEWT NANNY")
-        title_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #7ee787; letter-spacing: 2px;")
-        header_layout.addWidget(title_label)
+        self.total_spent_label = QLabel("Total spent: 0.00 PED")
+        self.total_spent_label.setFont(QFont("Consolas", 16, QFont.Weight.Bold))
+        self.total_spent_label.setStyleSheet("color: #ff6b6b;")
+        self.total_spent_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.total_spent_label)
 
-        header_layout.addStretch()
+        self.total_return_label = QLabel("Total return: 0.000 PED")
+        self.total_return_label.setFont(QFont("Consolas", 16, QFont.Weight.Bold))
+        self.total_return_label.setStyleSheet("color: #7ee787;")
+        self.total_return_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.total_return_label)
 
-        close_btn = QPushButton("✕")
-        close_btn.setFixedSize(22, 22)
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(40, 40, 50, 200);
-                color: #8b949e;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: rgba(200, 60, 60, 200);
-                color: #ffffff;
-            }
-        """)
-        close_btn.clicked.connect(self.hide)
-        header_layout.addWidget(close_btn)
+        timer_layout = QHBoxLayout()
+        timer_layout.addStretch()
 
-        layout.addLayout(header_layout)
-
-    def create_timer(self, layout):
-        """Create session timer display"""
         self.timer_label = QLabel("00:00:00")
-        self.timer_label.setFont(QFont("Consolas", 28, QFont.Weight.Bold))
-        self.timer_label.setStyleSheet("color: #ffffff;")
-        self.timer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.timer_label)
+        self.timer_label.setFont(QFont("Consolas", 12))
+        self.timer_label.setStyleSheet("color: #8b949e;")
+        timer_layout.addWidget(self.timer_label)
 
-    def create_stats_grid(self, layout):
-        """Create statistics grid with modern cards"""
-        stats_frame = QFrame()
-        stats_frame.setStyleSheet("""
-            QFrame {
-                background-color: rgba(30, 30, 40, 150);
-                border-radius: 8px;
-                padding: 8px;
-            }
-        """)
-
-        stats_layout = QVBoxLayout(stats_frame)
-        stats_layout.setSpacing(6)
-
-        self.stats_labels = {}
-
-        stats_items = [
-            ("Return %", "100.0%", "#58a6ff"),
-            ("Profit", "0.00 PED", "#7ee787"),
-            ("Globals", "0", "#d29922"),
-            ("HOFs", "0", "#f0883e"),
-            ("Items", "0", "#a371f7"),
-        ]
-
-        for label, default, color in stats_items:
-            row_layout = QHBoxLayout()
-
-            lbl = QLabel(label)
-            lbl.setFont(QFont("Segoe UI", 9))
-            lbl.setStyleSheet("color: #8b949e;")
-            row_layout.addWidget(lbl)
-
-            row_layout.addStretch()
-
-            value_lbl = QLabel(default)
-            value_lbl.setFont(QFont("Consolas", 12, QFont.Weight.Bold))
-            value_lbl.setStyleSheet(f"color: {color};")
-            row_layout.addWidget(value_lbl)
-
-            self.stats_labels[label] = value_lbl
-
-            separator = QFrame()
-            separator.setStyleSheet("border-bottom: 1px solid rgba(60, 60, 70, 100);")
-            separator.setFixedHeight(1)
-            stats_layout.addWidget(separator)
-            stats_layout.addLayout(row_layout)
-
-        layout.addWidget(stats_frame)
-
-    def create_weapon_section(self, layout):
-        """Create weapon loadout section"""
-        weapon_frame = QFrame()
-        weapon_frame.setStyleSheet("""
-            QFrame {
-                background-color: rgba(30, 30, 40, 150);
-                border-radius: 8px;
-                padding: 8px;
-            }
-        """)
-
-        weapon_layout = QVBoxLayout(weapon_frame)
-        weapon_layout.setSpacing(4)
-
-        title = QLabel("LOADOUT")
-        title.setFont(QFont("Segoe UI", 8, QFont.Weight.Bold))
-        title.setStyleSheet("color: #8b949e; letter-spacing: 1px;")
-        weapon_layout.addWidget(title)
-
-        self.weapon_label = QLabel("No weapon selected")
-        self.weapon_label.setFont(QFont("Consolas", 10))
-        self.weapon_label.setStyleSheet("color: #e6edf3;")
-        weapon_layout.addWidget(self.weapon_label)
-
-        weapon_info_layout = QHBoxLayout()
-
-        self.amp_label = QLabel("--")
-        self.amp_label.setFont(QFont("Consolas", 9))
-        self.amp_label.setStyleSheet("color: #8b949e;")
-        weapon_info_layout.addWidget(self.amp_label)
-
-        self.decay_label = QLabel("-- PED/click")
-        self.decay_label.setFont(QFont("Consolas", 9))
-        self.decay_label.setStyleSheet("color: #8b949e;")
-        weapon_info_layout.addWidget(self.decay_label)
-
-        weapon_info_layout.addStretch()
-        weapon_layout.addLayout(weapon_info_layout)
-
-        layout.addWidget(weapon_frame)
-
-    def create_activity_ticker(self, layout):
-        """Create activity ticker"""
-        ticker_frame = QFrame()
-        ticker_frame.setStyleSheet("""
-            QFrame {
-                background-color: rgba(25, 25, 35, 180);
-                border-radius: 6px;
-            }
-        """)
-
-        ticker_layout = QVBoxLayout(ticker_frame)
-        ticker_layout.setContentsMargins(6, 4, 6, 4)
-
-        title = QLabel("ACTIVITY")
-        title.setFont(QFont("Segoe UI", 8, QFont.Weight.Bold))
-        title.setStyleSheet("color: #6e7681; letter-spacing: 1px;")
-        ticker_layout.addWidget(title)
-
-        self.activity_label = QLabel("No recent activity")
-        self.activity_label.setFont(QFont("Consolas", 9))
-        self.activity_label.setStyleSheet("color: #8b949e;")
-        self.activity_label.setWordWrap(True)
-        ticker_layout.addWidget(self.activity_label)
-
-        layout.addWidget(ticker_frame)
+        timer_layout.addStretch()
+        layout.addLayout(timer_layout)
 
     def setup_timers(self):
         """Setup update timers"""
@@ -254,6 +171,9 @@ class StreamerOverlayWidget(QWidget):
 
     def start_session(self, session_id: str, activity_type: str):
         """Start a new session"""
+        logger.info(f"[OVERLAY] start_session called: session_id={session_id}, activity_type={activity_type}")
+        logger.info(f"[OVERLAY] Previous stats before reset: {dict(self._stats)}")
+        
         self.session_start_time = datetime.now()
         self.session_active = True
         self.current_session_id = session_id
@@ -264,13 +184,17 @@ class StreamerOverlayWidget(QWidget):
             'total_cost': Decimal('0'),
             'total_return': Decimal('0'),
         }
-        self._weapon = {'name': '', 'amp': '', 'decay': ''}
+        self._shots_taken = 0
+        logger.info(f"[OVERLAY] Stats reset to: {dict(self._stats)}")
+        
         self._update_stats_display()
         self.show()
         logger.info(f"Streamer overlay session started: {session_id}")
 
     def stop_session(self):
         """Stop current session"""
+        logger.info(f"[OVERLAY] stop_session called, session_active={self.session_active}, current_session_id={self.current_session_id}")
+        logger.info(f"[OVERLAY] Stats before stop: {dict(self._stats)}")
         self.session_active = False
         self.session_start_time = None
         self.timer_label.setText("00:00:00")
@@ -281,31 +205,51 @@ class StreamerOverlayWidget(QWidget):
         cost = self._stats.get('total_cost', Decimal('0'))
         return_val = self._stats.get('total_return', Decimal('0'))
 
+        logger.debug(f"[OVERLAY] _update_stats_display: cost={float(cost):.3f}, return={float(return_val):.3f}")
+
         if cost > 0:
             return_pct = (return_val / cost) * 100
-            return_pct_str = f"{return_pct:.1f}%"
+            return_pct_str = f"{float(return_pct):.0f}%"
         else:
-            return_pct_str = "100.0%"
+            return_pct_str = "100%"
 
-        profit = return_val - cost
-        if profit >= 0:
-            profit_str = f"+{float(profit):.2f} PED"
-            profit_color = "#7ee787"
+        logger.debug(f"[OVERLAY] Display update: {return_pct_str} return, spent={float(cost):.2f} PED, return={float(return_val):.3f} PED")
+
+        self.return_percentage_label.setText(return_pct_str)
+
+        if float(cost) > 0:
+            self.total_spent_label.setText(f"Total spent: {float(cost):.2f} PED")
         else:
-            profit_str = f"{float(profit):.2f} PED"
-            profit_color = "#f85149"
+            self.total_spent_label.setText("Total spent: 0.00 PED")
 
-        if "Return %" in self.stats_labels:
-            self.stats_labels["Return %"].setText(return_pct_str)
-        if "Profit" in self.stats_labels:
-            self.stats_labels["Profit"].setText(profit_str)
-            self.stats_labels["Profit"].setStyleSheet(f"color: {profit_color}; font-weight: bold;")
-        if "Globals" in self.stats_labels:
-            self.stats_labels["Globals"].setText(str(self._stats.get('globals', 0)))
-        if "HOFs" in self.stats_labels:
-            self.stats_labels["HOFs"].setText(str(self._stats.get('hofs', 0)))
-        if "Items" in self.stats_labels:
-            self.stats_labels["Items"].setText(str(self._stats.get('items', 0)))
+        if float(return_val) > 0:
+            self.total_return_label.setText(f"Total return: {float(return_val):.3f} PED")
+        else:
+            self.total_return_label.setText("Total return: 0.000 PED")
+
+    def _schedule_screenshot(self, event_type: str, value: float, player: str):
+        """Schedule a screenshot for global/HOF events"""
+        try:
+            from src.services.config_manager import ConfigManager
+            config = ConfigManager()
+
+            screenshot_enabled = config.get("screenshot.enabled", True)
+            if not screenshot_enabled:
+                logger.debug(f"[OVERLAY] Screenshots disabled, skipping")
+                return
+
+            screenshot_dir = config.get("screenshot.directory", "~/Documents/LewtNanny/")
+            screenshot_dir = os.path.expanduser(screenshot_dir)
+
+            delay_ms = int(config.get("screenshot.delay_ms", 500))
+
+            logger.info(f"[OVERLAY] Scheduling screenshot in {delay_ms}ms for {event_type}: {player} got {value} PED")
+
+            worker = ScreenshotWorker(delay_ms, screenshot_dir, event_type, value, player)
+            worker.start()
+
+        except Exception as e:
+            logger.error(f"[OVERLAY] Error scheduling screenshot: {e}")
 
     def update_stats(self, stats: Dict[str, Any]):
         """Update statistics from external source"""
@@ -322,123 +266,91 @@ class StreamerOverlayWidget(QWidget):
                 self._stats['total_return'] = Decimal(str(value))
         self._update_stats_display()
 
-    def update_weapon(self, weapon_name: str, amp: str = "", decay: str = ""):
-        """Update weapon display"""
-        self._weapon = {
-            'name': weapon_name or '',
-            'amp': amp or '',
-            'decay': decay or ''
-        }
-        self.weapon_label.setText(weapon_name if weapon_name else "No weapon selected")
-        self.amp_label.setText(f"Amp: {amp}" if amp else "Amp: --")
-        self.decay_label.setText(f"Decay: {decay}" if decay else "Decay: -- PED/click")
-
     def add_activity(self, activity: str):
-        """Add activity to ticker"""
-        current = self.activity_label.text()
-        if current == "No recent activity":
-            current = ""
+        pass
 
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        new_activity = f"[{timestamp}] {activity}"
-
-        lines = current.split("\n") if current else []
-        lines.insert(0, new_activity)
-        lines = lines[:5]
-
-        self.activity_label.setText("\n".join(lines))
+    def update_weapon(self, weapon_name: str, amp: str = "", decay: str = ""):
+        pass
 
     def add_event(self, event_data: Dict[str, Any]):
         """Add event to ticker and update stats"""
-        logger.info(f"[OVERLAY] ===========================================")
-        logger.info(f"[OVERLAY] >>> add_event RECEIVED <<<")
-        logger.info(f"[OVERLAY] Event type: {event_data.get('event_type', 'unknown')}")
-        logger.info(f"[OVERLAY] Event data: {event_data}")
+        logger.debug(f"[OVERLAY] ===========================================")
+        logger.debug(f"[OVERLAY] >>> add_event RECEIVED <<<")
+        logger.debug(f"[OVERLAY] Event type: {event_data.get('event_type', 'unknown')}")
+        logger.debug(f"[OVERLAY] Event data: {event_data}")
 
         event_type = event_data.get('event_type', 'unknown')
-        raw_message = event_data.get('raw_message', '')
         parsed_data = event_data.get('parsed_data', {})
 
-        logger.info(f"[OVERLAY] Processing event type: {event_type}")
-        logger.info(f"[OVERLAY] Parsed data: {parsed_data}")
+        logger.debug(f"[OVERLAY] Processing event type: {event_type}")
+        logger.debug(f"[OVERLAY] Parsed data: {parsed_data}")
 
-        activity_str = ""
-        should_add_activity = True
-
-        logger.info(f"[OVERLAY] Processing event type: {event_type}")
-        logger.info(f"[OVERLAY] Parsed data: {parsed_data}")
+        current_return = float(self._stats.get('total_return', Decimal('0')))
+        current_cost = float(self._stats.get('total_cost', Decimal('0')))
+        logger.debug(f"[OVERLAY] Before event - total_return: {current_return:.3f}, total_cost: {current_cost:.3f}")
 
         if event_type == 'loot':
-            item_name = parsed_data.get('item_name', 'Unknown')
-            quantity = parsed_data.get('quantity', 1)
             value = parsed_data.get('value', 0)
-            activity_str = f"💰 {item_name} x ({quantity}) ({value} PED)"
+            logger.debug(f"[OVERLAY] Loot event: value={value}")
             self._stats['items'] = self._stats.get('items', 0) + 1
             self._stats['total_return'] = self._stats.get('total_return', Decimal('0')) + Decimal(str(value))
-            logger.info(f"[OVERLAY] Loot event processed: items={self._stats['items']}, return={self._stats['total_return']}")
+            new_return = float(self._stats['total_return'])
+            logger.debug(f"[OVERLAY] Loot event processed: items={self._stats['items']}, adding {value} PED to return, new total_return: {new_return:.3f}")
 
         elif event_type == 'combat':
             damage = parsed_data.get('damage', 0)
-            decay = parsed_data.get('decay', 0)
-            critical = parsed_data.get('critical', False)
             miss = parsed_data.get('miss', False)
-            if miss:
-                activity_str = "❌ MISS"
-            elif critical:
-                activity_str = f"🔥 CRIT: {damage} dmg"
+            logger.debug(f"[OVERLAY] Combat event: damage={damage}, miss={miss}")
+            if not miss and damage and float(damage) > 0:
+                self._shots_taken += 1
+                if self._cost_per_attack > 0:
+                    self._stats['total_cost'] = Decimal(str(self._shots_taken * float(self._cost_per_attack)))
+                new_cost = float(self._stats['total_cost'])
+                logger.debug(f"[OVERLAY] Combat event processed: shots={self._shots_taken}, cost_per_attack={float(self._cost_per_attack):.6f}, new total_cost: {new_cost:.3f}")
             else:
-                activity_str = f"⚔️ {damage} dmg"
-            if decay and float(decay) > 0:
-                self._stats['total_cost'] = self._stats.get('total_cost', Decimal('0')) + Decimal(str(decay))
-            logger.info(f"[OVERLAY] Combat event processed: damage={damage}, decay={decay}, critical={critical}")
-
-        elif event_type == 'skill':
-            skill = parsed_data.get('skill', '')
-            exp = parsed_data.get('experience', 0)
-            activity_str = f"📈 {skill} +{exp} exp"
+                logger.debug(f"[OVERLAY] Combat event skipped (miss or no damage): miss={miss}, damage={damage}")
 
         elif event_type == 'global':
-            player = parsed_data.get('player', '')
-            creature = parsed_data.get('creature', '')
             value = parsed_data.get('value', 0)
-            activity_str = f"🌟 GLOBAL! {player} → {creature} ({value} PED)"
-            self._stats['globals'] = self._stats.get('globals', 0) + 1
-            self._stats['total_return'] = self._stats.get('total_return', Decimal('0')) + Decimal(str(value))
-            logger.info(f"[OVERLAY] GLOBAL event processed: globals={self._stats['globals']}")
+            player = parsed_data.get('player', '')
+            logger.debug(f"[OVERLAY] GLOBAL event: value={value}, player={player}, my_character_name={self.character_name}")
+            if self.character_name and player and player.lower() == self.character_name.lower():
+                logger.info(f"[OVERLAY] GLOBAL DETECTED! {player} got {value} PED - scheduling screenshot")
+                self._schedule_screenshot("global", value, player)
+            else:
+                logger.debug(f"[OVERLAY] GLOBAL event skipped (not mine): player={player}, my_character_name={self.character_name}")
 
         elif event_type == 'hof':
-            player = parsed_data.get('player', '')
-            creature = parsed_data.get('creature', '')
             value = parsed_data.get('value', 0)
-            activity_str = f"🏆 HOF! {player} → {creature} ({value} PED)"
-            self._stats['hofs'] = self._stats.get('hofs', 0) + 1
-            self._stats['total_return'] = self._stats.get('total_return', Decimal('0')) + Decimal(str(value))
-            logger.info(f"[OVERLAY] HOF event processed: hofs={self._stats['hofs']}")
+            player = parsed_data.get('player', '')
+            logger.debug(f"[OVERLAY] HOF event: value={value}, player={player}, my_character_name={self.character_name}")
+            if self.character_name and player and player.lower() == self.character_name.lower():
+                logger.info(f"[OVERLAY] HOF DETECTED! {player} got {value} PED - scheduling screenshot")
+                self._schedule_screenshot("hof", value, player)
+            else:
+                logger.debug(f"[OVERLAY] HOF event skipped (not mine): player={player}, my_character_name={self.character_name}")
 
         else:
-            activity_str = raw_message[:45] if raw_message else event_type
-
-        if should_add_activity and activity_str:
-            self.add_activity(activity_str)
+            logger.debug(f"[OVERLAY] Unknown event type: {event_type}, raw_message: {event_data.get('raw_message', 'N/A')}")
 
         self._update_stats_display()
-        logger.info(f"[OVERLAY] <<< add_event complete >>>")
-        logger.info(f"[OVERLAY] Current stats: {dict(self._stats)}")
+        logger.debug(f"[OVERLAY] <<< add_event complete >>>")
+        logger.debug(f"[OVERLAY] Current stats: globals={self._stats.get('globals')}, hofs={self._stats.get('hofs')}, items={self._stats.get('items')}, total_cost={float(self._stats.get('total_cost', Decimal('0'))):.3f}, total_return={float(self._stats.get('total_return', Decimal('0'))):.3f}")
 
     def mousePressEvent(self, a0):
         """Mouse press for dragging"""
-        if a0.button() == Qt.MouseButton.LeftButton:  # type: ignore[union-attr]
+        if a0.button() == Qt.MouseButton.LeftButton:
             self.dragging = True
-            self.drag_position = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()  # type: ignore[union-attr]
-            a0.accept()  # type: ignore[union-attr]
+            self.drag_position = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            a0.accept()
 
     def mouseMoveEvent(self, a0):
         """Mouse move for dragging"""
-        if a0.buttons() == Qt.MouseButton.LeftButton and self.dragging:  # type: ignore[union-attr]
-            self.move(a0.globalPosition().toPoint() - self.drag_position)  # type: ignore[union-attr]
-            a0.accept()  # type: ignore[union-attr]
+        if a0.buttons() == Qt.MouseButton.LeftButton and self.dragging:
+            self.move(a0.globalPosition().toPoint() - self.drag_position)
+            a0.accept()
 
-    def mouseReleaseEvent(self, a0):  # type: ignore[no-untyped-def]
+    def mouseReleaseEvent(self, a0):
         """Mouse release to stop dragging"""
         self.dragging = False
 
@@ -453,17 +365,31 @@ class SessionOverlay:
         self.current_weapon = None
         logger.info("SessionOverlay initialized")
 
+    def get_character_name(self) -> str:
+        """Get the current character name from config"""
+        if self.config_manager:
+            return self.config_manager.get("character.name", "") or ""
+        return ""
+
     def show(self):
         """Show the overlay"""
         try:
             if self.overlay_widget is None:
                 self.overlay_widget = StreamerOverlayWidget()
+                self.overlay_widget.set_character_name(self.get_character_name())
+            else:
+                self.overlay_widget.set_character_name(self.get_character_name())
 
             self.overlay_widget.show()
             logger.info("SessionOverlay shown")
 
         except Exception as e:
             logger.error(f"Error showing overlay: {e}")
+
+    def update_character_name(self):
+        """Update the character name in the overlay widget"""
+        if self.overlay_widget:
+            self.overlay_widget.set_character_name(self.get_character_name())
 
     def hide(self):
         """Hide the overlay"""
@@ -480,6 +406,7 @@ class SessionOverlay:
 
     def start_session(self, session_id: str, activity_type: str):
         """Start a new session"""
+        logger.info(f"[OVERLAY_CONTROLLER] start_session called: session_id={session_id}, activity_type={activity_type}")
         if self.overlay_widget:
             self.overlay_widget.start_session(session_id, activity_type)
         logger.info(f"SessionOverlay started session: {session_id}")
@@ -504,3 +431,9 @@ class SessionOverlay:
         self.current_weapon = weapon_name
         if self.overlay_widget:
             self.overlay_widget.update_weapon(weapon_name, amp, decay)
+
+    def set_cost_per_attack(self, cost: float):
+        """Set the cost per attack for calculating total spent"""
+        if self.overlay_widget:
+            self.overlay_widget.set_cost_per_attack(cost)
+        logger.info(f"SessionOverlay set cost per attack: {cost}")

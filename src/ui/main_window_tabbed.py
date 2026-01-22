@@ -29,8 +29,8 @@ from src.ui.overlay import SessionOverlay
 from src.ui.components.config_tab import ConfigTab
 from src.ui.components.analysis_charts import ComprehensiveChartWidget
 from src.ui.components.combat_tab import CombatTabWidget
+from src.services.game_data_service import GameDataService
 from src.ui.components.crafting_tab import CraftingTabWidget
-from src.ui.components.streamer_ui import StreamerTabWidget
 from src.ui.components.weapon_selector import WeaponSelector
 
 logger = logging.getLogger(__name__)
@@ -94,7 +94,7 @@ class StatusIndicator(QLabel):
 class TabbedMainWindow(QMainWindow):
     """Main application window with custom tab bar and persistent bottom control bar"""
 
-    TAB_NAMES = ["Loot", "Analysis", "Skills", "Combat", "Crafting", "Twitch", "Streamer UI", "Config"]
+    TAB_NAMES = ["Loot", "Analysis", "Skills", "Combat", "Crafting", "Twitch", "Config"]
 
     def __init__(self, db_manager, config_manager):
         super().__init__()
@@ -107,6 +107,10 @@ class TabbedMainWindow(QMainWindow):
         self.current_session_start: Optional[datetime] = None
         self.current_theme = 'dark'
         self.is_logging_paused = False
+        
+        # Total cost calculation tracking
+        self.total_shots_taken = 0
+        self.cost_per_attack = 0.0
 
         self.setWindowTitle("LewtNanny - Entropia Universe Loot Tracker")
         self.setGeometry(100, 100, 1200, 800)
@@ -117,7 +121,9 @@ class TabbedMainWindow(QMainWindow):
         self.setup_menubar()
         self.setup_status_bar()
         self.setup_timer()
-
+        
+        # Initialize overlay early so it can receive events
+        self.overlay = SessionOverlay(self.db_manager, self.config_manager)
         logger.info("TabbedMainWindow initialization complete")
 
     def setup_ui(self):
@@ -248,7 +254,6 @@ class TabbedMainWindow(QMainWindow):
         self.create_combat_tab()
         self.create_crafting_tab()
         self.create_twitch_tab()
-        self.create_streamer_ui_tab()
         self.create_config_tab()
 
     def create_bottom_control_bar(self):
@@ -776,19 +781,17 @@ class TabbedMainWindow(QMainWindow):
         self.content_stack.addWidget(twitch_widget)
         logger.info("Twitch tab created")
 
-    def create_streamer_ui_tab(self):
-        """Create the Streamer UI tab"""
-        streamer_widget = StreamerTabWidget(self.db_manager)
-        self.streamer_tab = streamer_widget
-        self.content_stack.addWidget(streamer_widget)
-        logger.info("Streamer UI tab created")
-
     def create_config_tab(self):
         """Create the Config tab using the new ConfigTab widget"""
         self.config_widget = ConfigTab(config_manager=self.config_manager)
         self.content_stack.addWidget(self.config_widget)
         self.config_widget.signals.loadout_changed.connect(self._on_loadout_changed)
-        logger.info("Config tab created using ConfigTab")
+        
+        # Initialize cost per attack for the current loadout
+        self.cost_per_attack = self._calculate_cost_per_attack()
+        logger.info(f"Config tab created using ConfigTab, initial cost per attack: {self.cost_per_attack:.6f} PED")
+        if self.overlay:
+            self.overlay.set_cost_per_attack(self.cost_per_attack)
 
     def _on_loadout_changed(self):
         """Handle loadout changed - update overlay with new weapon info"""
@@ -804,9 +807,14 @@ class TabbedMainWindow(QMainWindow):
                                     loadout.amplifier or "",
                                     f"{loadout.damage_enh * 0.1:.3f}" if loadout.damage_enh else ""
                                 )
-                            if hasattr(self, 'streamer_tab') and self.streamer_tab:
-                                self.streamer_tab.update_weapon_display(loadout.weapon)
-                            logger.info(f"Loadout changed to: {loadout.weapon}")
+                                self.overlay.set_cost_per_attack(self.cost_per_attack)
+                            
+                            # Update cost per attack for total cost calculation
+                            self.cost_per_attack = self._calculate_cost_per_attack()
+                            logger.info(f"Loadout changed to: {loadout.weapon}, cost per attack: {self.cost_per_attack:.6f} PED")
+                            
+                            # Update total cost display with new cost per attack
+                            self._update_total_cost_display()
                             break
         except Exception as e:
             logger.error(f"Error handling loadout change: {e}")
@@ -1019,8 +1027,150 @@ class TabbedMainWindow(QMainWindow):
         self.update_timer.timeout.connect(self.update_status)
         self.update_timer.timeout.connect(self.check_readiness)
         self.update_timer.start(1000)
-
+        
+        # Timer for checking cost per attack calculation
+        self.cost_check_timer = QTimer()
+        self.cost_check_timer.timeout.connect(self._check_and_update_cost)
+        self.cost_check_timer.start(2000)  # Check every 2 seconds
+        
         logger.debug("Timer setup complete")
+    
+    def _check_and_update_cost(self):
+        """Check if cost per attack needs to be recalculated"""
+        if self.cost_per_attack <= 0:
+            new_cost = self._calculate_cost_per_attack()
+            if new_cost > 0:
+                self.cost_per_attack = new_cost
+                logger.info(f"Cost per attack calculated: {self.cost_per_attack:.6f} PED")
+                if self.overlay:
+                    self.overlay.set_cost_per_attack(self.cost_per_attack)
+                self._update_total_cost_display()
+
+    def _calculate_cost_per_attack(self) -> float:
+        """Calculate cost per attack from the active loadout"""
+        try:
+            if not hasattr(self, 'config_widget') or not self.config_widget:
+                return 0.0
+                
+            active_loadout = self.config_widget.active_loadout_combo.currentData()
+            if not active_loadout:
+                return 0.0
+                
+            # Try to get cost from config_tab's calculated stats
+            if hasattr(self.config_widget, 'ammo_burn_text') and hasattr(self.config_widget, 'weapon_decay_text'):
+                try:
+                    ammo_burn = float(self.config_widget.ammo_burn_text.text())
+                    decay = float(self.config_widget.weapon_decay_text.text())
+                    ammo_cost = ammo_burn / 10000.0
+                    return decay + ammo_cost
+                except (ValueError, AttributeError) as e:
+                    logger.debug(f"Could not get cost from config_tab: {e}")
+            
+            # Fallback: calculate using loadout data
+            selected_loadout = None
+            for loadout in self.config_widget._loadouts:
+                if loadout.id == active_loadout:
+                    selected_loadout = loadout
+                    break
+                    
+            if not selected_loadout:
+                return 0.0
+                
+            # Calculate cost per attack using similar logic to config_tab._async_calculate_stats
+            async def calc_cost():
+                data_service = GameDataService()
+                weapon = await data_service.get_weapon_by_name(selected_loadout.weapon)
+                if not weapon:
+                    return 0.0
+                    
+                base_decay = float(weapon.decay) if weapon.decay else 0.0
+                base_ammo = weapon.ammo if weapon.ammo else 0
+                
+                damage_mult = 1.0 + (selected_loadout.damage_enh * 0.1)
+                economy_mult = 1.0 - (selected_loadout.economy_enh * 0.05)
+                
+                enhanced_decay = base_decay * damage_mult * economy_mult
+                enhanced_ammo = base_ammo * damage_mult
+                
+                # Add amplifier decay
+                if selected_loadout.amplifier:
+                    amp = await data_service.get_attachment_by_name(selected_loadout.amplifier)
+                    if amp:
+                        enhanced_decay += float(amp.decay) if amp.decay else 0
+                        enhanced_ammo += amp.ammo if amp.ammo else 0
+                
+                # Add scope decay
+                if selected_loadout.scope:
+                    scope = await data_service.get_attachment_by_name(selected_loadout.scope)
+                    if scope:
+                        enhanced_decay += float(scope.decay) if scope.decay else 0
+                        enhanced_ammo += scope.ammo if scope.ammo else 0
+                
+                # Add sight 1 decay
+                if selected_loadout.sight_1:
+                    sight = await data_service.get_attachment_by_name(selected_loadout.sight_1)
+                    if sight:
+                        enhanced_decay += float(sight.decay) if sight.decay else 0
+                        enhanced_ammo += sight.ammo if sight.ammo else 0
+                
+                # Add sight 2 decay
+                if selected_loadout.sight_2:
+                    sight = await data_service.get_attachment_by_name(selected_loadout.sight_2)
+                    if sight:
+                        enhanced_decay += float(sight.decay) if sight.decay else 0
+                        enhanced_ammo += sight.ammo if sight.ammo else 0
+                
+                # Calculate ammo cost (ammo is in PEC, divide by 10000 to get PED)
+                ammo_cost = enhanced_ammo / 10000.0
+                
+                return enhanced_decay + ammo_cost
+            
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                cost = loop.run_until_complete(calc_cost())
+                return cost
+            finally:
+                loop.close()
+                
+        except Exception as e:
+            logger.error(f"Error calculating cost per attack: {e}")
+            return 0.0
+
+    def _update_total_cost_display(self):
+        """Update the total cost display based on shots taken and cost per attack"""
+        try:
+            if self.cost_per_attack <= 0:
+                # Try to calculate cost if not already calculated
+                self.cost_per_attack = self._calculate_cost_per_attack()
+                if self.overlay:
+                    self.overlay.set_cost_per_attack(self.cost_per_attack)
+            
+            if self.cost_per_attack <= 0:
+                # Can't update yet, cost not available
+                return
+                
+            total_cost = self.total_shots_taken * self.cost_per_attack
+            self.loot_summary_labels["Total Cost"].setText(f"{total_cost:.2f} PED")
+            
+            # Sync cost to overlay
+            if self.overlay:
+                self.overlay._shots_taken = self.total_shots_taken
+                self.overlay._stats['total_cost'] = Decimal(str(total_cost))
+                self.overlay._update_stats_display()
+            
+            # Also update % Return if we have cost and return values
+            total_return_str = self.loot_summary_labels["Total Return"].text().replace(",", "").split()[0]
+            total_return = float(total_return_str)
+            
+            if total_cost > 0:
+                return_pct = (total_return / total_cost) * 100
+                self.loot_summary_labels["% Return"].setText(f"{return_pct:.1f}%")
+            elif total_return > 0:
+                self.loot_summary_labels["% Return"].setText("100.0%")
+                
+        except Exception as e:
+            logger.error(f"Error updating total cost display: {e}")
 
     def check_readiness(self):
         """Check if all prerequisites are met for starting a run"""
@@ -1169,9 +1319,7 @@ class TabbedMainWindow(QMainWindow):
 
             if self.overlay:
                 self.overlay.start_session(self.current_session_id, "hunting")
-
-            if hasattr(self, 'streamer_tab') and self.streamer_tab:
-                self.streamer_tab.start_session(self.current_session_id, "hunting")
+                self.overlay.set_cost_per_attack(self.cost_per_attack)
 
             logger.info(f"Session started: {self.current_session_id}")
 
@@ -1193,9 +1341,6 @@ class TabbedMainWindow(QMainWindow):
 
                 if self.overlay:
                     self.overlay.stop_session()
-
-                if hasattr(self, 'streamer_tab') and self.streamer_tab:
-                    self.streamer_tab.stop_session()
 
                 self.current_session_id = None
                 self.current_session_start = None
@@ -1240,13 +1385,9 @@ class TabbedMainWindow(QMainWindow):
 
     def toggle_streamer_ui(self):
         """Toggle streamer UI overlay"""
-        from src.ui.overlay import SessionOverlay
-
-        if self.overlay is None:
-            self.overlay = SessionOverlay(self.db_manager, self.config_manager)
-
         if self.overlay.overlay_widget is None or not self.overlay.overlay_widget.isVisible():
             self.overlay.show()
+            self.overlay.set_cost_per_attack(self.cost_per_attack)
             if self.current_session_id:
                 self.overlay.start_session(self.current_session_id, "hunting")
             logger.info("Streamer overlay shown")
@@ -1312,15 +1453,11 @@ class TabbedMainWindow(QMainWindow):
         """Toggle overlay window"""
         try:
             if checked:
-                if self.overlay is None:
-                    self.overlay = SessionOverlay(self.db_manager, self.config_manager)
-                    logger.info("Created new overlay instance")
-
                 self.overlay.show()
+                self.overlay.set_cost_per_attack(self.cost_per_attack)
                 logger.info("Overlay shown")
             else:
-                if self.overlay:
-                    self.overlay.hide()
+                self.overlay.hide()
                 logger.info("Overlay hidden")
 
         except Exception as e:
@@ -1376,6 +1513,14 @@ class TabbedMainWindow(QMainWindow):
                 asyncio.set_event_loop(loop)
                 loop.run_until_complete(self.db_manager.delete_all_sessions())
                 loop.close()
+                
+                # Reset session tracking variables
+                self.total_shots_taken = 0
+                self.cost_per_attack = self._calculate_cost_per_attack()
+                if self.overlay:
+                    self.overlay.set_cost_per_attack(self.cost_per_attack)
+                self._update_total_cost_display()
+                
                 logger.warning("All sessions have been reset")
                 self.status_bar.showMessage("All sessions have been reset")
             except Exception as e:
@@ -1488,17 +1633,6 @@ class TabbedMainWindow(QMainWindow):
 
         # Update Streamer Tab
         logger.info(f"[UI] ===========================================")
-        logger.info(f"[UI] Updating STREAMER TAB...")
-        if hasattr(self, 'streamer_tab') and self.streamer_tab:
-            logger.info(f"[UI] Calling streamer_tab.add_event({event_type})...")
-            try:
-                self.streamer_tab.add_event(event_data)
-                logger.info(f"[UI] Streamer tab updated successfully")
-            except AttributeError as e:
-                logger.error(f"[UI] ERROR: Streamer tab missing add_event: {e}")
-        else:
-            logger.warning(f"[UI] WARNING: No streamer tab available")
-
         # Update Combat Tab
         logger.info(f"[UI] ===========================================")
         logger.info(f"[UI] Updating COMBAT TAB...")
@@ -1576,13 +1710,29 @@ class TabbedMainWindow(QMainWindow):
                 self.loot_summary_labels["Creatures Looted"].setText(str(creatures))
 
         elif event_type == 'combat':
-            pass
+            damage = parsed_data.get('damage', 0)
+            critical = parsed_data.get('critical', False)
+            miss = parsed_data.get('miss', False)
+            
+            if miss:
+                pass
+            elif damage and damage > 0:
+                # Track shots taken for cost calculation
+                self.total_shots_taken += 1
+                # Update total cost display
+                self._update_total_cost_display()
 
         elif event_type == 'skill':
             pass
 
         total_return = float(self.loot_summary_labels["Total Return"].text().replace(",", "").split()[0])
         total_cost = float(self.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0])
+
+        # Sync stats to overlay
+        if self.overlay:
+            self.overlay._stats['total_return'] = Decimal(str(total_return))
+            self.overlay._stats['total_cost'] = Decimal(str(total_cost))
+            self.overlay._update_stats_display()
 
         if total_cost > 0:
             return_pct = (total_return / total_cost) * 100
@@ -1628,15 +1778,22 @@ class TabbedMainWindow(QMainWindow):
         """Process loot event and add to item breakdown"""
         item_name = parsed_data.get('item_name', '')
         quantity = parsed_data.get('quantity', 1)
+        total_value = parsed_data.get('value', 0.0)
         
         if not item_name:
             return
+
+        item_value = total_value / quantity if quantity > 0 else 0
+        markup_percent = 0
 
         found = False
         for row in range(self.item_breakdown_table.rowCount()):
             if self.item_breakdown_table.item(row, 0).text() == item_name:
                 count = int(self.item_breakdown_table.item(row, 1).text()) + quantity
                 self.item_breakdown_table.setItem(row, 1, QTableWidgetItem(str(count)))
+                existing_total = float(self.item_breakdown_table.item(row, 4).text())
+                new_total = existing_total + total_value
+                self.item_breakdown_table.setItem(row, 4, QTableWidgetItem(f"{new_total:.4f}"))
                 found = True
                 break
 
@@ -1645,6 +1802,6 @@ class TabbedMainWindow(QMainWindow):
             self.item_breakdown_table.insertRow(row)
             self.item_breakdown_table.setItem(row, 0, QTableWidgetItem(item_name))
             self.item_breakdown_table.setItem(row, 1, QTableWidgetItem(str(quantity)))
-            self.item_breakdown_table.setItem(row, 2, QTableWidgetItem("0.00"))
-            self.item_breakdown_table.setItem(row, 3, QTableWidgetItem("0%"))
-            self.item_breakdown_table.setItem(row, 4, QTableWidgetItem("0.00"))
+            self.item_breakdown_table.setItem(row, 2, QTableWidgetItem(f"{item_value:.4f}"))
+            self.item_breakdown_table.setItem(row, 3, QTableWidgetItem(f"{markup_percent}%"))
+            self.item_breakdown_table.setItem(row, 4, QTableWidgetItem(f"{total_value:.4f}"))
