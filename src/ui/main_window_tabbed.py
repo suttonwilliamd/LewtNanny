@@ -1323,6 +1323,16 @@ class TabbedMainWindow(QMainWindow):
 
             logger.info(f"Session started: {self.current_session_id}")
 
+            self.item_breakdown_table.setRowCount(0)
+            self.run_log_table.setRowCount(0)
+
+            self.loot_summary_labels["Creatures Looted"].setText("0")
+            self.loot_summary_labels["Total Cost"].setText("0.00 PED")
+            self.loot_summary_labels["Total Return"].setText("0.00 PED")
+            self.loot_summary_labels["% Return"].setText("0.0%")
+            self.loot_summary_labels["Globals"].setText("0")
+            self.loot_summary_labels["HOFs"].setText("0")
+
         except Exception as e:
             logger.error(f"Error starting session: {e}", exc_info=True)
             self.status_bar.showMessage(f"Error starting session: {e}")
