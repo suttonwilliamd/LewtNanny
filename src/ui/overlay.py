@@ -355,14 +355,277 @@ class StreamerOverlayWidget(QWidget):
         self.dragging = False
 
 
+class LootNannyStyleOverlayWidget(QWidget):
+    """LootNanny-style overlay widget using JSON layout configuration"""
+
+    def __init__(self, parent=None, layout_config: dict = None):
+        super().__init__(parent)
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.Tool
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+
+        self.dragging = False
+        self.drag_position = QPoint()
+        self.character_name = ""
+        self._shots_taken = 0
+        self._cost_per_attack = Decimal('0')
+
+        self._layout_config = layout_config or SessionOverlay.LOOTNANNY_LAYOUT
+        self._labels = {}
+
+        self._stats = {
+            'globals': 0,
+            'hofs': 0,
+            'items': 0,
+            'total_cost': Decimal('0'),
+            'total_return': Decimal('0'),
+        }
+
+        self.session_start_time = None
+        self.session_active = False
+
+        self.setup_ui()
+        self.setup_timers()
+
+        logger.debug("LootNannyStyleOverlayWidget initialized")
+
+    def set_character_name(self, name: str):
+        """Set the character name for filtering globals/HOFs"""
+        self.character_name = name
+        logger.debug(f"[OVERLAY_LN] Character name set to: {name}")
+
+    def set_cost_per_attack(self, cost: float):
+        """Set the cost per attack for calculating total spent"""
+        self._cost_per_attack = Decimal(str(cost))
+        logger.debug(f"[OVERLAY_LN] Cost per attack set to: {self._cost_per_attack}")
+        self._update_stats_display()
+
+    def setup_ui(self):
+        """Setup the overlay UI using JSON layout configuration"""
+        container = QFrame(self)
+        container.setObjectName("container")
+
+        container_style = self._layout_config.get("style", "")
+        container.setStyleSheet(f"""
+            QFrame {{
+                {container_style}
+            }}
+        """)
+
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(8)
+
+        self._build_layout_from_config(layout, self._layout_config["layout"])
+
+        container.adjustSize()
+        self.setFixedSize(container.sizeHint().width() + 30, container.sizeHint().height() + 30)
+        self.move(100, 100)
+
+    def _build_layout_from_config(self, parent_layout, layout_config):
+        """Build UI elements from JSON layout configuration"""
+        for row_config in layout_config:
+            if isinstance(row_config, list) and len(row_config) > 0:
+                row_layout = QHBoxLayout()
+                row_layout.setSpacing(10)
+
+                for item_config in row_config:
+                    if isinstance(item_config, list) and len(item_config) >= 2:
+                        text_template = item_config[0]
+                        data_key = item_config[1]
+                        style = item_config[2] if len(item_config) > 2 else ""
+
+                        label = QLabel(text_template.format(self._get_default_value(data_key)))
+                        label.setStyleSheet(style)
+
+                        if "font-size" in style:
+                            font = QFont()
+                            font.setPointSize(10)
+                            if "20pt" in style:
+                                font.setPointSize(20)
+                                font.setBold(True)
+                            elif "24pt" in style:
+                                font.setPointSize(24)
+                                font.setBold(True)
+                            label.setFont(font)
+
+                        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                        self._labels[data_key] = label
+                        row_layout.addWidget(label)
+
+                parent_layout.addLayout(row_layout)
+
+    def _get_default_value(self, data_key: str) -> str:
+        """Get default value for a data key"""
+        defaults = {
+            "PERCENTAGE_RETURN": "100",
+            "TOTAL_LOOTS": "0",
+            "TOTAL_SPEND": "0.00",
+            "TOTAL_RETURN": "0.000",
+            "GLOBALS": "0",
+            "HOFS": "0",
+        }
+        return defaults.get(data_key, "0")
+
+    def setup_timers(self):
+        """Setup update timers"""
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self.update_display)
+        self.update_timer.start(1000)
+
+    def update_display(self):
+        """Update timer display"""
+        if self.session_active and self.session_start_time:
+            elapsed = datetime.now() - self.session_start_time
+            hours = int(elapsed.total_seconds() // 3600)
+            minutes = int((elapsed.total_seconds() % 3600) // 60)
+            seconds = int(elapsed.total_seconds() % 60)
+            if "TIMER" in self._labels:
+                self._labels["TIMER"].setText(f"{hours:02d}:{minutes:02d}:{seconds:02d}")
+
+    def start_session(self, session_id: str, activity_type: str, session_start_time: Optional[datetime] = None):
+        """Start a new session"""
+        logger.info(f"[OVERLAY_LN] start_session called: session_id={session_id}, activity_type={activity_type}")
+
+        self.session_start_time = session_start_time if session_start_time else datetime.now()
+        self.session_active = True
+        self.current_session_id = session_id
+        self._stats = {
+            'globals': 0,
+            'hofs': 0,
+            'items': 0,
+            'total_cost': Decimal('0'),
+            'total_return': Decimal('0'),
+        }
+        self._shots_taken = 0
+
+        self._update_stats_display()
+        self.show()
+        logger.info(f"LootNanny overlay session started: {session_id}")
+
+    def stop_session(self):
+        """Stop current session"""
+        self.session_active = False
+        self.session_start_time = None
+        logger.info("LootNanny overlay session stopped")
+
+    def _update_stats_display(self):
+        """Update statistics display with calculated values"""
+        cost = self._stats.get('total_cost', Decimal('0'))
+        return_val = self._stats.get('total_return', Decimal('0'))
+        items = self._stats.get('items', 0)
+
+        logger.debug(f"[OVERLAY_LN] _update_stats_display: cost={float(cost):.3f}, return={float(return_val):.3f}")
+
+        if cost > 0:
+            return_pct = (return_val / cost) * 100
+            return_pct_str = f"{float(return_pct):.0f}"
+        else:
+            return_pct_str = "100"
+
+        logger.debug(f"[OVERLAY_LN] Display update: {return_pct_str}% return, spent={float(cost):.2f} PED, return={float(return_val):.3f} PED")
+
+        if "PERCENTAGE_RETURN" in self._labels:
+            self._labels["PERCENTAGE_RETURN"].setText(f"{return_pct_str}%")
+
+        if "TOTAL_LOOTS" in self._labels:
+            self._labels["TOTAL_LOOTS"].setText(str(items))
+
+        if "TOTAL_SPEND" in self._labels:
+            self._labels["TOTAL_SPEND"].setText(f"{float(cost):.2f}")
+
+        if "TOTAL_RETURN" in self._labels:
+            self._labels["TOTAL_RETURN"].setText(f"{float(return_val):.3f}")
+
+    def add_event(self, event_data: Dict[str, Any]):
+        """Add event to overlay"""
+        logger.debug(f"[OVERLAY_LN] add_event received: {event_data.get('event_type', 'unknown')}")
+
+        event_type = event_data.get('event_type', 'unknown')
+        parsed_data = event_data.get('parsed_data', {})
+
+        if event_type == 'loot':
+            value = parsed_data.get('value', 0)
+            logger.debug(f"[OVERLAY_LN] Loot event: value={value}")
+            self._stats['items'] = self._stats.get('items', 0) + 1
+            self._stats['total_return'] = self._stats.get('total_return', Decimal('0')) + Decimal(str(value))
+
+        elif event_type == 'combat':
+            damage = parsed_data.get('damage', 0)
+            miss = parsed_data.get('miss', False)
+            logger.debug(f"[OVERLAY_LN] Combat event: damage={damage}, miss={miss}")
+            if not miss and damage and float(damage) > 0:
+                self._shots_taken += 1
+                if self._cost_per_attack > 0:
+                    self._stats['total_cost'] = Decimal(str(self._shots_taken * float(self._cost_per_attack)))
+
+        elif event_type == 'global':
+            value = parsed_data.get('value', 0)
+            player = parsed_data.get('player', '')
+            logger.debug(f"[OVERLAY_LN] GLOBAL event: value={value}, player={player}")
+            self._stats['globals'] = self._stats.get('globals', 0) + 1
+
+        elif event_type == 'hof':
+            value = parsed_data.get('value', 0)
+            player = parsed_data.get('player', '')
+            logger.debug(f"[OVERLAY_LN] HOF event: value={value}, player={player}")
+            self._stats['hofs'] = self._stats.get('hofs', 0) + 1
+
+        else:
+            logger.debug(f"[OVERLAY_LN] Unknown event type: {event_type}")
+
+        self._update_stats_display()
+
+    def update_weapon(self, weapon_name: str, amp: str = "", decay: str = ""):
+        """Update weapon display"""
+        pass
+
+    def mousePressEvent(self, a0):
+        """Mouse press for dragging"""
+        if a0.button() == Qt.MouseButton.LeftButton:
+            self.dragging = True
+            self.drag_position = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            a0.accept()
+
+    def mouseMoveEvent(self, a0):
+        """Mouse move for dragging"""
+        if a0.buttons() == Qt.MouseButton.LeftButton and self.dragging:
+            self.move(a0.globalPosition().toPoint() - self.drag_position)
+            a0.accept()
+
+    def mouseReleaseEvent(self, a0):
+        """Mouse release to stop dragging"""
+        self.dragging = False
+
+
 class SessionOverlay:
-    """Session overlay controller"""
+    """Session overlay controller with A/B testing support"""
+
+    LOOTNANNY_LAYOUT = {
+        "layout": [
+            [
+                ["{}%", "PERCENTAGE_RETURN", "font-size: 24pt; color: #ffffff;"]
+            ],
+            [
+                ["Total Loots: {}", "TOTAL_LOOTS", "color: #8B949E; font-size: 10pt;"],
+                ["Total Spend: {} PED", "TOTAL_SPEND", "color: #ff6b6b; font-size: 10pt;"],
+                ["Total Return: {} PED", "TOTAL_RETURN", "color: #7ee787; font-size: 10pt;"]
+            ]
+        ],
+        "style": "background-color: rgba(15, 15, 20, 245); border: 1px solid rgba(60, 60, 80, 180); border-radius: 8px;"
+    }
 
     def __init__(self, db_manager, config_manager):
         self.db_manager = db_manager
         self.config_manager = config_manager
         self.overlay_widget: Optional[StreamerOverlayWidget] = None
+        self.lootnanny_widget: Optional[LootNannyStyleOverlayWidget] = None
         self.current_weapon = None
+        self.active_style = "original"
         self._stats = {
             'total_cost': Decimal('0'),
             'total_return': Decimal('0')
@@ -375,20 +638,71 @@ class SessionOverlay:
             return self.config_manager.get("character.name", "") or ""
         return ""
 
-    def show(self):
-        """Show the overlay"""
-        try:
-            if self.overlay_widget is None:
-                self.overlay_widget = StreamerOverlayWidget()
-                self.overlay_widget.set_character_name(self.get_character_name())
-            else:
-                self.overlay_widget.set_character_name(self.get_character_name())
+    def show(self, style: str = "original"):
+        """Show the overlay
 
-            self.overlay_widget.show()
-            logger.info("SessionOverlay shown")
+        Args:
+            style: Either "original" for StreamerOverlayWidget or "lootnanny" for LootNannyStyleOverlayWidget
+        """
+        try:
+            self.active_style = style
+
+            if style == "lootnanny":
+                if self.lootnanny_widget is None:
+                    self.lootnanny_widget = LootNannyStyleOverlayWidget()
+                    self.lootnanny_widget.set_character_name(self.get_character_name())
+                else:
+                    self.lootnanny_widget.set_character_name(self.get_character_name())
+                    self.lootnanny_widget._update_stats_display()
+                self.lootnanny_widget.show()
+                logger.info(f"SessionOverlay shown (LootNanny style)")
+            else:
+                if self.overlay_widget is None:
+                    self.overlay_widget = StreamerOverlayWidget()
+                    self.overlay_widget.set_character_name(self.get_character_name())
+                else:
+                    self.overlay_widget.set_character_name(self.get_character_name())
+                    self.overlay_widget._update_stats_display()
+                self.overlay_widget.show()
+                logger.info(f"SessionOverlay shown (Original style)")
 
         except Exception as e:
             logger.error(f"Error showing overlay: {e}")
+
+    def toggle_style(self):
+        """Toggle between overlay styles for A/B testing"""
+        self.active_style = "lootnanny" if self.active_style == "original" else "original"
+        is_visible = False
+
+        if self.active_style == "lootnanny":
+            if self.overlay_widget and self.overlay_widget.isVisible():
+                self.overlay_widget.hide()
+                is_visible = True
+            if self.lootnanny_widget:
+                if is_visible:
+                    self.lootnanny_widget.show()
+                    self.lootnanny_widget._update_stats_display()
+            else:
+                self.show("lootnanny")
+                is_visible = True
+        else:
+            if self.lootnanny_widget and self.lootnanny_widget.isVisible():
+                self.lootnanny_widget.hide()
+                is_visible = True
+            if self.overlay_widget:
+                if is_visible:
+                    self.overlay_widget.show()
+                    self.overlay_widget._update_stats_display()
+            else:
+                self.show("original")
+                is_visible = True
+
+        logger.info(f"Overlay style toggled to: {self.active_style}")
+        return self.active_style
+
+    def get_current_style(self) -> str:
+        """Get the currently active overlay style"""
+        return self.active_style
 
     def update_character_name(self):
         """Update the character name in the overlay widget"""
@@ -399,26 +713,35 @@ class SessionOverlay:
         """Hide the overlay"""
         if self.overlay_widget:
             self.overlay_widget.hide()
-            logger.info("SessionOverlay hidden")
+        if self.lootnanny_widget:
+            self.lootnanny_widget.hide()
+        logger.info("SessionOverlay hidden")
 
     def close(self):
         """Close the overlay"""
         if self.overlay_widget:
             self.overlay_widget.close()
             self.overlay_widget = None
-            logger.info("SessionOverlay closed")
+        if self.lootnanny_widget:
+            self.lootnanny_widget.close()
+            self.lootnanny_widget = None
+        logger.info("SessionOverlay closed")
 
     def start_session(self, session_id: str, activity_type: str, session_start_time: Optional[datetime] = None):
         """Start a new session"""
         logger.info(f"[OVERLAY_CONTROLLER] start_session called: session_id={session_id}, activity_type={activity_type}")
         if self.overlay_widget:
             self.overlay_widget.start_session(session_id, activity_type, session_start_time)
+        if self.lootnanny_widget:
+            self.lootnanny_widget.start_session(session_id, activity_type, session_start_time)
         logger.info(f"SessionOverlay started session: {session_id}")
 
     def stop_session(self):
         """Stop current session"""
         if self.overlay_widget:
             self.overlay_widget.stop_session()
+        if self.lootnanny_widget:
+            self.lootnanny_widget.stop_session()
         logger.info("SessionOverlay stopped session")
 
     def add_event(self, event_data: Dict[str, Any]):
@@ -426,18 +749,22 @@ class SessionOverlay:
         logger.info(f"[OVERLAY_CONTROLLER] add_event called with type: {event_data.get('event_type', 'unknown')}")
         if self.overlay_widget:
             self.overlay_widget.add_event(event_data)
-            logger.info(f"[OVERLAY_CONTROLLER] Forwarded event to widget")
-        else:
-            logger.warning(f"[OVERLAY_CONTROLLER] No overlay widget available!")
+        if self.lootnanny_widget:
+            self.lootnanny_widget.add_event(event_data)
+        logger.info(f"[OVERLAY_CONTROLLER] Event forwarded to all widgets")
 
     def update_weapon(self, weapon_name: str, amp: str = "", decay: str = ""):
         """Update weapon display"""
         self.current_weapon = weapon_name
         if self.overlay_widget:
             self.overlay_widget.update_weapon(weapon_name, amp, decay)
+        if self.lootnanny_widget:
+            self.lootnanny_widget.update_weapon(weapon_name, amp, decay)
 
     def set_cost_per_attack(self, cost: float):
         """Set the cost per attack for calculating total spent"""
         if self.overlay_widget:
             self.overlay_widget.set_cost_per_attack(cost)
+        if self.lootnanny_widget:
+            self.lootnanny_widget.set_cost_per_attack(cost)
         logger.info(f"SessionOverlay set cost per attack: {cost}")

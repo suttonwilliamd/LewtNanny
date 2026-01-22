@@ -34,8 +34,7 @@ class WeaponSelector:
     def _load_attachment_data(self):
         """Load attachments and scopes data from JSON files"""
         try:
-            # Load attachments (amplifiers)
-            with open('attachments.json', 'r', encoding='utf-8') as f:
+            with open('data/attachments.json', 'r', encoding='utf-8') as f:
                 attachments_data = json.load(f)
                 self.attachments = attachments_data.get('data', {})
         except FileNotFoundError:

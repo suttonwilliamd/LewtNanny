@@ -331,7 +331,7 @@ class TabbedMainWindow(QMainWindow):
         self.pause_btn.clicked.connect(self.toggle_pause_logging)
         left_section.addWidget(self.pause_btn)
 
-        self.streamer_ui_btn = QPushButton("Show Streamer UI")
+        self.streamer_ui_btn = QPushButton("Switch Overlay (Original)")
         self.streamer_ui_btn.setFixedHeight(32)
         self.streamer_ui_btn.setStyleSheet("""
             QPushButton {
@@ -346,7 +346,7 @@ class TabbedMainWindow(QMainWindow):
                 background-color: #8B949E;
             }
         """)
-        self.streamer_ui_btn.clicked.connect(self.toggle_streamer_ui)
+        self.streamer_ui_btn.clicked.connect(self.switch_overlay_style)
         left_section.addWidget(self.streamer_ui_btn)
 
         bottom_layout.addLayout(left_section)
@@ -1392,16 +1392,38 @@ class TabbedMainWindow(QMainWindow):
         logger.info(f"Logging paused: {self.is_logging_paused}")
 
     def toggle_streamer_ui(self):
-        """Toggle streamer UI overlay"""
+        """Toggle streamer UI overlay - A/B testing support"""
         if self.overlay.overlay_widget is None or not self.overlay.overlay_widget.isVisible():
-            self.overlay.show()
-            self.overlay.set_cost_per_attack(self.cost_per_attack)
-            if self.current_session_id:
-                self.overlay.start_session(self.current_session_id, "hunting", self.current_session_start)
-            logger.info("Streamer overlay shown")
+            if self.overlay.lootnanny_widget is None or not self.overlay.lootnanny_widget.isVisible():
+                current_style = self.overlay.get_current_style()
+                self.overlay.show(current_style)
+                self.overlay.set_cost_per_attack(self.cost_per_attack)
+                if self.current_session_id:
+                    self.overlay.start_session(self.current_session_id, "hunting", self.current_session_start)
+                style_name = "LootNanny" if current_style == "lootnanny" else "Original"
+                self.streamer_ui_btn.setText(f"Switch Overlay ({style_name})")
+                logger.info(f"Streamer overlay shown ({style_name} style)")
+            else:
+                self.overlay.hide()
+                logger.info("Streamer overlay hidden")
         else:
             self.overlay.hide()
             logger.info("Streamer overlay hidden")
+
+    def switch_overlay_style(self):
+        """Switch between overlay styles for A/B testing"""
+        new_style = self.overlay.toggle_style()
+        style_name = "LootNanny" if new_style == "lootnanny" else "Original"
+        self.streamer_ui_btn.setText(f"Switch Overlay ({style_name})")
+
+        self.overlay.set_cost_per_attack(self.cost_per_attack)
+        if self.current_session_id:
+            self.overlay.start_session(self.current_session_id, "hunting", self.current_session_start)
+            widget = self.overlay.lootnanny_widget if new_style == "lootnanny" else self.overlay.overlay_widget
+            if widget:
+                widget._update_stats_display()
+
+        logger.info(f"Overlay style switched to: {new_style}")
 
     def open_donate(self):
         """Open donation link"""
@@ -1497,9 +1519,11 @@ class TabbedMainWindow(QMainWindow):
         """Toggle overlay window"""
         try:
             if checked:
-                self.overlay.show()
+                self.overlay.show(self.overlay.active_style)
                 self.overlay.set_cost_per_attack(self.cost_per_attack)
-                logger.info("Overlay shown")
+                if self.current_session_id:
+                    self.overlay.start_session(self.current_session_id, "hunting", self.current_session_start)
+                logger.info(f"Overlay shown ({self.overlay.active_style} style)")
             else:
                 self.overlay.hide()
                 logger.info("Overlay hidden")
@@ -1777,7 +1801,10 @@ class TabbedMainWindow(QMainWindow):
         if self.overlay:
             self.overlay._stats['total_return'] = Decimal(str(total_return))
             self.overlay._stats['total_cost'] = Decimal(str(total_cost))
-            self.overlay._update_stats_display()
+            if self.overlay.overlay_widget:
+                self.overlay.overlay_widget._update_stats_display()
+            if self.overlay.lootnanny_widget:
+                self.overlay.lootnanny_widget._update_stats_display()
 
         self._update_analysis_realtime()
 
