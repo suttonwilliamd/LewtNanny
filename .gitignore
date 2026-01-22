@@ -41,7 +41,6 @@ env/
 # Runtime data (user-specific, generated files)
 data/
 !data/.gitkeep
-weapons.json
 
 # OS
 Thumbs.db
