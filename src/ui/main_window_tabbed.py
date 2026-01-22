@@ -1513,7 +1513,7 @@ class TabbedMainWindow(QMainWindow):
             import shutil
             from pathlib import Path
 
-            db_path = Path("data/leotnanny.db")
+            db_path = Path("data/lewtnanny.db")
             if db_path.exists():
                 backup_path = f"data/backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
                 shutil.copy(db_path, backup_path)

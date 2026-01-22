@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class GameDataService:
     """Async data access service for game data"""
 
-    def __init__(self, db_path: str = "data/leotnanny.db"):
+    def __init__(self, db_path: str = "data/lewtnanny.db"):
         self.db_path = Path(db_path)
 
     async def get_counts(self) -> Dict[str, int]:

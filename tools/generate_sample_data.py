@@ -101,7 +101,7 @@ async def main():
     """Main function"""
     import aiosqlite
     
-    db_path = "data/leotnanny.db"
+    db_path = "data/lewtnanny.db"
     Path(db_path).parent.mkdir(exist_ok=True)
     
     db_manager = DatabaseManager(db_path)

@@ -419,7 +419,7 @@ class SettingsDialog(QDialog):
         self.auto_save_check.setChecked(settings.get('auto_save', True))
         self.auto_save_interval.setValue(settings.get('auto_save_interval', 30))
         
-        db_path = settings.get('database_path', 'data/leotnanny.db')
+        db_path = settings.get('database_path', 'data/lewtnanny.db')
         self.database_path.setText(str(Path(db_path).absolute()))
         
         export_path = settings.get('export_path', str(Path.home()))

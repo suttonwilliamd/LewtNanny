@@ -538,7 +538,7 @@ async def cmd_session(args: argparse.Namespace, output: CLIOutput) -> int:
 async def cmd_db(args: argparse.Namespace, output: CLIOutput) -> int:
     """Database management commands"""
     try:
-        db_path = Path("data/leotnanny.db")
+        db_path = Path("data/lewtnanny.db")
         
         if args.subcommand == "info":
             if db_path.exists():
@@ -567,7 +567,7 @@ async def cmd_db(args: argparse.Namespace, output: CLIOutput) -> int:
             
         elif args.subcommand == "backup":
             import shutil
-            backup_path = f"data/leotnanny_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+            backup_path = f"data/lewtnanny_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
             shutil.copy(db_path, backup_path)
             output.print(f"Backup created: {backup_path}")
             
@@ -787,7 +787,7 @@ async def cmd_monitor_run(args: argparse.Namespace, output: CLIOutput, chat_path
     print("LewtNanny Chat Monitor - Continuous Mode")
     print("=" * 70)
     print(f"Chat Log: {chat_path}")
-    print(f"Database: data/leotnanny.db")
+    print(f"Database: data/lewtnanny.db")
     
     # Get loadout info if specified
     loadout_name = args.loadout

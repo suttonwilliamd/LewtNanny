@@ -51,7 +51,7 @@ class ConfigTab(QWidget):
         self.signals = ConfigSignals()
         self._theme = "dark"
 
-        self.db_path = "data/leotnanny.db"
+        self.db_path = "data/lewtnanny.db"
         self._loadouts: List[WeaponLoadout] = []
         self._selected_loadout_index: Optional[int] = None
 
@@ -975,7 +975,7 @@ class LoadoutDialog(QDialog):
             self._sights = ["None"]
 
             for att in attachments:
-                if att.attachment_type in ['BLP Amp', 'Energy Amp', 'Amp']:
+                if att.attachment_type in ['BLP Amp', 'Laser Amp']:
                     self._amplifiers.append(att.name)
                 elif att.attachment_type == 'Scope':
                     self._scopes.append(att.name)

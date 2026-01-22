@@ -62,7 +62,7 @@ async def add_frontier_weapons():
         }
     ]
     
-    db_path = Path("data/leotnanny.db")
+    db_path = Path("data/lewtnanny.db")
     
     async with aiosqlite.connect(db_path) as db:
         for weapon in weapons:

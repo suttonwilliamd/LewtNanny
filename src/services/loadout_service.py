@@ -108,7 +108,7 @@ class CustomWeapon:
 class LoadoutService:
     """Service for managing weapon loadouts"""
     
-    def __init__(self, db_path: str = "data/leotnanny.db"):
+    def __init__(self, db_path: str = "data/lewtnanny.db"):
         self.db_path = Path(db_path)
         self._initialized = False
     

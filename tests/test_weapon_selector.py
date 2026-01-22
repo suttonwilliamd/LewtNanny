@@ -41,7 +41,7 @@ class TestWindow(QMainWindow):
         layout.setContentsMargins(10, 10, 10, 10)
         
         # Create weapon selector
-        self.db_manager = DatabaseManager("data/leotnanny.db")
+        self.db_manager = DatabaseManager("data/lewtnanny.db")
         
         self.weapon_selector = WeaponSelector(
             parent=central,
@@ -72,7 +72,7 @@ class TestWindow(QMainWindow):
 
 async def init_database():
     """Initialize database and load data"""
-    db = DatabaseManager("data/leotnanny.db")
+    db = DatabaseManager("data/lewtnanny.db")
     await db.initialize()
     return db
 

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 
-def setup_logger(log_file: str = "data/leotnanny.log"):
+def setup_logger(log_file: str = "data/lewtnanny.log"):
     """Setup logging configuration"""
     log_path = Path(log_file)
     log_path.parent.mkdir(exist_ok=True)
