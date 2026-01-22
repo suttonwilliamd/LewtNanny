@@ -34,13 +34,9 @@ env/
 *~
 .DS_Store
 
-# Database
-*.db
-*.sqlite3
-
 # Runtime data (user-specific, generated files)
-data/
-!data/.gitkeep
+data/config.json
+!data/
 
 # OS
 Thumbs.db
