@@ -88,6 +88,9 @@ class ConfigManager:
             "markups": {
                 "auto_update": True,
                 "custom_values": {}
+            },
+            "loadouts": {
+                "active_loadout_id": None
             }
         }
     
@@ -116,6 +119,23 @@ class ConfigManager:
             
         config[keys[-1]] = value
         await self.save_config()
+    
+    def set_sync(self, key: str, value: Any):
+        """Set configuration value by key synchronously (supports dot notation)"""
+        keys = key.split('.')
+        config = self.config
+        
+        for k in keys[:-1]:
+            if k not in config:
+                config[k] = {}
+            config = config[k]
+            
+        config[keys[-1]] = value
+        try:
+            with open(self.config_path, 'w', encoding='utf-8') as f:
+                json.dump(self.config, f, indent=2, default=str)
+        except Exception as e:
+            print(f"Error saving config: {e}")
     
     async def update(self, updates: Dict[str, Any]):
         """Update multiple configuration values"""

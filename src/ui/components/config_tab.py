@@ -538,10 +538,32 @@ class ConfigTab(QWidget):
             service = LoadoutService()
             self._loadouts = await service.get_all_loadouts()
             self._refresh_loadout_table()
-            self._refresh_active_loadout_combo()
+            self.active_loadout_combo.blockSignals(True)
+            try:
+                self._refresh_active_loadout_combo()
+                self._restore_active_loadout()
+            finally:
+                self.active_loadout_combo.blockSignals(False)
         except Exception as e:
             print(f"Error loading loadouts: {e}")
             self._loadouts = []
+
+    def _restore_active_loadout(self):
+        """Restore the saved active loadout selection"""
+        saved_id = self._config.get("loadouts.active_loadout_id")
+        if saved_id:
+            for i in range(self.active_loadout_combo.count()):
+                if self.active_loadout_combo.itemData(i) == saved_id:
+                    self.active_loadout_combo.setCurrentIndex(i)
+                    break
+            
+            for idx, loadout in enumerate(self._loadouts):
+                if loadout.id == saved_id:
+                    self._selected_loadout_index = idx
+                    self.loadout_table.selectRow(idx)
+                    self.select_loadout_btn.show()
+                    self.delete_weapon_btn.show()
+                    break
 
     def _refresh_loadout_table(self):
         """Refresh the loadout table"""
@@ -667,10 +689,12 @@ class ConfigTab(QWidget):
             for loadout in self._loadouts:
                 if loadout.id == loadout_id:
                     self._update_active_loadout_info(loadout)
+                    self._config.set_sync("loadouts.active_loadout_id", loadout_id)
                     return
         self.active_loadout_info.setText("No loadout selected")
         self.ammo_burn_text.setText("0")
         self.weapon_decay_text.setText("0.000000")
+        self._config.set_sync("loadouts.active_loadout_id", None)
 
     def _update_active_loadout_info(self, loadout: WeaponLoadout):
         """Update the active loadout info display"""
