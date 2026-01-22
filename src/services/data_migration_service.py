@@ -1,6 +1,6 @@
 """
-Comprehensive data migration service
-Loads all JSON data from data/ directory into SQLite
+Data migration service
+Loads all JSON data from data/ directory into separate SQLite database files
 """
 
 import json
@@ -16,14 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 class DataMigrationService:
-    """Handles all data migration from JSON to SQLite"""
+    """Handles all data migration from JSON to separate SQLite databases"""
 
-    def __init__(self, db_path: str = None):
-        from src.utils.paths import ensure_user_data_dir, get_user_data_dir
-        if db_path:
-            self.db_path = Path(db_path)
+    def __init__(self, db_dir: str = None):
+        from src.utils.paths import ensure_user_data_dir
+        if db_dir:
+            self.db_dir = Path(db_dir)
         else:
-            self.db_path = ensure_user_data_dir() / "lewtnanny.db"
+            self.db_dir = ensure_user_data_dir()
+        
         self.data_path = Path(__file__).parent.parent.parent / "data"
         self.json_files = {
             'weapons': self.data_path / 'weapons.json',
@@ -36,7 +37,7 @@ class DataMigrationService:
 
     async def migrate_all(self, force: bool = False) -> Dict[str, int]:
         """
-        Migrate all JSON data to SQLite
+        Migrate all JSON data to separate SQLite databases
 
         Args:
             force: If True, clear existing data and re-migrate
@@ -44,134 +45,35 @@ class DataMigrationService:
         Returns:
             Dict with counts of migrated items per category
         """
-        async with aiosqlite.connect(self.db_path) as db:
-            await self._create_tables(db)
-
-            if force:
-                await self._clear_data(db)
-
-            counts = {
-                'weapons': await self._migrate_weapons(db),
-                'attachments': await self._migrate_attachments(db),
-                'scopes': await self._migrate_scopes(db),
-                'sights': await self._migrate_sights(db),
-                'resources': await self._migrate_resources(db),
-                'blueprints': await self._migrate_blueprints(db),
-                'blueprint_materials': await self._migrate_blueprint_materials(db)
-            }
-
-            await db.commit()
-            return counts
+        from src.core.database_manager import DatabaseManager
+        
+        manager = DatabaseManager(self.db_dir)
+        await manager.initialize_all()
+        
+        counts = {
+            'weapons': await self._migrate_weapons_to_db(manager.weapons_db, force),
+            'attachments': await self._migrate_attachments_to_db(manager.attachments_db, force),
+            'scopes': await self._migrate_scopes_to_db(manager.attachments_db, force),
+            'sights': await self._migrate_sights_to_db(manager.attachments_db, force),
+            'resources': await self._migrate_resources_to_db(manager.resources_db, force),
+            'blueprints': await self._migrate_blueprints_to_db(manager.crafting_db, force),
+            'blueprint_materials': await self._migrate_blueprint_materials_to_db(manager.crafting_db, force)
+        }
+        
+        await manager.close_all()
+        return counts
 
     async def verify_data(self) -> Dict[str, Any]:
         """Verify migration results and return counts"""
-        async with aiosqlite.connect(self.db_path) as db:
-            counts = {}
-            tables = ['weapons', 'attachments', 'resources', 'blueprints', 'blueprint_materials']
+        from src.core.database_manager import DatabaseManager
+        
+        manager = DatabaseManager(self.db_dir)
+        counts = await manager.get_counts()
+        await manager.close_all()
+        return counts
 
-            for table in tables:
-                cursor = await db.execute(f"SELECT COUNT(*) FROM {table}")
-                result = await cursor.fetchone()
-                counts[table] = result[0] if result else 0
-
-            # Check sample data
-            cursor = await db.execute("SELECT name FROM weapons LIMIT 5")
-            samples = await cursor.fetchall()
-            counts['sample_weapons'] = [s[0] for s in samples]
-
-            cursor = await db.execute("SELECT name FROM resources LIMIT 5")
-            samples = await cursor.fetchall()
-            counts['sample_resources'] = [s[0] for s in samples]
-
-            return counts
-
-    async def _create_tables(self, db: aiosqlite.Connection):
-        """Create all database tables with proper schema"""
-        await db.executescript("""
-            DROP TABLE IF EXISTS blueprint_materials;
-            DROP TABLE IF EXISTS blueprints;
-            DROP TABLE IF EXISTS resources;
-            DROP TABLE IF EXISTS attachments;
-            DROP TABLE IF EXISTS weapons;
-
-            CREATE TABLE weapons (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                ammo INTEGER DEFAULT 0,
-                decay REAL DEFAULT 0,
-                weapon_type TEXT,
-                dps REAL,
-                eco REAL,
-                range_value INTEGER DEFAULT 0,
-                damage REAL DEFAULT 0,
-                reload_time REAL DEFAULT 0,
-                hits INTEGER DEFAULT 0,
-                data_updated TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE attachments (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                attachment_type TEXT NOT NULL,
-                ammo INTEGER DEFAULT 0,
-                decay REAL DEFAULT 0,
-                damage_bonus REAL DEFAULT 0,
-                ammo_bonus REAL DEFAULT 0,
-                decay_modifier REAL DEFAULT 0,
-                economy_bonus REAL DEFAULT 0,
-                range_bonus INTEGER DEFAULT 0,
-                data_updated TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE resources (
-                name TEXT PRIMARY KEY,
-                tt_value REAL DEFAULT 0,
-                decay REAL DEFAULT 0,
-                data_updated TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE blueprints (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                result_item TEXT,
-                result_quantity INTEGER DEFAULT 1,
-                skill_required TEXT,
-                condition_limit INTEGER,
-                data_updated TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE blueprint_materials (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                blueprint_id TEXT NOT NULL,
-                material_name TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                FOREIGN KEY (blueprint_id) REFERENCES blueprints(id) ON DELETE CASCADE,
-                UNIQUE(blueprint_id, material_name)
-            );
-
-            CREATE INDEX idx_weapons_name ON weapons(name);
-            CREATE INDEX idx_weapons_type ON weapons(weapon_type);
-            CREATE INDEX idx_weapons_dps ON weapons(dps DESC);
-            CREATE INDEX idx_weapons_eco ON weapons(eco DESC);
-
-            CREATE INDEX idx_attachments_name ON attachments(name);
-            CREATE INDEX idx_attachments_type ON attachments(attachment_type);
-
-            CREATE INDEX idx_resources_name ON resources(name);
-            CREATE INDEX idx_resources_tt_value ON resources(tt_value DESC);
-
-            CREATE INDEX idx_blueprints_name ON blueprints(name);
-            CREATE INDEX idx_blueprint_materials_bp ON blueprint_materials(blueprint_id);
-            CREATE INDEX idx_blueprint_materials_mat ON blueprint_materials(material_name);
-        """)
-        logger.info("Database tables created")
-
-    async def _migrate_weapons(self, db: aiosqlite.Connection) -> int:
-        """Migrate weapons from JSON"""
+    async def _migrate_weapons_to_db(self, db_path: Path, force: bool = False) -> int:
+        """Migrate weapons from JSON to separate weapons database"""
         weapons_path = self.json_files['weapons']
         if not weapons_path.exists():
             logger.warning("weapons.json not found")
@@ -183,40 +85,46 @@ class DataMigrationService:
         updated = data.get('updated', '')
         updated_dt = datetime.strptime(updated, '%Y%m%dT%H%M%S') if updated else None
 
-        count = 0
-        for weapon_id, weapon_info in data.get('data', {}).items():
-            try:
-                decay = float(weapon_info.get('decay', 0))
-                ammo = int(weapon_info.get('ammo', 0))
+        async with aiosqlite.connect(db_path) as db:
+            if force:
+                await db.execute("DELETE FROM weapons")
 
-                decay_per_hit = decay / max(1, ammo) if ammo > 0 else decay
-                base_damage = self._estimate_damage(weapon_info.get('type', ''))
-                dps = base_damage / 3.0 if base_damage > 0 else 0
-                eco = (base_damage / decay_per_hit) if decay_per_hit > 0 else 0
+            count = 0
+            for weapon_id, weapon_info in data.get('data', {}).items():
+                try:
+                    decay = float(weapon_info.get('decay', 0))
+                    ammo = int(weapon_info.get('ammo', 0))
 
-                await db.execute("""
-                    INSERT INTO weapons
-                    (id, name, ammo, decay, weapon_type, dps, eco, data_updated)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    weapon_id,
-                    weapon_id,
-                    ammo,
-                    decay,
-                    weapon_info.get('type', 'Unknown'),
-                    dps,
-                    eco,
-                    updated_dt
-                ))
-                count += 1
-            except Exception as e:
-                logger.error(f"Error migrating weapon {weapon_id}: {e}")
+                    decay_per_hit = decay / max(1, ammo) if ammo > 0 else decay
+                    base_damage = self._estimate_damage(weapon_info.get('type', ''))
+                    dps = base_damage / 3.0 if base_damage > 0 else 0
+                    eco = (base_damage / decay_per_hit) if decay_per_hit > 0 else 0
 
-        logger.info(f"Migrated {count} weapons")
+                    await db.execute("""
+                        INSERT INTO weapons
+                        (id, name, ammo, decay, weapon_type, dps, eco, data_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        weapon_id,
+                        weapon_id,
+                        ammo,
+                        decay,
+                        weapon_info.get('type', 'Unknown'),
+                        dps,
+                        eco,
+                        updated_dt
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Error migrating weapon {weapon_id}: {e}")
+
+            await db.commit()
+
+        logger.info(f"Migrated {count} weapons to {db_path.name}")
         return count
 
-    async def _migrate_attachments(self, db: aiosqlite.Connection) -> int:
-        """Migrate attachments from JSON"""
+    async def _migrate_attachments_to_db(self, db_path: Path, force: bool = False) -> int:
+        """Migrate attachments from JSON to separate attachments database"""
         attachments_path = self.json_files['attachments']
         if not attachments_path.exists():
             logger.warning("attachments.json not found")
@@ -228,30 +136,36 @@ class DataMigrationService:
         updated = data.get('updated', '')
         updated_dt = datetime.strptime(updated, '%Y%m%dT%H%M%S') if updated else None
 
-        count = 0
-        for attachment_id, attach_info in data.get('data', {}).items():
-            try:
-                await db.execute("""
-                    INSERT INTO attachments
-                    (id, name, attachment_type, ammo, decay, data_updated)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    attachment_id,
-                    attachment_id,
-                    attach_info.get('type', 'Unknown'),
-                    int(attach_info.get('ammo', 0)),
-                    float(attach_info.get('decay', 0)),
-                    updated_dt
-                ))
-                count += 1
-            except Exception as e:
-                logger.error(f"Error migrating attachment {attachment_id}: {e}")
+        async with aiosqlite.connect(db_path) as db:
+            if force:
+                await db.execute("DELETE FROM attachments")
 
-        logger.info(f"Migrated {count} attachments")
+            count = 0
+            for attachment_id, attach_info in data.get('data', {}).items():
+                try:
+                    await db.execute("""
+                        INSERT INTO attachments
+                        (id, name, attachment_type, ammo, decay, data_updated)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        attachment_id,
+                        attachment_id,
+                        attach_info.get('type', 'Unknown'),
+                        int(attach_info.get('ammo', 0)),
+                        float(attach_info.get('decay', 0)),
+                        updated_dt
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Error migrating attachment {attachment_id}: {e}")
+
+            await db.commit()
+
+        logger.info(f"Migrated {count} attachments to {db_path.name}")
         return count
 
-    async def _migrate_scopes(self, db: aiosqlite.Connection) -> int:
-        """Migrate scopes (treated as attachments) from JSON"""
+    async def _migrate_scopes_to_db(self, db_path: Path, force: bool = False) -> int:
+        """Migrate scopes from JSON to attachments database"""
         scopes_path = self.json_files['scopes']
         if not scopes_path.exists():
             logger.warning("scopes.json not found")
@@ -263,31 +177,34 @@ class DataMigrationService:
         updated = data.get('updated', '')
         updated_dt = datetime.strptime(updated, '%Y%m%dT%H%M%S') if updated else None
 
-        count = 0
-        for scope_id, scope_info in data.get('data', {}).items():
-            try:
-                await db.execute("""
-                    INSERT INTO attachments
-                    (id, name, attachment_type, ammo, decay, range_bonus, data_updated)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    scope_id,
-                    scope_id,
-                    'Scope',
-                    int(scope_info.get('ammo', 0)),
-                    float(scope_info.get('decay', 0)),
-                    20,
-                    updated_dt
-                ))
-                count += 1
-            except Exception as e:
-                logger.error(f"Error migrating scope {scope_id}: {e}")
+        async with aiosqlite.connect(db_path) as db:
+            count = 0
+            for scope_id, scope_info in data.get('data', {}).items():
+                try:
+                    await db.execute("""
+                        INSERT OR IGNORE INTO attachments
+                        (id, name, attachment_type, ammo, decay, range_bonus, data_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        scope_id,
+                        scope_id,
+                        'Scope',
+                        int(scope_info.get('ammo', 0)),
+                        float(scope_info.get('decay', 0)),
+                        20,
+                        updated_dt
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Error migrating scope {scope_id}: {e}")
 
-        logger.info(f"Migrated {count} scopes")
+            await db.commit()
+
+        logger.info(f"Migrated {count} scopes to {db_path.name}")
         return count
 
-    async def _migrate_sights(self, db: aiosqlite.Connection) -> int:
-        """Migrate sights (treated as attachments) from JSON"""
+    async def _migrate_sights_to_db(self, db_path: Path, force: bool = False) -> int:
+        """Migrate sights from JSON to attachments database"""
         sights_path = self.json_files['sights']
         if not sights_path.exists():
             logger.warning("sights.json not found")
@@ -299,31 +216,34 @@ class DataMigrationService:
         updated = data.get('updated', '')
         updated_dt = datetime.strptime(updated, '%Y%m%dT%H%M%S') if updated else None
 
-        count = 0
-        for sight_id, sight_info in data.get('data', {}).items():
-            try:
-                await db.execute("""
-                    INSERT INTO attachments
-                    (id, name, attachment_type, ammo, decay, economy_bonus, data_updated)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    sight_id,
-                    sight_id,
-                    'Sight',
-                    int(sight_info.get('ammo', 0)),
-                    float(sight_info.get('decay', 0)),
-                    0.05,
-                    updated_dt
-                ))
-                count += 1
-            except Exception as e:
-                logger.error(f"Error migrating sight {sight_id}: {e}")
+        async with aiosqlite.connect(db_path) as db:
+            count = 0
+            for sight_id, sight_info in data.get('data', {}).items():
+                try:
+                    await db.execute("""
+                        INSERT OR IGNORE INTO attachments
+                        (id, name, attachment_type, ammo, decay, economy_bonus, data_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        sight_id,
+                        sight_id,
+                        'Sight',
+                        int(sight_info.get('ammo', 0)),
+                        float(sight_info.get('decay', 0)),
+                        0.05,
+                        updated_dt
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Error migrating sight {sight_id}: {e}")
 
-        logger.info(f"Migrated {count} sights")
+            await db.commit()
+
+        logger.info(f"Migrated {count} sights to {db_path.name}")
         return count
 
-    async def _migrate_resources(self, db: aiosqlite.Connection) -> int:
-        """Migrate resources from JSON"""
+    async def _migrate_resources_to_db(self, db_path: Path, force: bool = False) -> int:
+        """Migrate resources from JSON to separate resources database"""
         resources_path = self.json_files['resources']
         if not resources_path.exists():
             logger.warning("resources.json not found")
@@ -335,38 +255,44 @@ class DataMigrationService:
         updated = data.get('updated', '')
         updated_dt = datetime.strptime(updated, '%Y%m%dT%H%M%S') if updated else None
 
-        count = 0
-        for resource_name, resource_info in data.get('data', {}).items():
-            try:
-                if isinstance(resource_info, (int, float)):
-                    tt_value = float(resource_info)
-                    decay = 0.0
-                elif isinstance(resource_info, str):
-                    tt_value = float(resource_info)
-                    decay = 0.0
-                else:
-                    tt_value = float(resource_info.get('tt_value', 0))
-                    decay = float(resource_info.get('decay', 0))
+        async with aiosqlite.connect(db_path) as db:
+            if force:
+                await db.execute("DELETE FROM resources")
 
-                await db.execute("""
-                    INSERT OR REPLACE INTO resources
-                    (name, tt_value, decay, data_updated)
-                    VALUES (?, ?, ?, ?)
-                """, (
-                    resource_name,
-                    tt_value,
-                    decay,
-                    updated_dt
-                ))
-                count += 1
-            except Exception as e:
-                logger.error(f"Error migrating resource {resource_name}: {e}")
+            count = 0
+            for resource_name, resource_info in data.get('data', {}).items():
+                try:
+                    if isinstance(resource_info, (int, float)):
+                        tt_value = float(resource_info)
+                        decay = 0.0
+                    elif isinstance(resource_info, str):
+                        tt_value = float(resource_info)
+                        decay = 0.0
+                    else:
+                        tt_value = float(resource_info.get('tt_value', 0))
+                        decay = float(resource_info.get('decay', 0))
 
-        logger.info(f"Migrated {count} resources")
+                    await db.execute("""
+                        INSERT OR REPLACE INTO resources
+                        (name, tt_value, decay, data_updated)
+                        VALUES (?, ?, ?, ?)
+                    """, (
+                        resource_name,
+                        tt_value,
+                        decay,
+                        updated_dt
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Error migrating resource {resource_name}: {e}")
+
+            await db.commit()
+
+        logger.info(f"Migrated {count} resources to {db_path.name}")
         return count
 
-    async def _migrate_blueprints(self, db: aiosqlite.Connection) -> int:
-        """Migrate blueprints from JSON"""
+    async def _migrate_blueprints_to_db(self, db_path: Path, force: bool = False) -> int:
+        """Migrate blueprints from JSON to separate crafting database"""
         crafting_path = self.json_files['crafting']
         if not crafting_path.exists():
             logger.warning("crafting.json not found")
@@ -378,31 +304,37 @@ class DataMigrationService:
         updated = data.get('updated', '')
         updated_dt = datetime.strptime(updated, '%Y%m%dT%H%M%S') if updated else None
 
-        count = 0
-        for blueprint_id, materials in data.get('data', {}).items():
-            try:
-                name = blueprint_id
-                result_item = name.replace(' Blueprint (L)', '').replace(' Blueprint', '')
+        async with aiosqlite.connect(db_path) as db:
+            if force:
+                await db.execute("DELETE FROM blueprints")
 
-                await db.execute("""
-                    INSERT INTO blueprints
-                    (id, name, result_item, data_updated)
-                    VALUES (?, ?, ?, ?)
-                """, (
-                    blueprint_id,
-                    name,
-                    result_item,
-                    updated_dt
-                ))
-                count += 1
-            except Exception as e:
-                logger.error(f"Error migrating blueprint {blueprint_id}: {e}")
+            count = 0
+            for blueprint_id, materials in data.get('data', {}).items():
+                try:
+                    name = blueprint_id
+                    result_item = name.replace(' Blueprint (L)', '').replace(' Blueprint', '')
 
-        logger.info(f"Migrated {count} blueprints")
+                    await db.execute("""
+                        INSERT INTO blueprints
+                        (id, name, result_item, data_updated)
+                        VALUES (?, ?, ?, ?)
+                    """, (
+                        blueprint_id,
+                        name,
+                        result_item,
+                        updated_dt
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Error migrating blueprint {blueprint_id}: {e}")
+
+            await db.commit()
+
+        logger.info(f"Migrated {count} blueprints to {db_path.name}")
         return count
 
-    async def _migrate_blueprint_materials(self, db: aiosqlite.Connection) -> int:
-        """Migrate blueprint materials from JSON (normalized)"""
+    async def _migrate_blueprint_materials_to_db(self, db_path: Path, force: bool = False) -> int:
+        """Migrate blueprint materials from JSON to crafting database"""
         crafting_path = self.json_files['crafting']
         if not crafting_path.exists():
             return 0
@@ -410,43 +342,40 @@ class DataMigrationService:
         with open(crafting_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        count = 0
-        for blueprint_id, materials in data.get('data', {}).items():
-            if not isinstance(materials, list):
-                continue
+        async with aiosqlite.connect(db_path) as db:
+            if force:
+                await db.execute("DELETE FROM blueprint_materials")
 
-            for material in materials:
-                if not isinstance(material, list) or len(material) < 2:
+            count = 0
+            for blueprint_id, materials in data.get('data', {}).items():
+                if not isinstance(materials, list):
                     continue
 
-                try:
-                    material_name = material[0]
-                    quantity = material[1]
+                for material in materials:
+                    if not isinstance(material, list) or len(material) < 2:
+                        continue
 
-                    await db.execute("""
-                        INSERT OR IGNORE INTO blueprint_materials
-                        (blueprint_id, material_name, quantity)
-                        VALUES (?, ?, ?)
-                    """, (
-                        blueprint_id,
-                        material_name,
-                        int(quantity)
-                    ))
-                    count += 1
-                except Exception as e:
-                    logger.error(f"Error migrating material {material_name} for {blueprint_id}: {e}")
+                    try:
+                        material_name = material[0]
+                        quantity = material[1]
 
-        logger.info(f"Migrated {count} blueprint materials")
+                        await db.execute("""
+                            INSERT OR IGNORE INTO blueprint_materials
+                            (blueprint_id, material_name, quantity)
+                            VALUES (?, ?, ?)
+                        """, (
+                            blueprint_id,
+                            material_name,
+                            int(quantity)
+                        ))
+                        count += 1
+                    except Exception as e:
+                        logger.error(f"Error migrating material {material_name} for {blueprint_id}: {e}")
+
+            await db.commit()
+
+        logger.info(f"Migrated {count} blueprint materials to {db_path.name}")
         return count
-
-    async def _clear_data(self, db: aiosqlite.Connection):
-        """Clear all data tables for fresh migration"""
-        await db.execute("DELETE FROM blueprint_materials")
-        await db.execute("DELETE FROM blueprints")
-        await db.execute("DELETE FROM resources")
-        await db.execute("DELETE FROM attachments")
-        await db.execute("DELETE FROM weapons")
-        logger.info("Cleared all existing data")
 
     def _estimate_damage(self, weapon_type: str) -> float:
         """Estimate base damage based on weapon type"""
@@ -475,7 +404,7 @@ class DataMigrationService:
 
 
 async def run_migration(force: bool = False) -> Dict[str, int]:
-    """Standalone migration runner"""
+    """Standalone migration runner using separate databases"""
     service = DataMigrationService()
     return await service.migrate_all(force=force)
 
@@ -493,8 +422,8 @@ if __name__ == "__main__":
     print("\nMigration complete!")
     print(f"  Weapons: {counts['weapons']}")
     print(f"  Attachments: {counts['attachments']}")
-    print(f"  Scopes: {counts.get('scopes', 'N/A')}")
-    print(f"  Sights: {counts.get('sights', 'N/A')}")
+    print(f"  Scopes: {counts.get('scopes', 0)}")
+    print(f"  Sights: {counts.get('sights', 0)}")
     print(f"  Resources: {counts['resources']}")
     print(f"  Blueprints: {counts['blueprints']}")
     print(f"  Blueprint Materials: {counts['blueprint_materials']}")

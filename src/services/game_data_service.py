@@ -1,6 +1,6 @@
 """
 High-performance data access layer for game data
-Replaces in-memory dicts with SQLite queries
+Uses separate database files for each data category
 """
 
 import asyncio
@@ -20,43 +20,50 @@ logger = logging.getLogger(__name__)
 
 
 class GameDataService:
-    """Async data access service for game data"""
+    """Async data access service for game data using separate databases"""
 
-    def __init__(self, db_path: str = None):
-        if db_path:
-            self.db_path = Path(db_path)
-        else:
-            self.db_path = ensure_user_data_dir() / "lewtnanny.db"
+    def __init__(self, db_dir: Path = None):
+        if db_dir is None:
+            db_dir = ensure_user_data_dir()
+        self.db_dir = db_dir
+        
+        self.weapons_db = db_dir / "weapons.db"
+        self.attachments_db = db_dir / "attachments.db"
+        self.resources_db = db_dir / "resources.db"
+        self.crafting_db = db_dir / "crafting.db"
 
     async def get_counts(self) -> Dict[str, int]:
         """Get counts of all data tables"""
-        async with aiosqlite.connect(self.db_path) as db:
-            counts = {}
-            tables = ['weapons', 'attachments', 'resources', 'blueprints', 'blueprint_materials']
-            for table in tables:
-                cursor = await db.execute(f"SELECT COUNT(*) FROM {table}")
-                result = await cursor.fetchone()
-                counts[table] = result[0] if result else 0
-            return counts
-
-    # =========================================================================
-    # WEAPON OPERATIONS
-    # =========================================================================
+        counts = {}
+        
+        for db_path, table_name in [
+            (self.weapons_db, 'weapons'),
+            (self.attachments_db, 'attachments'),
+            (self.resources_db, 'resources'),
+            (self.crafting_db, 'blueprints')
+        ]:
+            if db_path.exists():
+                async with aiosqlite.connect(db_path) as db:
+                    cursor = await db.execute(f"SELECT COUNT(*) FROM {table_name}")
+                    result = await cursor.fetchone()
+                    counts[table_name] = result[0] if result else 0
+        
+        return counts
 
     async def get_all_weapons(self) -> List[Weapon]:
-        """Get all weapons"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get all weapons from weapons database"""
+        weapons = []
+        async with aiosqlite.connect(self.weapons_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM weapons ORDER BY name")
 
-            weapons = []
             async for row in cursor:
                 weapons.append(self._row_to_weapon(row))
-            return weapons
+        return weapons
 
     async def get_weapon_by_name(self, name: str) -> Optional[Weapon]:
-        """Get weapon by exact name match"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get weapon by exact name match from weapons database"""
+        async with aiosqlite.connect(self.weapons_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 "SELECT * FROM weapons WHERE name = ? LIMIT 1",
@@ -66,8 +73,9 @@ class GameDataService:
             return self._row_to_weapon(row) if row else None
 
     async def search_weapons(self, query: str, limit: int = 50) -> List[Weapon]:
-        """Search weapons by name (LIKE query)"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Search weapons by name from weapons database"""
+        weapons = []
+        async with aiosqlite.connect(self.weapons_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("""
                 SELECT * FROM weapons
@@ -76,14 +84,14 @@ class GameDataService:
                 LIMIT ?
             """, (f"%{query}%", limit))
 
-            weapons = []
             async for row in cursor:
                 weapons.append(self._row_to_weapon(row))
-            return weapons
+        return weapons
 
     async def get_weapons_by_type(self, weapon_type: str) -> List[Weapon]:
-        """Get weapons by type"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get weapons by type from weapons database"""
+        weapons = []
+        async with aiosqlite.connect(self.weapons_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("""
                 SELECT * FROM weapons
@@ -91,14 +99,14 @@ class GameDataService:
                 ORDER BY dps DESC
             """, (weapon_type,))
 
-            weapons = []
             async for row in cursor:
                 weapons.append(self._row_to_weapon(row))
-            return weapons
+        return weapons
 
     async def get_best_weapons_by_dps(self, limit: int = 10) -> List[Weapon]:
-        """Get top weapons by DPS"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get top weapons by DPS from weapons database"""
+        weapons = []
+        async with aiosqlite.connect(self.weapons_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("""
                 SELECT * FROM weapons
@@ -107,14 +115,14 @@ class GameDataService:
                 LIMIT ?
             """, (limit,))
 
-            weapons = []
             async for row in cursor:
                 weapons.append(self._row_to_weapon(row))
-            return weapons
+        return weapons
 
     async def get_best_weapons_by_eco(self, limit: int = 10) -> List[Weapon]:
-        """Get top weapons by economy (damage per PED)"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get top weapons by economy from weapons database"""
+        weapons = []
+        async with aiosqlite.connect(self.weapons_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("""
                 SELECT * FROM weapons
@@ -123,10 +131,9 @@ class GameDataService:
                 LIMIT ?
             """, (limit,))
 
-            weapons = []
             async for row in cursor:
                 weapons.append(self._row_to_weapon(row))
-            return weapons
+        return weapons
 
     async def get_weapon_stats(self, weapon_name: str) -> Optional[WeaponStats]:
         """Get detailed weapon stats for calculations"""
@@ -146,24 +153,21 @@ class GameDataService:
             weapon_type=weapon.weapon_type
         )
 
-    # =========================================================================
-    # ATTACHMENT OPERATIONS
-    # =========================================================================
-
     async def get_all_attachments(self) -> List[Attachment]:
-        """Get all attachments"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get all attachments from attachments database"""
+        attachments = []
+        async with aiosqlite.connect(self.attachments_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM attachments ORDER BY name")
 
-            attachments = []
             async for row in cursor:
                 attachments.append(self._row_to_attachment(row))
-            return attachments
+        return attachments
 
     async def get_attachments_by_type(self, attachment_type: str) -> List[Attachment]:
-        """Get attachments by type (BLP Amp, Energy Amp, Scope, Sight, etc.)"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get attachments by type from attachments database"""
+        attachments = []
+        async with aiosqlite.connect(self.attachments_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("""
                 SELECT * FROM attachments
@@ -171,14 +175,14 @@ class GameDataService:
                 ORDER BY name
             """, (attachment_type,))
 
-            attachments = []
             async for row in cursor:
                 attachments.append(self._row_to_attachment(row))
-            return attachments
+        return attachments
 
     async def search_attachments(self, query: str) -> List[Attachment]:
-        """Search attachments by name"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Search attachments by name from attachments database"""
+        attachments = []
+        async with aiosqlite.connect(self.attachments_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("""
                 SELECT * FROM attachments
@@ -186,14 +190,13 @@ class GameDataService:
                 ORDER BY name
             """, (f"%{query}%",))
 
-            attachments = []
             async for row in cursor:
                 attachments.append(self._row_to_attachment(row))
-            return attachments
+        return attachments
 
     async def get_attachment_by_name(self, name: str) -> Optional[Attachment]:
-        """Get attachment by exact name match"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get attachment by exact name match from attachments database"""
+        async with aiosqlite.connect(self.attachments_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 "SELECT * FROM attachments WHERE name = ? LIMIT 1",
@@ -219,24 +222,20 @@ class GameDataService:
             range_bonus=attachment.range_bonus
         )
 
-    # =========================================================================
-    # RESOURCE OPERATIONS
-    # =========================================================================
-
     async def get_all_resources(self) -> List[Resource]:
-        """Get all resources"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get all resources from resources database"""
+        resources = []
+        async with aiosqlite.connect(self.resources_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM resources ORDER BY name")
 
-            resources = []
             async for row in cursor:
                 resources.append(self._row_to_resource(row))
-            return resources
+        return resources
 
     async def get_resource_by_name(self, name: str) -> Optional[Resource]:
-        """Get resource by exact name match"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get resource by exact name match from resources database"""
+        async with aiosqlite.connect(self.resources_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 "SELECT * FROM resources WHERE name = ? LIMIT 1",
@@ -246,8 +245,9 @@ class GameDataService:
             return self._row_to_resource(row) if row else None
 
     async def search_resources(self, query: str, limit: int = 50) -> List[Resource]:
-        """Search resources by name"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Search resources by name from resources database"""
+        resources = []
+        async with aiosqlite.connect(self.resources_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("""
                 SELECT * FROM resources
@@ -256,14 +256,14 @@ class GameDataService:
                 LIMIT ?
             """, (f"%{query}%", limit))
 
-            resources = []
             async for row in cursor:
                 resources.append(self._row_to_resource(row))
-            return resources
+        return resources
 
     async def get_resources_by_tt_value(self, min_tt: float = 0, max_tt: float = 1000) -> List[Resource]:
-        """Get resources within TT value range"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get resources within TT value range from resources database"""
+        resources = []
+        async with aiosqlite.connect(self.resources_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("""
                 SELECT * FROM resources
@@ -271,31 +271,26 @@ class GameDataService:
                 ORDER BY tt_value DESC
             """, (min_tt, max_tt))
 
-            resources = []
             async for row in cursor:
                 resources.append(self._row_to_resource(row))
-            return resources
-
-    # =========================================================================
-    # BLUEPRINT OPERATIONS
-    # =========================================================================
+        return resources
 
     async def get_all_blueprints(self) -> List[Blueprint]:
-        """Get all blueprints with materials"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get all blueprints with materials from crafting database"""
+        blueprints = []
+        async with aiosqlite.connect(self.crafting_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM blueprints ORDER BY name")
 
-            blueprints = []
             async for row in cursor:
                 blueprint = self._row_to_blueprint(row)
                 blueprint.materials = await self._get_blueprint_materials(db, row['id'])
                 blueprints.append(blueprint)
-            return blueprints
+        return blueprints
 
     async def get_blueprint_by_name(self, name: str) -> Optional[Blueprint]:
-        """Get blueprint by name with materials"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Get blueprint by name with materials from crafting database"""
+        async with aiosqlite.connect(self.crafting_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 "SELECT * FROM blueprints WHERE name = ? LIMIT 1",
@@ -310,8 +305,9 @@ class GameDataService:
             return blueprint
 
     async def search_blueprints(self, query: str) -> List[Blueprint]:
-        """Search blueprints by name"""
-        async with aiosqlite.connect(self.db_path) as db:
+        """Search blueprints by name from crafting database"""
+        blueprints = []
+        async with aiosqlite.connect(self.crafting_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("""
                 SELECT * FROM blueprints
@@ -319,16 +315,16 @@ class GameDataService:
                 ORDER BY name
             """, (f"%{query}%",))
 
-            blueprints = []
             async for row in cursor:
                 blueprint = self._row_to_blueprint(row)
                 blueprint.materials = await self._get_blueprint_materials(db, row['id'])
                 blueprints.append(blueprint)
-            return blueprints
+        return blueprints
 
     async def get_blueprints_by_material(self, material_name: str) -> List[Blueprint]:
         """Find blueprints that use a specific material"""
-        async with aiosqlite.connect(self.db_path) as db:
+        blueprints = []
+        async with aiosqlite.connect(self.crafting_db) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("""
                 SELECT DISTINCT bp.* FROM blueprints bp
@@ -337,12 +333,11 @@ class GameDataService:
                 ORDER BY bp.name
             """, (f"%{material_name}%",))
 
-            blueprints = []
             async for row in cursor:
                 blueprint = self._row_to_blueprint(row)
                 blueprint.materials = await self._get_blueprint_materials(db, row['id'])
                 blueprints.append(blueprint)
-            return blueprints
+        return blueprints
 
     async def calculate_blueprint_cost(self, blueprint_name: str, resource_values: Dict[str, float] = None) -> float:
         """Calculate total material cost for a blueprint"""
@@ -362,7 +357,7 @@ class GameDataService:
         return total_cost
 
     async def _get_blueprint_materials(self, db: aiosqlite.Connection, blueprint_id: str) -> List[BlueprintMaterial]:
-        """Get materials for a blueprint"""
+        """Get materials for a blueprint from crafting database"""
         cursor = await db.execute("""
             SELECT * FROM blueprint_materials WHERE blueprint_id = ?
         """, (blueprint_id,))
@@ -375,10 +370,6 @@ class GameDataService:
                 quantity=row['quantity']
             ))
         return materials
-
-    # =========================================================================
-    # HELPER METHODS
-    # =========================================================================
 
     def _row_to_weapon(self, row) -> Weapon:
         return Weapon(
@@ -478,9 +469,7 @@ class WeaponCalculator:
         
         dps = enhanced_damage / base_weapon.reload_time if base_weapon.reload_time > 0 else Decimal('0')
         
-        # Calculate DPP (Damage per PEC) - 100 PEC = 1 PED
-        # DPP = Total Damage / Total Cost in PEC
-        total_cost_pec = total_cost_per_shot * Decimal('100')  # Convert PED to PEC
+        total_cost_pec = total_cost_per_shot * Decimal('100')
         damage_per_pec = enhanced_damage / total_cost_pec if total_cost_pec > 0 else Decimal('0')
 
         return EnhancedWeaponStats(
@@ -518,7 +507,7 @@ class WeaponCalculator:
             'total_damage': float(total_damage),
             'average_cost_per_shot': float(enhanced.total_cost_per_shot),
             'average_dps': float(enhanced.dps),
-            'damage_per_ped': float(enhanced.damage_per_ped)  # Actually DPP (Damage per PEC)
+            'damage_per_ped': float(enhanced.damage_per_ped)
         }
 
 

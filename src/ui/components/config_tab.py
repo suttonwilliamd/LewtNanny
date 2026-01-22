@@ -976,7 +976,7 @@ class LoadoutDialog(QDialog):
             self._sights = ["None"]
 
             for att in attachments:
-                if att.attachment_type in ['BLP Amp', 'Laser Amp']:
+                if att.attachment_type in ['BLP Amp', 'Laser Amp', 'Energy Amp', 'Melee Amp', 'MF Amp']:
                     self._amplifiers.append(att.name)
                 elif att.attachment_type == 'Scope':
                     self._scopes.append(att.name)
@@ -987,6 +987,20 @@ class LoadoutDialog(QDialog):
             self.scope_combo.addItems(sorted(set(self._scopes)))
             self.sight1_combo.addItems(sorted(set(self._sights)))
             self.sight2_combo.addItems(sorted(set(self._sights)))
+
+            # Default to "None" for all optional fields
+            none_idx = self.amp_combo.findText("None")
+            if none_idx >= 0:
+                self.amp_combo.setCurrentIndex(none_idx)
+            none_idx = self.scope_combo.findText("None")
+            if none_idx >= 0:
+                self.scope_combo.setCurrentIndex(none_idx)
+            none_idx = self.sight1_combo.findText("None")
+            if none_idx >= 0:
+                self.sight1_combo.setCurrentIndex(none_idx)
+            none_idx = self.sight2_combo.findText("None")
+            if none_idx >= 0:
+                self.sight2_combo.setCurrentIndex(none_idx)
 
         except Exception as e:
             print(f"Error loading data: {e}")
