@@ -169,12 +169,12 @@ class StreamerOverlayWidget(QWidget):
             seconds = int(elapsed.total_seconds() % 60)
             self.timer_label.setText(f"{hours:02d}:{minutes:02d}:{seconds:02d}")
 
-    def start_session(self, session_id: str, activity_type: str):
+    def start_session(self, session_id: str, activity_type: str, session_start_time: Optional[datetime] = None):
         """Start a new session"""
         logger.info(f"[OVERLAY] start_session called: session_id={session_id}, activity_type={activity_type}")
         logger.info(f"[OVERLAY] Previous stats before reset: {dict(self._stats)}")
         
-        self.session_start_time = datetime.now()
+        self.session_start_time = session_start_time if session_start_time else datetime.now()
         self.session_active = True
         self.current_session_id = session_id
         self._stats = {
@@ -363,6 +363,10 @@ class SessionOverlay:
         self.config_manager = config_manager
         self.overlay_widget: Optional[StreamerOverlayWidget] = None
         self.current_weapon = None
+        self._stats = {
+            'total_cost': Decimal('0'),
+            'total_return': Decimal('0')
+        }
         logger.info("SessionOverlay initialized")
 
     def get_character_name(self) -> str:
@@ -404,11 +408,11 @@ class SessionOverlay:
             self.overlay_widget = None
             logger.info("SessionOverlay closed")
 
-    def start_session(self, session_id: str, activity_type: str):
+    def start_session(self, session_id: str, activity_type: str, session_start_time: Optional[datetime] = None):
         """Start a new session"""
         logger.info(f"[OVERLAY_CONTROLLER] start_session called: session_id={session_id}, activity_type={activity_type}")
         if self.overlay_widget:
-            self.overlay_widget.start_session(session_id, activity_type)
+            self.overlay_widget.start_session(session_id, activity_type, session_start_time)
         logger.info(f"SessionOverlay started session: {session_id}")
 
     def stop_session(self):

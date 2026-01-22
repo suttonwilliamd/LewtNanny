@@ -555,6 +555,7 @@ class ConfigTab(QWidget):
             for i in range(self.active_loadout_combo.count()):
                 if self.active_loadout_combo.itemData(i) == saved_id:
                     self.active_loadout_combo.setCurrentIndex(i)
+                    self._on_active_loadout_changed(i)
                     break
             
             for idx, loadout in enumerate(self._loadouts):
