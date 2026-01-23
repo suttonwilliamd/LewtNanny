@@ -120,6 +120,9 @@ class ChatReader(QObject):
         loot_match = self.patterns['loot'].search(line)
         if loot_match:
             loot_info = loot_match.groups()
+            logger.debug(f"[CHAT_READER] Loot match found: {loot_info}")
+            logger.debug(f"[CHAT_READER] Full line: {line}")
+            
             # Exclude Universal Ammo (not actual loot, appears when converting shrapnel at 101%)
             if loot_info[0] == 'Universal Ammo':
                 logger.info(f"[CHAT_READER] Skipping Universal Ammo (shrapnel conversion)")
@@ -128,17 +131,26 @@ class ChatReader(QObject):
             # Only process loot messages that are actually from you, not from chat channels
             # Personal loot messages either have no brackets or have your character name, not channel names
             before_received = line.split('You received')[0]
+            logger.debug(f"[CHAT_READER] Text before 'You received': '{before_received}'")
+            logger.debug(f"[CHAT_READER] Does it contain ']': {']' in before_received}")
+            
             if ']' in before_received:
                 # Check if this is a chat channel (not empty brackets or your character name)
                 # Look for patterns like [Channel], [Player Name], etc.
                 import re
-                # Match any non-empty content in brackets
-                bracket_content = re.search(r'\[(.*?)\]', before_received)
-                if bracket_content and bracket_content.group(1).strip():
+                # Find ALL bracket contents in the prefix
+                all_brackets = re.findall(r'\[(.*?)\]', before_received)
+                logger.debug(f"[CHAT_READER] All bracket contents found: {all_brackets}")
+                
+                # Check if any bracket has non-empty content (indicating chat channel/player name)
+                has_non_empty_bracket = any(bracket.strip() for bracket in all_brackets)
+                logger.debug(f"[CHAT_READER] Has non-empty bracket: {has_non_empty_bracket}")
+                
+                if has_non_empty_bracket:
                     # This is someone else's loot message in a chat channel
                     logger.info(f"[CHAT_READER] Skipping other player's loot message: {line[:80]}...")
                     return None
-                # Empty brackets [] are ok to process (personal loot)
+                # All brackets are empty, so this is personal loot
                 
             logger.info(f"[CHAT_READER] Detected LOOT event: {loot_info}")
             event_data = {
