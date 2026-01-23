@@ -6,6 +6,7 @@ Implements the detailed UI specification with custom tab bar and persistent bott
 import sys
 import asyncio
 import logging
+import threading
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from pathlib import Path
@@ -235,6 +236,11 @@ class TabbedMainWindow(QMainWindow):
                         color: #E6EDF3;
                     }
                 """)
+
+        # Update blueprint dropdown when switching to crafting tab
+        if tab_name == "Crafting" and hasattr(self, 'crafting_tab'):
+            # Use a timer to ensure the widget is fully visible
+            QTimer.singleShot(100, lambda: self.crafting_tab.update_blueprint_dropdown())
 
         logger.debug(f"Switched to tab: {tab_name}")
 
@@ -746,6 +752,7 @@ class TabbedMainWindow(QMainWindow):
     def create_crafting_tab(self):
         """Create the Crafting tab"""
         crafting_widget = CraftingTabWidget(self.db_manager)
+        self.crafting_tab = crafting_widget
         self.content_stack.addWidget(crafting_widget)
         logger.info("Crafting tab created")
 
@@ -1753,7 +1760,7 @@ class TabbedMainWindow(QMainWindow):
         logger.info(f"[UI] ===========================================")
         logger.info(f"[UI] Updating LOOT SUMMARY...")
         try:
-            self._process_event_for_summary(event_type, parsed_data)
+            self._process_event_for_summary(event_type, parsed_data, raw_message)
             logger.info(f"[UI] Loot summary updated")
         except Exception as e:
             logger.error(f"[UI] ERROR updating loot summary: {e}", exc_info=True)
@@ -1773,7 +1780,7 @@ class TabbedMainWindow(QMainWindow):
         logger.info(f"[UI] ===========================================")
         logger.info(f"[UI] <<< Event handling complete: {event_type} >>>")
 
-    def _process_event_for_summary(self, event_type: str, parsed_data: Dict[str, Any]):
+    def _process_event_for_summary(self, event_type: str, parsed_data: Dict[str, Any], raw_message: str = ""):
         """Update loot summary stats based on event type"""
         if event_type == 'loot':
             value = parsed_data.get('value', 0)
@@ -1781,11 +1788,10 @@ class TabbedMainWindow(QMainWindow):
             new_total = current + value
             self.loot_summary_labels["Total Return"].setText(f"{new_total:.2f} PED")
 
-            raw = parsed_data.get('raw_message', '')
-            if 'Hall of Fame' in raw or 'HOF' in raw:
+            if 'Hall of Fame' in raw_message or 'HOF' in raw_message:
                 hof_count = int(self.loot_summary_labels["HOFs"].text()) + 1
                 self.loot_summary_labels["HOFs"].setText(str(hof_count))
-            elif 'killed a creature' in raw:
+            elif 'killed a creature' in raw_message:
                 globals_count = int(self.loot_summary_labels["Globals"].text()) + 1
                 self.loot_summary_labels["Globals"].setText(str(globals_count))
 
@@ -1889,25 +1895,123 @@ class TabbedMainWindow(QMainWindow):
             ))
 
     def _on_run_log_selection_changed(self):
-        """Handle run log row selection - update item breakdown"""
+        """Handle run log row selection - update item breakdown, summary, and skills"""
         selected_rows = self.run_log_table.selectedItems()
         if not selected_rows:
+            self._clear_session_specific_data()
             return
 
         row = selected_rows[0].row()
         session_id = self.run_log_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
 
         if not session_id:
+            self._clear_session_specific_data()
             return
 
         if session_id == "current":
             self._update_item_breakdown_current_run()
+            self._load_current_session_summary()
         else:
-            self._load_item_breakdown_for_session(session_id)
+            self._load_session_data(session_id)
 
     def _update_item_breakdown_current_run(self):
-        """Update item breakdown with current run data from the table"""
+        """Current run item breakdown is already live-updated, no need to change"""
+        # The item breakdown table is populated in real-time via _process_loot_event
+        # For current run selection, just leave it as is
+        pass
+
+    def _load_session_data(self, session_id: str):
+        """Load all session data: item breakdown, summary, and skills"""
         self.item_breakdown_table.setRowCount(0)
+        self.skills_table.setRowCount(0)
+
+        def load_data():
+            async def inner():
+                # Load item breakdown
+                items = await self.db_manager.get_session_loot_items(session_id)
+                for item in items:
+                    row = self.item_breakdown_table.rowCount()
+                    self.item_breakdown_table.insertRow(row)
+                    self.item_breakdown_table.setItem(row, 0, QTableWidgetItem(item['item_name']))
+                    self.item_breakdown_table.setItem(row, 1, QTableWidgetItem(str(item['quantity'])))
+                    item_value = item['total_value'] / item['quantity'] if item['quantity'] > 0 else 0
+                    self.item_breakdown_table.setItem(row, 2, QTableWidgetItem(f"{item_value:.4f}"))
+                    self.item_breakdown_table.setItem(row, 3, QTableWidgetItem(f"{item['markup_percent']:.0f}%"))
+                    self.item_breakdown_table.setItem(row, 4, QTableWidgetItem(f"{item['total_value']:.4f}"))
+
+                # Load session summary
+                sessions = await self.db_manager.get_all_sessions()
+                session_data = next((s for s in sessions if s['id'] == session_id), None)
+                if session_data:
+                    counts = await self.db_manager.get_session_counts(session_id)
+
+                    total_cost = session_data.get('total_cost', 0) or 0
+                    total_return = session_data.get('total_return', 0) or 0
+                    return_pct = (total_return / total_cost * 100) if total_cost > 0 else 0
+
+                    self.loot_summary_labels["Total Cost"].setText(f"{total_cost:.2f} PED")
+                    self.loot_summary_labels["Total Return"].setText(f"{total_return:.2f} PED")
+                    self.loot_summary_labels["% Return"].setText(f"{return_pct:.1f}%" if total_cost > 0 else "0.0%")
+                    self.loot_summary_labels["Creatures Looted"].setText(str(counts['creatures']))
+                    self.loot_summary_labels["Globals"].setText(str(counts['globals']))
+                    self.loot_summary_labels["HOFs"].setText(str(counts['hofs']))
+
+                # Load skills
+                skills = await self.db_manager.get_session_skills(session_id)
+                skill_totals = {}
+                for skill_data in skills:
+                    skill_name = skill_data.get('skill', '')
+                    experience = skill_data.get('experience', 0)
+                    improvement = skill_data.get('improvement', 0)
+                    gain_value = experience or improvement
+
+                    if skill_name:
+                        if skill_name not in skill_totals:
+                            skill_totals[skill_name] = {'total_gain': 0, 'procs': 0}
+                        skill_totals[skill_name]['total_gain'] += gain_value
+                        skill_totals[skill_name]['procs'] += 1
+
+                total_skill_gain = 0
+                for skill_name, data in skill_totals.items():
+                    row = self.skills_table.rowCount()
+                    self.skills_table.insertRow(row)
+                    self.skills_table.setItem(row, 0, QTableWidgetItem(str(row + 1)))
+                    self.skills_table.setItem(row, 1, QTableWidgetItem(skill_name))
+                    self.skills_table.setItem(row, 2, QTableWidgetItem(f"{data['total_gain']:.2f}"))
+                    self.skills_table.setItem(row, 3, QTableWidgetItem(str(data['procs'])))
+                    total_skill_gain += data['total_gain']
+
+                # Recalculate proc percentages
+                total_procs = sum(data['procs'] for data in skill_totals.values())
+                for row in range(self.skills_table.rowCount()):
+                    procs = int(self.skills_table.item(row, 3).text())
+                    proc_percent = (procs / total_procs) * 100 if total_procs > 0 else 100
+                    self.skills_table.setItem(row, 4, QTableWidgetItem(f"{proc_percent:.0f}%"))
+
+                self.total_skill_gain_value.setText(f"{total_skill_gain:.2f}")
+
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(inner())
+                finally:
+                    loop.close()
+            except Exception as e:
+                logger.error(f"Error loading session data: {e}")
+
+        threading.Thread(target=load_data, daemon=True).start()
+
+    def _load_current_session_summary(self):
+        """Load summary for current session (already shown)"""
+        # Current session data is already displayed, no need to change
+        pass
+
+    def _clear_session_specific_data(self):
+        """Clear session-specific data when no run is selected"""
+        # Reset to current session data or clear
+        # For now, just leave as is since current session data should be shown
+        pass
 
     def _load_item_breakdown_for_session(self, session_id: str):
         """Load item breakdown for a specific session"""

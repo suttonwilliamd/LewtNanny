@@ -203,6 +203,15 @@ class DatabaseManager:
             for blueprint_id, materials in crafting_data.get('data', {}).items():
                 try:
                     result_item = blueprint_id.replace(' Blueprint (L)', '').replace(' Blueprint', '')
+                    # Store materials as JSON in crafting_blueprints table
+                    materials_json = json.dumps(materials) if isinstance(materials, list) else '[]'
+
+                    await db.execute("""
+                        INSERT OR IGNORE INTO crafting_blueprints (id, name, materials, result_item, result_quantity)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (blueprint_id, blueprint_id, materials_json, result_item, 1))
+
+                    # Also populate the old tables for backward compatibility
                     await db.execute("""
                         INSERT OR IGNORE INTO blueprints (id, name, result_item)
                         VALUES (?, ?, ?)
@@ -696,3 +705,61 @@ class DatabaseManager:
             logger.debug(f"Session totals updated: {session_id}")
         except Exception as e:
             logger.error(f"Error updating session totals: {e}")
+
+    async def get_session_counts(self, session_id: str) -> Dict[str, int]:
+        """Get counts of creatures, globals, and HOFs for a session"""
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                cursor = await db.execute("""
+                    SELECT raw_message
+                    FROM events
+                    WHERE session_id = ?
+                """, (session_id,))
+
+                creatures = 0
+                globals_count = 0
+                hofs = 0
+
+                async for row in cursor:
+                    raw_message = row[0] or ""
+                    if 'Hall of Fame' in raw_message or 'HOF' in raw_message:
+                        hofs += 1
+                    elif 'killed a creature' in raw_message:
+                        globals_count += 1
+                        creatures += 1
+
+                return {
+                    'creatures': creatures,
+                    'globals': globals_count,
+                    'hofs': hofs
+                }
+
+        except Exception as e:
+            logger.error(f"Error getting session counts: {e}")
+            return {'creatures': 0, 'globals': 0, 'hofs': 0}
+
+    async def get_session_skills(self, session_id: str) -> List[Dict[str, Any]]:
+        """Get skill gains for a session"""
+        skills = []
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                cursor = await db.execute("""
+                    SELECT parsed_data
+                    FROM events
+                    WHERE session_id = ? AND event_type IN ('skill_gain', 'skill')
+                    ORDER BY timestamp
+                """, (session_id,))
+
+                async for row in cursor:
+                    parsed_data = row[0]
+                    if parsed_data:
+                        try:
+                            data = json.loads(parsed_data) if isinstance(parsed_data, str) else parsed_data
+                            skills.append(data)
+                        except json.JSONDecodeError:
+                            logger.warning(f"Failed to parse skill data: {parsed_data}")
+
+        except Exception as e:
+            logger.error(f"Error getting session skills: {e}")
+
+        return skills
