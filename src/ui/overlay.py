@@ -353,7 +353,8 @@ class StreamerOverlayWidget(QWidget):
 
         if event_type == 'loot':
             value = parsed_data.get('value', 0)
-            logger.debug(f"[OVERLAY] Loot event: value={value}")
+            item_name = parsed_data.get('item_name', '')
+            logger.debug(f"[OVERLAY] Loot event: value={value}, item={item_name}")
             self._stats['items'] = self._stats.get('items', 0) + 1
             self._stats['total_return'] = self._stats.get('total_return', Decimal('0')) + Decimal(str(value))
             new_return = float(self._stats['total_return'])
@@ -362,7 +363,7 @@ class StreamerOverlayWidget(QWidget):
         elif event_type == 'combat':
             damage = parsed_data.get('damage', 0)
             miss = parsed_data.get('miss', False)
-            dodge = parsed_data.get('dodge', False)  # When creature dodges your attack
+            dodge = parsed_data.get('dodged', False)  # When creature dodges your attack
             logger.debug(f"[OVERLAY] Combat event: damage={damage}, miss={miss}, dodge={dodge}")
             
             # Count shots that consume ammo/decay (successful hits + dodged shots)

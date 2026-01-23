@@ -113,7 +113,7 @@ class TabbedMainWindow(QMainWindow):
         self.cost_per_attack = 0.0
 
         self.setWindowTitle("LewtNanny - Entropia Universe Loot Tracker")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setGeometry(100, 100, 1000, 650)
 
         logger.info("TabbedMainWindow initializing...")
 
@@ -146,7 +146,7 @@ class TabbedMainWindow(QMainWindow):
     def create_top_tab_bar(self):
         """Create the top tab bar with buttons for all tabs"""
         self.tab_bar_frame = QFrame()
-        self.tab_bar_frame.setFixedHeight(40)
+        self.tab_bar_frame.setFixedHeight(30)
         self.tab_bar_frame.setStyleSheet("""
             QFrame {
                 background-color: #161B22;
@@ -266,7 +266,7 @@ class TabbedMainWindow(QMainWindow):
     def create_bottom_control_bar(self):
         """Create the persistent bottom control bar"""
         self.bottom_bar_frame = QFrame()
-        self.bottom_bar_frame.setFixedHeight(50)
+        self.bottom_bar_frame.setFixedHeight(40)
         self.bottom_bar_frame.setStyleSheet("""
             QFrame {
                 background-color: #161B22;
@@ -753,6 +753,7 @@ class TabbedMainWindow(QMainWindow):
         """Create the Crafting tab"""
         crafting_widget = CraftingTabWidget(self.db_manager)
         self.crafting_tab = crafting_widget
+        crafting_widget.add_crafting_cost.connect(self._on_crafting_cost_added)
         self.content_stack.addWidget(crafting_widget)
         logger.info("Crafting tab created")
 
@@ -804,16 +805,47 @@ class TabbedMainWindow(QMainWindow):
                                     f"{loadout.damage_enh * 0.1:.3f}" if loadout.damage_enh else ""
                                 )
                                 self.overlay.set_cost_per_attack(self.cost_per_attack)
-                            
+
                             # Update cost per attack for total cost calculation
                             self.cost_per_attack = self._calculate_cost_per_attack()
                             logger.info(f"Loadout changed to: {loadout.weapon}, cost per attack: {self.cost_per_attack:.6f} PED")
-                            
+
                             # Update total cost display with new cost per attack
                             self._update_total_cost_display()
                             break
         except Exception as e:
             logger.error(f"Error handling loadout change: {e}")
+
+    def _on_crafting_cost_added(self, cost: float):
+        """Handle crafting cost added as spent cost (like ammo/decay)"""
+        try:
+            if not self.current_session_id:
+                logger.warning("No active session to add crafting cost to")
+                return
+
+            # Add crafting cost directly to overlay as spent cost
+            if self.overlay and self.overlay.overlay_widget and hasattr(self.overlay.overlay_widget, '_stats'):
+                current_cost = float(self.overlay.overlay_widget._stats.get('total_cost', Decimal('0')))
+                new_cost = current_cost + abs(cost)  # Cost is positive for spending
+                self.overlay.overlay_widget._stats['total_cost'] = Decimal(str(new_cost))
+
+                # Update overlay display
+                self.overlay.overlay_widget._update_stats_display()
+
+            # Add crafting materials to item breakdown for tracking (as negative for display)
+            self._process_loot_event({
+                'item_name': 'Crafting Materials',
+                'quantity': 1,
+                'value': cost  # Keep as negative for item tracking
+            })
+
+            # Update main UI totals
+            self._update_total_cost_display()
+
+            logger.info(f"Added crafting cost: {abs(cost):.2f} PED to spent total")
+
+        except Exception as e:
+            logger.error(f"Error handling crafting cost addition: {e}")
 
     def create_chat_config_panel(self):
         """Create chat monitoring configuration panel"""
@@ -1150,10 +1182,10 @@ class TabbedMainWindow(QMainWindow):
             logger.debug(f"Updating total cost: {total_cost:.2f} PED (shots={self.total_shots_taken}, cpa={self.cost_per_attack})")
             self.loot_summary_labels["Total Cost"].setText(f"{total_cost:.2f} PED")
             
-            if self.overlay:
+            if self.overlay and self.overlay.overlay_widget:
                 self.overlay._shots_taken = self.total_shots_taken
                 self.overlay._stats['total_cost'] = Decimal(str(total_cost))
-                self.overlay._update_stats_display()
+                self.overlay.overlay_widget._update_stats_display()
             
             total_return_str = self.loot_summary_labels["Total Return"].text().replace(",", "").split()[0]
             total_return = float(total_return_str)
@@ -1834,8 +1866,6 @@ class TabbedMainWindow(QMainWindow):
             self.overlay._stats['total_cost'] = Decimal(str(total_cost))
             if self.overlay.overlay_widget:
                 self.overlay.overlay_widget._update_stats_display()
-            if self.overlay.lootnanny_widget:
-                self.overlay.lootnanny_widget._update_stats_display()
 
         self._update_analysis_realtime()
 
@@ -1890,9 +1920,9 @@ class TabbedMainWindow(QMainWindow):
             self.item_breakdown_table.setItem(row, 4, QTableWidgetItem(f"{total_value:.4f}"))
 
         if self.current_session_id:
-            asyncio.create_task(self.db_manager.save_session_loot_item(
+            self.db_manager.save_session_loot_item_sync(
                 self.current_session_id, item_name, quantity, total_value, markup_percent
-            ))
+            )
 
     def _on_run_log_selection_changed(self):
         """Handle run log row selection - update item breakdown, summary, and skills"""

@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QHeaderView, QProgressBar, QComboBox, QLineEdit,
     QScrollArea, QFrame, QCheckBox, QPushButton
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont, QColor
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 
 class CraftingTabWidget(QWidget):
     """Crafting statistics and tracking widget with blueprint calculator"""
+
+    # Signal to add crafting cost as negative loot
+    add_crafting_cost = pyqtSignal(float)
 
     def __init__(self, db_manager=None, config_manager=None):
         super().__init__()
@@ -474,6 +477,7 @@ class CraftingTabWidget(QWidget):
                 background-color: #1F6FEB;
             }
         """)
+        self.add_to_session_btn.clicked.connect(self._on_add_to_session_clicked)
         layout.addWidget(self.add_to_session_btn)
 
         return section
@@ -988,6 +992,56 @@ class CraftingTabWidget(QWidget):
 
             self.update_crafting_display()
             logger.debug(f"Crafting event added: {event_data}")
+
+    def _on_add_to_session_clicked(self):
+        """Handle add to session button click - add crafting cost as negative loot"""
+        try:
+            total_cost = self._get_current_total_material_cost()
+            if total_cost > 0:
+                # Emit signal with negative cost to subtract from loot
+                self.add_crafting_cost.emit(-float(total_cost))
+                logger.info(f"Added crafting cost {total_cost:.2f} PED to active run")
+            else:
+                logger.warning("No crafting cost to add - either no blueprint selected or cost is 0")
+        except Exception as e:
+            logger.error(f"Error adding crafting cost to session: {e}")
+
+    def _get_current_total_material_cost(self) -> Decimal:
+        """Get the current total material cost for the selected blueprint * total clicks"""
+        if not self.current_blueprint or self.current_blueprint not in self.blueprints_data:
+            return Decimal('0')
+
+        bp_data = self.blueprints_data[self.current_blueprint]
+        materials = bp_data if bp_data else []
+
+        # Get total clicks multiplier
+        total_clicks = 1  # Default to 1
+        if "Total Clicks:" in self.form_fields:
+            clicks_text = self.form_fields["Total Clicks:"].text().strip()
+            try:
+                total_clicks = int(clicks_text) if clicks_text else 1
+                total_clicks = max(1, total_clicks)  # Ensure minimum of 1
+            except ValueError:
+                total_clicks = 1
+
+        total_cost = Decimal('0')
+        for material_info in materials:
+            if isinstance(material_info, list) and len(material_info) >= 2:
+                material_name = material_info[0]
+                base_quantity = material_info[1]
+            else:
+                continue
+
+            tt_value = Decimal('0')
+            if material_name in self.resources_data:
+                tt_value = Decimal(str(self.resources_data[material_name]))
+
+            # Multiply quantity by total clicks
+            total_quantity = base_quantity * total_clicks
+            material_total = tt_value * Decimal(str(total_quantity))
+            total_cost += material_total
+
+        return total_cost
 
     def clear_data(self):
         """Clear all crafting data"""
