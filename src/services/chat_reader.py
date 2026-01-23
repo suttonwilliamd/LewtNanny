@@ -129,28 +129,27 @@ class ChatReader(QObject):
                 return None
             
             # Only process loot messages that are actually from you, not from chat channels
-            # Personal loot messages either have no brackets or have your character name, not channel names
+            # Personal loot messages either have no character name bracket or have your character name in the last bracket before "You received"
             before_received = line.split('You received')[0]
             logger.debug(f"[CHAT_READER] Text before 'You received': '{before_received}'")
-            logger.debug(f"[CHAT_READER] Does it contain ']': {']' in before_received}")
             
-            if ']' in before_received:
-                # Check if this is a chat channel (not empty brackets or your character name)
-                # Look for patterns like [Channel], [Player Name], etc.
-                import re
-                # Find ALL bracket contents in the prefix
-                all_brackets = re.findall(r'\[(.*?)\]', before_received)
-                logger.debug(f"[CHAT_READER] All bracket contents found: {all_brackets}")
+            # Find the LAST bracket content before "You received" - this should be the character name
+            import re
+            last_bracket_match = None
+            for match in re.finditer(r'\[(.*?)\]', before_received):
+                last_bracket_match = match
+            
+            if last_bracket_match:
+                bracket_content = last_bracket_match.group(1).strip()
+                logger.debug(f"[CHAT_READER] Last bracket content before 'You received': '{bracket_content}'")
                 
-                # Check if any bracket has non-empty content (indicating chat channel/player name)
-                has_non_empty_bracket = any(bracket.strip() for bracket in all_brackets)
-                logger.debug(f"[CHAT_READER] Has non-empty bracket: {has_non_empty_bracket}")
-                
-                if has_non_empty_bracket:
+                # If the last bracket contains non-empty content, it's someone else's loot
+                if bracket_content:
                     # This is someone else's loot message in a chat channel
                     logger.info(f"[CHAT_READER] Skipping other player's loot message: {line[:80]}...")
                     return None
-                # All brackets are empty, so this is personal loot
+                # Empty bracket indicates this is personal loot (character name field empty)
+                logger.debug(f"[CHAT_READER] Processing personal loot (empty character name bracket)")
                 
             logger.info(f"[CHAT_READER] Detected LOOT event: {loot_info}")
             event_data = {
