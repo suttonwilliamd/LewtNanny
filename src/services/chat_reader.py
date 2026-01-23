@@ -42,7 +42,7 @@ class ChatReader(QObject):
             'critical': re.compile(r'Critical\s+hit\s+-\s+Additional\s+damage!\s+You\s+inflicted\s+([\d.]+)\s+points\s+of\s+damage'),
             'critical_armor': re.compile(r'Critical\s+hit\s+-\s+Armor\s+penetration!\s+You\s+took\s+([\d.]+)\s+points\s+of\s+damage'),
             'miss': re.compile(r'The attack missed you'),
-            'dodge': re.compile(r'The target\s+Dodged\s+your\s+attack'),
+            'dodge': re.compile(r'.*Dodged.*your\s+attack'),
             'evade': re.compile(r'You\s+Evaded\s+the\s+attack'),
             'heal': re.compile(r'You\s+healed\s+yourself\s+([\d.]+)\s+points'),
             'weapon': re.compile(r'You\s+equipped\s+(.+)'),
@@ -124,6 +124,14 @@ class ChatReader(QObject):
             if loot_info[0] == 'Universal Ammo':
                 logger.info(f"[CHAT_READER] Skipping Universal Ammo (shrapnel conversion)")
                 return None
+            
+            # Only process loot messages that are actually from you, not from chat channels
+            # Personal loot messages don't have channel prefixes like [Rookie], [#arkadia], etc.
+            if ']' in line.split('You received')[0]:
+                # This is someone else's loot message in a chat channel
+                logger.info(f"[CHAT_READER] Skipping other player's loot message: {line[:80]}...")
+                return None
+                
             logger.info(f"[CHAT_READER] Detected LOOT event: {loot_info}")
             event_data = {
                 'event_type': EventType.LOOT.value,

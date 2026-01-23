@@ -331,7 +331,7 @@ class TabbedMainWindow(QMainWindow):
         self.pause_btn.clicked.connect(self.toggle_pause_logging)
         left_section.addWidget(self.pause_btn)
 
-        self.streamer_ui_btn = QPushButton("Switch Overlay (Original)")
+        self.streamer_ui_btn = QPushButton("Show Overlay")
         self.streamer_ui_btn.setFixedHeight(32)
         self.streamer_ui_btn.setStyleSheet("""
             QPushButton {
@@ -346,7 +346,8 @@ class TabbedMainWindow(QMainWindow):
                 background-color: #8B949E;
             }
         """)
-        self.streamer_ui_btn.clicked.connect(self.switch_overlay_style)
+        self.streamer_ui_btn.setCheckable(True)
+        self.streamer_ui_btn.toggled.connect(self.toggle_overlay)
         left_section.addWidget(self.streamer_ui_btn)
 
         bottom_layout.addLayout(left_section)
@@ -558,6 +559,13 @@ class TabbedMainWindow(QMainWindow):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         for i in range(1, 5):
             header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+        
+        # Enable sorting on header click
+        header.setSectionsClickable(True)
+        header.sectionClicked.connect(self.on_item_breakdown_header_clicked)
+        
+        # Track sort state for count column
+        self.item_breakdown_sort_order = Qt.SortOrder.AscendingOrder
 
         layout.addWidget(self.item_breakdown_table)
 
@@ -679,23 +687,52 @@ class TabbedMainWindow(QMainWindow):
             skill_name = parsed_data.get('skill', '')
             experience = parsed_data.get('experience', 0)
             improvement = parsed_data.get('improvement', 0)
+            gain_value = experience or improvement
 
-            logger.info(f"[UI] Adding skill event: {skill_name} +{experience} exp")
+            logger.info(f"[UI] Adding skill event: {skill_name} +{gain_value} exp")
 
             # Update total skill gain
             current_total = float(self.total_skill_gain_value.text())
-            new_total = current_total + (experience or improvement)
+            new_total = current_total + gain_value
             self.total_skill_gain_value.setText(f"{new_total:.2f}")
 
-            # Add to skills table
-            row = self.skills_table.rowCount()
-            self.skills_table.insertRow(row)
+            # Check if skill already exists in table
+            existing_row = -1
+            for row in range(self.skills_table.rowCount()):
+                name_item = self.skills_table.item(row, 1)
+                if name_item and name_item.text() == skill_name:
+                    existing_row = row
+                    break
 
-            self.skills_table.setItem(row, 0, QTableWidgetItem(str(row + 1)))
-            self.skills_table.setItem(row, 1, QTableWidgetItem(skill_name))
-            self.skills_table.setItem(row, 2, QTableWidgetItem(f"{experience or improvement:.2f}"))
-            self.skills_table.setItem(row, 3, QTableWidgetItem("1"))
-            self.skills_table.setItem(row, 4, QTableWidgetItem("100%"))
+            if existing_row >= 0:
+                # Update existing skill row
+                value_item = self.skills_table.item(existing_row, 2)
+                procs_item = self.skills_table.item(existing_row, 3)
+                
+                current_value = float(value_item.text()) if value_item else 0
+                current_procs = int(procs_item.text()) if procs_item else 0
+                
+                new_value = current_value + gain_value
+                new_procs = current_procs + 1
+                
+                self.skills_table.setItem(existing_row, 2, QTableWidgetItem(f"{new_value:.2f}"))
+                self.skills_table.setItem(existing_row, 3, QTableWidgetItem(str(new_procs)))
+            else:
+                # Add new skill row
+                row = self.skills_table.rowCount()
+                self.skills_table.insertRow(row)
+
+                self.skills_table.setItem(row, 0, QTableWidgetItem(str(row + 1)))
+                self.skills_table.setItem(row, 1, QTableWidgetItem(skill_name))
+                self.skills_table.setItem(row, 2, QTableWidgetItem(f"{gain_value:.2f}"))
+                self.skills_table.setItem(row, 3, QTableWidgetItem("1"))
+
+            # Recalculate proc % for all rows
+            total_procs = sum(int(self.skills_table.item(r, 3).text()) for r in range(self.skills_table.rowCount()))
+            for r in range(self.skills_table.rowCount()):
+                procs = int(self.skills_table.item(r, 3).text())
+                proc_percent = (procs / total_procs) * 100 if total_procs > 0 else 100
+                self.skills_table.setItem(r, 4, QTableWidgetItem(f"{proc_percent:.0f}%"))
 
             logger.info(f"[UI] Skill event added to table")
 
@@ -1242,6 +1279,9 @@ class TabbedMainWindow(QMainWindow):
 
             self.item_breakdown_table.setRowCount(0)
 
+            self.skills_table.setRowCount(0)
+            self.total_skill_gain_value.setText("0.00")
+
             self.loot_summary_labels["Creatures Looted"].setText("0")
             self.loot_summary_labels["Total Cost"].setText("0.00 PED")
             self.loot_summary_labels["Total Return"].setText("0.00 PED")
@@ -1392,38 +1432,18 @@ class TabbedMainWindow(QMainWindow):
         logger.info(f"Logging paused: {self.is_logging_paused}")
 
     def toggle_streamer_ui(self):
-        """Toggle streamer UI overlay - A/B testing support"""
+        """Toggle streamer UI overlay"""
         if self.overlay.overlay_widget is None or not self.overlay.overlay_widget.isVisible():
-            if self.overlay.lootnanny_widget is None or not self.overlay.lootnanny_widget.isVisible():
-                current_style = self.overlay.get_current_style()
-                self.overlay.show(current_style)
-                self.overlay.set_cost_per_attack(self.cost_per_attack)
-                if self.current_session_id:
-                    self.overlay.start_session(self.current_session_id, "hunting", self.current_session_start)
-                style_name = "LootNanny" if current_style == "lootnanny" else "Original"
-                self.streamer_ui_btn.setText(f"Switch Overlay ({style_name})")
-                logger.info(f"Streamer overlay shown ({style_name} style)")
-            else:
-                self.overlay.hide()
-                logger.info("Streamer overlay hidden")
+            self.overlay.show()
+            self.overlay.set_cost_per_attack(self.cost_per_attack)
+            if self.current_session_id:
+                self.overlay.start_session(self.current_session_id, "hunting", self.current_session_start)
+            self.streamer_ui_btn.setText("Hide Overlay")
+            logger.info("Streamer overlay shown")
         else:
             self.overlay.hide()
+            self.streamer_ui_btn.setText("Show Overlay")
             logger.info("Streamer overlay hidden")
-
-    def switch_overlay_style(self):
-        """Switch between overlay styles for A/B testing"""
-        new_style = self.overlay.toggle_style()
-        style_name = "LootNanny" if new_style == "lootnanny" else "Original"
-        self.streamer_ui_btn.setText(f"Switch Overlay ({style_name})")
-
-        self.overlay.set_cost_per_attack(self.cost_per_attack)
-        if self.current_session_id:
-            self.overlay.start_session(self.current_session_id, "hunting", self.current_session_start)
-            widget = self.overlay.lootnanny_widget if new_style == "lootnanny" else self.overlay.overlay_widget
-            if widget:
-                widget._update_stats_display()
-
-        logger.info(f"Overlay style switched to: {new_style}")
 
     def open_donate(self):
         """Open donation link"""
@@ -1519,11 +1539,11 @@ class TabbedMainWindow(QMainWindow):
         """Toggle overlay window"""
         try:
             if checked:
-                self.overlay.show(self.overlay.active_style)
+                self.overlay.show()
                 self.overlay.set_cost_per_attack(self.cost_per_attack)
                 if self.current_session_id:
                     self.overlay.start_session(self.current_session_id, "hunting", self.current_session_start)
-                logger.info(f"Overlay shown ({self.overlay.active_style} style)")
+                logger.info("Overlay shown")
             else:
                 self.overlay.hide()
                 logger.info("Overlay hidden")
@@ -1776,12 +1796,17 @@ class TabbedMainWindow(QMainWindow):
             damage = parsed_data.get('damage', 0)
             critical = parsed_data.get('critical', False)
             miss = parsed_data.get('miss', False)
+            dodged = parsed_data.get('dodged', False)
             
             if miss:
                 pass
             elif damage and damage > 0:
                 self.total_shots_taken += 1
                 logger.debug(f"Combat hit: damage={damage}, total_shots={self.total_shots_taken}, cost_per_attack={self.cost_per_attack}")
+                self._update_total_cost_display()
+            elif dodged:
+                self.total_shots_taken += 1
+                logger.debug(f"Combat dodge: total_shots={self.total_shots_taken}, cost_per_attack={self.cost_per_attack}")
                 self._update_total_cost_display()
 
         elif event_type == 'skill':
@@ -1908,6 +1933,19 @@ class TabbedMainWindow(QMainWindow):
                 loop.close()
             except Exception as e:
                 logger.error(f"Error loading item breakdown: {e}")
+
+    def on_item_breakdown_header_clicked(self, column: int):
+        """Handle header click for sorting item breakdown table"""
+        # Only sort when Count column (column 1) is clicked
+        if column == 1:
+            # Toggle sort order
+            if self.item_breakdown_sort_order == Qt.SortOrder.AscendingOrder:
+                self.item_breakdown_sort_order = Qt.SortOrder.DescendingOrder
+            else:
+                self.item_breakdown_sort_order = Qt.SortOrder.AscendingOrder
+            
+            # Sort the table by the Count column
+            self.item_breakdown_table.sortItems(column, self.item_breakdown_sort_order)
 
     async def _load_past_runs(self):
         """Load past runs from database into run log table"""
