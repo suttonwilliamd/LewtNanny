@@ -126,11 +126,19 @@ class ChatReader(QObject):
                 return None
             
             # Only process loot messages that are actually from you, not from chat channels
-            # Personal loot messages don't have channel prefixes like [Rookie], [#arkadia], etc.
-            if ']' in line.split('You received')[0]:
-                # This is someone else's loot message in a chat channel
-                logger.info(f"[CHAT_READER] Skipping other player's loot message: {line[:80]}...")
-                return None
+            # Personal loot messages either have no brackets or have your character name, not channel names
+            before_received = line.split('You received')[0]
+            if ']' in before_received:
+                # Check if this is a chat channel (not empty brackets or your character name)
+                # Look for patterns like [Channel], [Player Name], etc.
+                import re
+                # Match any non-empty content in brackets
+                bracket_content = re.search(r'\[(.*?)\]', before_received)
+                if bracket_content and bracket_content.group(1).strip():
+                    # This is someone else's loot message in a chat channel
+                    logger.info(f"[CHAT_READER] Skipping other player's loot message: {line[:80]}...")
+                    return None
+                # Empty brackets [] are ok to process (personal loot)
                 
             logger.info(f"[CHAT_READER] Detected LOOT event: {loot_info}")
             event_data = {
