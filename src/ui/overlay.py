@@ -19,6 +19,37 @@ from PyQt6.QtGui import QFont, QPainter, QColor, QPen, QScreen, QGuiApplication,
 logger = logging.getLogger(__name__)
 
 
+class BorderlessLabel(QLabel):
+    """Custom QLabel with guaranteed no borders"""
+    
+    def __init__(self, text=""):
+        super().__init__(text)
+        self.setStyleSheet("""
+            QLabel {
+                background: transparent;
+                border: none;
+                outline: none;
+                padding: 0px;
+                margin: 0px;
+            }
+        """)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setFrameStyle(QFrame.Shape.NoFrame | QFrame.Shadow.Plain)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+    
+    def paintEvent(self, a0):
+        # Override to ensure no borders are drawn
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(Qt.GlobalColor.transparent))
+        painter.fillRect(self.rect(), Qt.GlobalColor.transparent)
+        
+        # Draw text
+        painter.setPen(QPen(self.palette().color(self.palette().ColorRole.Text)))
+        painter.drawText(self.rect(), self.alignment(), self.text())
+        painter.end()
+
+
 class ScreenshotWorker(QThread):
     """Background worker to take screenshot after delay"""
 
@@ -103,12 +134,12 @@ class StreamerOverlayWidget(QWidget):
 
     def setup_ui(self):
         """Setup the overlay UI"""
-        self.setFixedSize(350, 520)
+        self.setFixedSize(280, 420)
         self.move(100, 100)
 
         # Create the container box
         container = QFrame(self)
-        container.setGeometry(0, 130, 350, 300)  # Move down to make room for logo on top
+        container.setGeometry(0, 100, 280, 240)  # Move down to make room for logo on top
         container.setStyleSheet("""
             QFrame {
                 background-color: rgba(15, 15, 20, 245);
@@ -118,8 +149,8 @@ class StreamerOverlayWidget(QWidget):
         self.container = container
 
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.setSpacing(8)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
 
         self.create_main_display(layout)
         
@@ -141,9 +172,9 @@ class StreamerOverlayWidget(QWidget):
         self.logo_label.setStyleSheet("border: none; background: transparent;")
         
         # Position the logo centered at the top
-        logo_width = 320
-        logo_height = 200
-        logo_x = (350 - logo_width) // 2  # Center horizontally
+        logo_width = 250
+        logo_height = 160
+        logo_x = (280 - logo_width) // 2  # Center horizontally
         logo_y = 20  # Position at the top
         self.logo_label.setGeometry(logo_x, logo_y, logo_width, logo_height)
         
@@ -176,35 +207,35 @@ class StreamerOverlayWidget(QWidget):
         layout.addLayout(header_layout)
 
         # Primary metric: large return percentage
-        self.return_percentage_label = QLabel("100.00%")
-        self.return_percentage_label.setFont(QFont("Consolas", 36, QFont.Weight.Bold))
+        self.return_percentage_label = BorderlessLabel("100.00%")
+        self.return_percentage_label.setFont(QFont("Consolas", 28))
         self.return_percentage_label.setStyleSheet("color: #00ff00;")
         self.return_percentage_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.return_percentage_label)
 
         # Kills stat
         self.kills_label = QLabel("Kills: 0")
-        self.kills_label.setFont(QFont("Consolas", 14))
+        self.kills_label.setFont(QFont("Consolas", 12))
         self.kills_label.setStyleSheet("color: #ffffff; border: none;")
         self.kills_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.kills_label)
 
         # Financial stats vertically
         self.total_return_label = QLabel("Return: 0.000 PED")
-        self.total_return_label.setFont(QFont("Consolas", 12))
+        self.total_return_label.setFont(QFont("Consolas", 10))
         self.total_return_label.setStyleSheet("color: #00ff00; border: none;")
         self.total_return_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.total_return_label)
 
         self.total_spent_label = QLabel("Spent: 0.00 PED")
-        self.total_spent_label.setFont(QFont("Consolas", 12))
+        self.total_spent_label.setFont(QFont("Consolas", 10))
         self.total_spent_label.setStyleSheet("color: #ff6b6b; border: none;")
         self.total_spent_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.total_spent_label)
 
         # Session Timer at bottom
         self.timer_label = QLabel("00:00:00")
-        self.timer_label.setFont(QFont("Consolas", 11))
+        self.timer_label.setFont(QFont("Consolas", 9))
         self.timer_label.setStyleSheet("color: #888888; border: none;")
         self.timer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.timer_label)
