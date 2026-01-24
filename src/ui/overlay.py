@@ -13,8 +13,8 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
     QPushButton, QGridLayout
 )
-from PyQt6.QtCore import Qt, QTimer, QPoint, QThread
-from PyQt6.QtGui import QFont, QPainter, QColor, QPen, QScreen, QGuiApplication, QPixmap
+from PyQt6.QtCore import Qt, QTimer, QPoint, QThread, QEvent
+from PyQt6.QtGui import QFont, QPainter, QColor, QPen, QScreen, QGuiApplication, QPixmap, QMouseEvent
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,37 @@ class ScreenshotWorker(QThread):
             logger.error(f"[OVERLAY] Error taking screenshot: {e}")
 
 
+class DraggableLogoLabel(QLabel):
+    """Custom QLabel that can drag the overlay window"""
+    
+    def __init__(self, overlay_widget):
+        super().__init__(None)
+        self.overlay_widget = overlay_widget
+        self.dragging = False
+        self.drag_position = QPoint()
+        
+    def mousePressEvent(self, ev):
+        """Logo mouse press - acts as drag handle"""
+        if ev.button() == Qt.MouseButton.LeftButton:
+            self.dragging = True
+            self.drag_position = ev.globalPosition().toPoint() - self.overlay_widget.pos()
+            ev.accept()
+
+    def mouseMoveEvent(self, ev):
+        """Logo mouse move - dragging functionality"""
+        if ev.buttons() == Qt.MouseButton.LeftButton and self.dragging:
+            new_pos = ev.globalPosition().toPoint() - self.drag_position
+            self.overlay_widget.move(new_pos)
+            self.overlay_widget.update_logo_position()
+            ev.accept()
+
+    def mouseReleaseEvent(self, ev):
+        """Logo mouse release - stop dragging"""
+        if ev.button() == Qt.MouseButton.LeftButton:
+            self.dragging = False
+            ev.accept()
+
+
 class StreamerOverlayWidget(QWidget):
     """Draggable, transparent overlay widget for streaming"""
 
@@ -101,6 +132,9 @@ class StreamerOverlayWidget(QWidget):
 
         self.dragging = False
         self.drag_position = QPoint()
+        self.resizing = False
+        self.resize_start_pos = QPoint()
+        self.resize_start_size = None
         self.character_name = ""
 
         self._stats = {
@@ -134,8 +168,30 @@ class StreamerOverlayWidget(QWidget):
 
     def setup_ui(self):
         """Setup the overlay UI"""
-        self.setFixedSize(210, 420)  # Reduced width by 25% (280 * 0.75 = 210)
+        self.resize(210, 420)  # Use resize instead of setFixedSize to allow resizing
         self.move(100, 100)
+        
+        # Create resize handle
+        self.resize_handle = QLabel(self)
+        self.resize_handle.setText("⋮")
+        self.resize_handle.setFixedSize(15, 15)
+        self.resize_handle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.resize_handle.setStyleSheet("""
+            QLabel {
+                color: rgba(200, 200, 200, 150);
+                background: rgba(100, 100, 100, 100);
+                border: 1px solid rgba(150, 150, 150, 100);
+                border-radius: 3px;
+            }
+            QLabel:hover {
+                color: rgba(255, 255, 255, 200);
+                background: rgba(150, 150, 150, 150);
+            }
+        """)
+        self.resize_handle.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        
+        # Position resize handle at bottom right corner
+        self.update_resize_handle_position()
 
         # Create the container box
         container = QFrame(self)
@@ -160,6 +216,33 @@ class StreamerOverlayWidget(QWidget):
         self.session_start_time = None
         self.session_active = False
 
+    def showEvent(self, a0):
+        """Handle show event to show logo"""
+        super().showEvent(a0)
+        if hasattr(self, 'logo_label'):
+            self.logo_label.show()
+
+    def hideEvent(self, a0):
+        """Handle hide event to hide logo"""
+        super().hideEvent(a0)
+        if hasattr(self, 'logo_label'):
+            self.logo_label.hide()
+
+    def closeEvent(self, a0):
+        """Handle close event to close logo"""
+        if hasattr(self, 'logo_label'):
+            self.logo_label.close()
+        super().closeEvent(a0)
+
+    def update_resize_handle_position(self):
+        """Update resize handle position to bottom right corner"""
+        if hasattr(self, 'resize_handle'):
+            handle_size = 15
+            window_size = self.size()
+            x = window_size.width() - handle_size - 2
+            y = window_size.height() - handle_size - 2
+            self.resize_handle.move(x, y)
+
     def create_logo_display(self):
         """Create logo display on top of the container"""
         import os
@@ -167,22 +250,36 @@ class StreamerOverlayWidget(QWidget):
         # Get the path to the logo image
         logo_path = r"C:\Users\sutto\LewtNanny\LewtNanny.png"
         
-        self.logo_label = QLabel(self)
+        # Create logo as independent draggable widget
+        self.logo_label = DraggableLogoLabel(self)
         self.logo_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.logo_label.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
         self.logo_label.setStyleSheet("border: none; background: transparent;")
+        self.logo_label.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.Tool
+        )
         
-        # Position the logo centered at the top
-        logo_width = 250
-        logo_height = 160
-        logo_x = (210 - logo_width) // 2  # Center horizontally (updated for new width)
+        # Store logo dimensions and position
+        self.logo_width = 250
+        self.logo_height = 160
         logo_y = 20  # Position at the top
-        self.logo_label.setGeometry(logo_x, logo_y, logo_width, logo_height)
+        
+        # Set logo geometry relative to main window
+        main_pos = self.pos()
+        self.logo_label.setGeometry(
+            main_pos.x() + 0, 
+            main_pos.y() + logo_y, 
+            self.logo_width, 
+            self.logo_height
+        )
         
         if os.path.exists(logo_path):
             logger.debug(f"[OVERLAY] Loading logo from: {logo_path}")
             pixmap = QPixmap(logo_path)
             if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(logo_width, logo_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                scaled_pixmap = pixmap.scaled(self.logo_width, self.logo_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 scaled_pixmap.setMask(scaled_pixmap.createHeuristicMask())
                 self.logo_label.setPixmap(scaled_pixmap)
                 logger.debug(f"[OVERLAY] Logo loaded successfully")
@@ -190,6 +287,10 @@ class StreamerOverlayWidget(QWidget):
                 logger.error(f"[OVERLAY] Failed to load pixmap from: {logo_path}")
         else:
             logger.error(f"[OVERLAY] Logo file not found at: {logo_path}")
+        
+        # Show logo initially
+        if hasattr(self, 'logo_label'):
+            self.logo_label.show()
 
     def create_main_display(self, layout):
         """Create main display with improved hierarchy and design"""
@@ -506,21 +607,96 @@ class StreamerOverlayWidget(QWidget):
         logger.debug(f"[OVERLAY] Current stats: globals={self._stats.get('globals')}, hofs={self._stats.get('hofs')}, items={self._stats.get('items')}, total_cost={float(self._stats.get('total_cost', Decimal('0'))):.3f}, total_return={float(self._stats.get('total_return', Decimal('0'))):.3f}")
 
     def mousePressEvent(self, a0):
-        """Mouse press for dragging"""
+        """Mouse press for dragging or resizing"""
         if a0.button() == Qt.MouseButton.LeftButton:
-            self.dragging = True
-            self.drag_position = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
-            a0.accept()
+            pos = a0.position().toPoint()
+            
+            # Check if click is on resize handle
+            if hasattr(self, 'resize_handle') and self.resize_handle.geometry().contains(pos):
+                self.resizing = True
+                self.resize_start_pos = a0.globalPosition().toPoint()
+                self.resize_start_size = self.size()
+                a0.accept()
+            else:
+                # Start dragging from anywhere on overlay
+                self.dragging = True
+                self.drag_position = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                a0.accept()
 
     def mouseMoveEvent(self, a0):
-        """Mouse move for dragging"""
-        if a0.buttons() == Qt.MouseButton.LeftButton and self.dragging:
-            self.move(a0.globalPosition().toPoint() - self.drag_position)
-            a0.accept()
+        """Mouse move for dragging or resizing"""
+        if a0.buttons() == Qt.MouseButton.LeftButton:
+            if self.resizing:
+                # Handle resizing
+                global_pos = a0.globalPosition().toPoint()
+                delta = global_pos - self.resize_start_pos
+                
+                # Allow small resizing - minimum is just for usability
+                min_width = 100  # Allow very small width
+                min_height = 200  # Allow small height but still usable
+                
+                current_size = self.resize_start_size or self.size()
+                new_width = max(min_width, current_size.width() + delta.x())
+                new_height = max(min_height, current_size.height() + delta.y())
+                
+                self.resize(new_width, new_height)
+                self.update_resize_handle_position()
+                a0.accept()
+            elif self.dragging:
+                # Handle dragging
+                new_pos = a0.globalPosition().toPoint() - self.drag_position
+                self.move(new_pos)
+                self.update_logo_position()
+                a0.accept()
 
     def mouseReleaseEvent(self, a0):
-        """Mouse release to stop dragging"""
-        self.dragging = False
+        """Mouse release to stop dragging or resizing"""
+        if a0.button() == Qt.MouseButton.LeftButton:
+            self.resizing = False
+            self.dragging = False
+            a0.accept()
+
+    def update_logo_position(self):
+        """Update logo position relative to main window"""
+        if hasattr(self, 'logo_label') and hasattr(self, 'logo_width'):
+            window_width = self.size().width()
+            logo_x = (window_width - self.logo_width) // 2
+            self.logo_label.move(self.pos().x() + logo_x, self.pos().y() + 20)
+
+    def mouseReleaseEvent(self, a0):
+        """Mouse release to stop dragging or resizing"""
+        if a0.button() == Qt.MouseButton.LeftButton:
+            self.dragging = False
+            self.resizing = False
+            a0.accept()
+
+    def resizeEvent(self, a0):
+        """Handle resize event to update container and handle positions"""
+        super().resizeEvent(a0)
+        
+        # Update container geometry
+        if hasattr(self, 'container'):
+            window_size = self.size()
+            self.container.setGeometry(0, 110, window_size.width(), window_size.height() - 110)
+        
+        # Update resize handle position
+        self.update_resize_handle_position()
+        
+        # Update logo position - always center and maintain full size
+        if hasattr(self, 'logo_label') and hasattr(self, 'logo_width'):
+            window_width = self.size().width()
+            main_pos = self.pos()
+            
+            # Always center the logo, even if it extends beyond window boundaries
+            logo_x = (window_width - self.logo_width) // 2
+            
+            # Position the logo window independently
+            self.logo_label.setGeometry(
+                main_pos.x() + logo_x, 
+                main_pos.y() + 20, 
+                self.logo_width, 
+                self.logo_height
+            )
 
 
 
