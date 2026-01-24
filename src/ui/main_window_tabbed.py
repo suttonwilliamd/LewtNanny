@@ -753,7 +753,12 @@ class TabbedMainWindow(QMainWindow):
         """Create the Crafting tab"""
         crafting_widget = CraftingTabWidget(self.db_manager)
         self.crafting_tab = crafting_widget
+        self.crafting_widget = crafting_widget  # Store reference for session management
         crafting_widget.add_crafting_cost.connect(self._on_crafting_cost_added)
+        
+        # Start with "Add to Session" button disabled (no active session)
+        crafting_widget.set_session_active(False)
+        
         self.content_stack.addWidget(crafting_widget)
         logger.info("Crafting tab created")
 
@@ -839,8 +844,10 @@ class TabbedMainWindow(QMainWindow):
                 'value': cost  # Keep as negative for item tracking
             })
 
-            # Update main UI totals
-            self._update_total_cost_display()
+            # Update main UI totals to include crafting costs
+            current_ui_cost = float(self.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0])
+            new_ui_cost = current_ui_cost + abs(cost)
+            self.loot_summary_labels["Total Cost"].setText(f"{new_ui_cost:.2f} PED")
 
             logger.info(f"Added crafting cost: {abs(cost):.2f} PED to spent total")
 
@@ -1178,13 +1185,28 @@ class TabbedMainWindow(QMainWindow):
                 logger.debug("Cannot update total cost: cost_per_attack is still 0")
                 return
                 
-            total_cost = self.total_shots_taken * self.cost_per_attack
-            logger.debug(f"Updating total cost: {total_cost:.2f} PED (shots={self.total_shots_taken}, cpa={self.cost_per_attack})")
-            self.loot_summary_labels["Total Cost"].setText(f"{total_cost:.2f} PED")
+            # Calculate shot costs (not including crafting)
+            shot_cost = self.total_shots_taken * self.cost_per_attack
+            logger.debug(f"Updating total cost: shot_cost={shot_cost:.2f} PED (shots={self.total_shots_taken}, cpa={self.cost_per_attack})")
+            
+            # Store the shot cost for later use in crafting cost preservation
+            if not hasattr(self, '_last_shot_cost'):
+                self._last_shot_cost = 0
+            
+            # Calculate delta from previous shot cost to avoid double counting
+            shot_cost_delta = shot_cost - self._last_shot_cost
+            
+            # Get current total cost and add only the incremental shot cost
+            current_total = float(self.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0])
+            new_total = current_total + shot_cost_delta
+            self.loot_summary_labels["Total Cost"].setText(f"{new_total:.2f} PED")
+            
+            # Store current shot cost for next calculation
+            self._last_shot_cost = shot_cost
             
             if self.overlay and self.overlay.overlay_widget:
                 self.overlay._shots_taken = self.total_shots_taken
-                self.overlay._stats['total_cost'] = Decimal(str(total_cost))
+                self.overlay._stats['total_cost'] = Decimal(str(new_total))
                 self.overlay.overlay_widget._update_stats_display()
             
             total_return_str = self.loot_summary_labels["Total Return"].text().replace(",", "").split()[0]
@@ -1327,6 +1349,13 @@ class TabbedMainWindow(QMainWindow):
             self.loot_summary_labels["% Return"].setText("0.0%")
             self.loot_summary_labels["Globals"].setText("0")
             self.loot_summary_labels["HOFs"].setText("0")
+            
+            # Reset shot cost tracking for new session
+            self._last_shot_cost = 0
+            
+            # Enable crafting "Add to Session" button
+            if hasattr(self, 'crafting_widget') and self.crafting_widget:
+                self.crafting_widget.set_session_active(True)
 
             if hasattr(self, 'chat_reader') and self.chat_reader:
                 chat_path = None
@@ -1419,6 +1448,10 @@ class TabbedMainWindow(QMainWindow):
                         color: #6A737D;
                     }
                 """)
+
+                # Disable crafting "Add to Session" button
+                if hasattr(self, 'crafting_widget') and self.crafting_widget:
+                    self.crafting_widget.set_session_active(False)
 
                 self.status_bar.showMessage(f"Session stopped")
                 logger.info(f"Session stopped: {session_id}")

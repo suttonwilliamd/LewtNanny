@@ -476,6 +476,10 @@ class CraftingTabWidget(QWidget):
             QPushButton:pressed {
                 background-color: #1F6FEB;
             }
+            QPushButton:disabled {
+                background-color: #3D444D;
+                color: #6A737D;
+            }
         """)
         self.add_to_session_btn.clicked.connect(self._on_add_to_session_clicked)
         layout.addWidget(self.add_to_session_btn)
@@ -1005,6 +1009,13 @@ class CraftingTabWidget(QWidget):
                 logger.warning("No crafting cost to add - either no blueprint selected or cost is 0")
         except Exception as e:
             logger.error(f"Error adding crafting cost to session: {e}")
+
+    def set_session_active(self, is_active: bool):
+        """Enable or disable the 'Add to Session' button based on session status"""
+        if hasattr(self, 'add_to_session_btn') and self.add_to_session_btn:
+            self.add_to_session_btn.setEnabled(is_active)
+            self.add_to_session_btn.setText("Add Run To Active Run")
+            logger.debug(f"Crafting 'Add to Session' button {'enabled' if is_active else 'disabled'}")
 
     def _get_current_total_material_cost(self) -> Decimal:
         """Get the current total material cost for the selected blueprint * total clicks"""
