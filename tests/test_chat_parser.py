@@ -35,7 +35,7 @@ async def test_chat_parsing():
         print(f"[OK] Event detected: {event_data['event_type']}")
         if event_data['event_type'] == 'loot':
             parsed = event_data['parsed_data']
-            print(f"   Items: {parsed.get('items', 'N/A')}")
+            print(f"   Item: {parsed.get('item_name', 'N/A')} x({parsed.get('quantity', 'N/A')})")
             print(f"   Value: {parsed.get('value', 'N/A')} PED")
         elif event_data['event_type'] == 'combat':
             parsed = event_data['parsed_data']
@@ -69,7 +69,7 @@ async def test_chat_parsing():
     
     for line in sample_lines:
         print(f"\nProcessing: {line}")
-        await chat_reader.parse_line(line)
+        chat_reader.parse_line(line)
     
     print("\n" + "=" * 50)
     print(f"Summary: Found {len(events)} events")

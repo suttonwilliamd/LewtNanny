@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QGridLayout
 )
 from PyQt6.QtCore import Qt, QTimer, QPoint, QThread
-from PyQt6.QtGui import QFont, QPainter, QColor, QPen, QScreen, QGuiApplication
+from PyQt6.QtGui import QFont, QPainter, QColor, QPen, QScreen, QGuiApplication, QPixmap
 
 logger = logging.getLogger(__name__)
 
@@ -103,11 +103,12 @@ class StreamerOverlayWidget(QWidget):
 
     def setup_ui(self):
         """Setup the overlay UI"""
-        self.setFixedSize(350, 320)
+        self.setFixedSize(350, 520)
         self.move(100, 100)
 
+        # Create the container box
         container = QFrame(self)
-        container.setGeometry(0, 0, 350, 280)
+        container.setGeometry(0, 130, 350, 300)  # Move down to make room for logo on top
         container.setStyleSheet("""
             QFrame {
                 background-color: rgba(15, 15, 20, 245);
@@ -117,13 +118,47 @@ class StreamerOverlayWidget(QWidget):
         self.container = container
 
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(12)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
 
         self.create_main_display(layout)
+        
+        # Add logo on top of the container
+        self.create_logo_display()
 
         self.session_start_time = None
         self.session_active = False
+
+    def create_logo_display(self):
+        """Create logo display on top of the container"""
+        import os
+        
+        # Get the path to the logo image
+        logo_path = r"C:\Users\sutto\LewtNanny\LewtNanny.png"
+        
+        self.logo_label = QLabel(self)
+        self.logo_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.logo_label.setStyleSheet("border: none; background: transparent;")
+        
+        # Position the logo centered at the top
+        logo_width = 320
+        logo_height = 200
+        logo_x = (350 - logo_width) // 2  # Center horizontally
+        logo_y = 20  # Position at the top
+        self.logo_label.setGeometry(logo_x, logo_y, logo_width, logo_height)
+        
+        if os.path.exists(logo_path):
+            logger.debug(f"[OVERLAY] Loading logo from: {logo_path}")
+            pixmap = QPixmap(logo_path)
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(logo_width, logo_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                scaled_pixmap.setMask(scaled_pixmap.createHeuristicMask())
+                self.logo_label.setPixmap(scaled_pixmap)
+                logger.debug(f"[OVERLAY] Logo loaded successfully")
+            else:
+                logger.error(f"[OVERLAY] Failed to load pixmap from: {logo_path}")
+        else:
+            logger.error(f"[OVERLAY] Logo file not found at: {logo_path}")
 
     def create_main_display(self, layout):
         """Create main display with improved hierarchy and design"""
@@ -150,36 +185,29 @@ class StreamerOverlayWidget(QWidget):
         # Kills stat
         self.kills_label = QLabel("Kills: 0")
         self.kills_label.setFont(QFont("Consolas", 14))
-        self.kills_label.setStyleSheet("color: #ffffff;")
+        self.kills_label.setStyleSheet("color: #ffffff; border: none;")
         self.kills_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.kills_label)
 
-        # Financial stats in one row
-        finance_layout = QHBoxLayout()
-
+        # Financial stats vertically
         self.total_return_label = QLabel("Return: 0.000 PED")
         self.total_return_label.setFont(QFont("Consolas", 12))
-        self.total_return_label.setStyleSheet("color: #00ff00;")
-        finance_layout.addWidget(self.total_return_label)
+        self.total_return_label.setStyleSheet("color: #00ff00; border: none;")
+        self.total_return_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.total_return_label)
 
         self.total_spent_label = QLabel("Spent: 0.00 PED")
         self.total_spent_label.setFont(QFont("Consolas", 12))
-        self.total_spent_label.setStyleSheet("color: #ff6b6b;")
-        finance_layout.addWidget(self.total_spent_label)
-
-        layout.addLayout(finance_layout)
+        self.total_spent_label.setStyleSheet("color: #ff6b6b; border: none;")
+        self.total_spent_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.total_spent_label)
 
         # Session Timer at bottom
-        timer_layout = QHBoxLayout()
-        timer_layout.addStretch()
-
         self.timer_label = QLabel("00:00:00")
         self.timer_label.setFont(QFont("Consolas", 11))
-        self.timer_label.setStyleSheet("color: #888888;")
-        timer_layout.addWidget(self.timer_label)
-
-        timer_layout.addStretch()
-        layout.addLayout(timer_layout)
+        self.timer_label.setStyleSheet("color: #888888; border: none;")
+        self.timer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.timer_label)
 
     def setup_timers(self):
         """Setup update timers"""
