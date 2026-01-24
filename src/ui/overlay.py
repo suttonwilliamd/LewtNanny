@@ -139,7 +139,7 @@ class StreamerOverlayWidget(QWidget):
 
         # Create the container box
         container = QFrame(self)
-        container.setGeometry(0, 105, 210, 240)  # Move down to make room for logo on top (updated width)
+        container.setGeometry(0, 135, 210, 240)  # Increase y by 5 pixels from original 130
         container.setStyleSheet("""
             QFrame {
                 background-color: rgba(15, 15, 20, 245);
