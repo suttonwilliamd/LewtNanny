@@ -348,7 +348,7 @@ class StreamerOverlayWidget(QWidget):
             self.total_spent_label.setText("Spent: 0.00 PED")
 
         if float(return_val) > 0:
-            self.total_return_label.setText(f"Return: {float(return_val):.3f} PED")
+            self.total_return_label.setText(f"Return: {float(return_val):.2f} PED")
         else:
             self.total_return_label.setText("Return: 0.000 PED")
 
