@@ -22,7 +22,8 @@ from PyQt6.QtWidgets import (
     QToolBar, QToolButton, QDockWidget, QStackedWidget,
     QLineEdit, QGraphicsDropShadowEffect
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QThread, pyqtSignal, QUrl
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtGui import QFont, QAction, QIcon, QColor, QPixmap, QPainter, QRadialGradient
 
 from src.models.models import ActivityType, EventType
@@ -1499,6 +1500,7 @@ class TabbedMainWindow(QMainWindow):
     def open_donate(self):
         """Open donation link"""
         logger.info("Donate button clicked")
+        QDesktopServices.openUrl(QUrl("https://www.paypal.com/donate/?hosted_button_id=C8NM596JX8V8E"))
 
     def toggle_theme(self):
         """Toggle between dark and light themes"""
