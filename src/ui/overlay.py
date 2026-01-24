@@ -142,7 +142,7 @@ class StreamerOverlayWidget(QWidget):
         container.setGeometry(0, 110, 210, 240)  # Set to 110 as requested
         container.setStyleSheet("""
             QFrame {
-                background-color: rgba(15, 15, 20, 245);  # Less transparent (230 -> 245)
+                background-color: rgba(20, 20, 30, 200);
                 border: 1px solid rgba(60, 60, 80, 180);
             }
         """)
