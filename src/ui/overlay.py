@@ -139,7 +139,7 @@ class StreamerOverlayWidget(QWidget):
 
         # Create the container box
         container = QFrame(self)
-        container.setGeometry(0, 135, 210, 240)  # Increase y by 5 pixels from original 130
+        container.setGeometry(0, 110, 210, 240)  # Set to 110 as requested
         container.setStyleSheet("""
             QFrame {
                 background-color: rgba(15, 15, 20, 245);
