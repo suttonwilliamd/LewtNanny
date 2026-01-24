@@ -214,7 +214,7 @@ class StreamerOverlayWidget(QWidget):
         layout.addWidget(self.return_percentage_label)
 
         # Kills stat
-        self.kills_label = QLabel("Kills: 0")
+        self.kills_label = QLabel("Loots: 0")
         self.kills_label.setFont(QFont("Consolas", 12))
         self.kills_label.setStyleSheet("color: #ffffff; border: none;")
         self.kills_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -340,7 +340,7 @@ class StreamerOverlayWidget(QWidget):
         color = self._get_return_color(return_pct)
         self.return_percentage_label.setStyleSheet(f"color: {color};")
 
-        self.kills_label.setText(f"Kills: {kills}")
+        self.kills_label.setText(f"Loots: {kills}")
 
         if float(cost) > 0:
             self.total_spent_label.setText(f"Spent: {float(cost):.2f} PED")
