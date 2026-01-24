@@ -134,12 +134,12 @@ class StreamerOverlayWidget(QWidget):
 
     def setup_ui(self):
         """Setup the overlay UI"""
-        self.setFixedSize(280, 420)
+        self.setFixedSize(210, 420)  # Reduced width by 25% (280 * 0.75 = 210)
         self.move(100, 100)
 
         # Create the container box
         container = QFrame(self)
-        container.setGeometry(0, 100, 280, 240)  # Move down to make room for logo on top
+        container.setGeometry(0, 100, 210, 240)  # Move down to make room for logo on top (updated width)
         container.setStyleSheet("""
             QFrame {
                 background-color: rgba(15, 15, 20, 245);
@@ -174,7 +174,7 @@ class StreamerOverlayWidget(QWidget):
         # Position the logo centered at the top
         logo_width = 250
         logo_height = 160
-        logo_x = (280 - logo_width) // 2  # Center horizontally
+        logo_x = (210 - logo_width) // 2  # Center horizontally (updated for new width)
         logo_y = 20  # Position at the top
         self.logo_label.setGeometry(logo_x, logo_y, logo_width, logo_height)
         
