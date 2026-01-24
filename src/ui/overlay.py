@@ -135,7 +135,7 @@ class StreamerOverlayWidget(QWidget):
     def setup_ui(self):
         """Setup the overlay UI"""
         self.setFixedSize(210, 420)  # Reduced width by 25% (280 * 0.75 = 210)
-        self.move(100, 100)
+        self.move(100, 105)  # Increased y by 5 pixels
 
         # Create the container box
         container = QFrame(self)
