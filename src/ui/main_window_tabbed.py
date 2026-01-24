@@ -746,6 +746,7 @@ class TabbedMainWindow(QMainWindow):
         """Create the Combat tab"""
         combat_widget = CombatTabWidget(self.db_manager)
         self.combat_tab = combat_widget
+        self.combat_widget = combat_widget  # Store reference for session management
         self.content_stack.addWidget(combat_widget)
         logger.info("Combat tab created")
 
@@ -1356,6 +1357,11 @@ class TabbedMainWindow(QMainWindow):
             # Enable crafting "Add to Session" button
             if hasattr(self, 'crafting_widget') and self.crafting_widget:
                 self.crafting_widget.set_session_active(True)
+            
+            # Update combat tab with session info
+            if hasattr(self, 'combat_widget') and self.combat_widget:
+                self.combat_widget.update_session_info(self.current_session_id, self.current_session_start)
+                self.combat_widget.start_new_session()
 
             if hasattr(self, 'chat_reader') and self.chat_reader:
                 chat_path = None
@@ -1452,6 +1458,10 @@ class TabbedMainWindow(QMainWindow):
                 # Disable crafting "Add to Session" button
                 if hasattr(self, 'crafting_widget') and self.crafting_widget:
                     self.crafting_widget.set_session_active(False)
+                
+                # Update combat tab to show no active session
+                if hasattr(self, 'combat_widget') and self.combat_widget:
+                    self.combat_widget.update_session_info(None, None)
 
                 self.status_bar.showMessage(f"Session stopped")
                 logger.info(f"Session stopped: {session_id}")

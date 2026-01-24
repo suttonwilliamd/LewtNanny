@@ -5,7 +5,7 @@ Tracks combat statistics including kills, damage, and efficiency
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from decimal import Decimal
 
 from PyQt6.QtWidgets import (
@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QGroupBox, QLabel, QTableWidget, QTableWidgetItem,
     QHeaderView, QProgressBar
 )
+from PyQt6.QtCore import QAbstractItemModel
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
@@ -26,6 +27,16 @@ class CombatTabWidget(QWidget):
         super().__init__()
         self.db_manager = db_manager
         self.combat_data = []
+        self.session_stats = {
+            'total_kills': 0,
+            'total_damage_dealt': 0.0,
+            'total_damage_received': 0.0,
+            'deaths': 0,
+            'critical_hits': 0,
+            'misses': 0,
+            'hits': 0,
+            'session_start': None
+        }
         
         self.setup_ui()
         logger.info("CombatTabWidget initialized")
@@ -46,6 +57,10 @@ class CombatTabWidget(QWidget):
     
     def create_combat_summary(self):
         """Create combat summary section"""
+        self.session_info_label = QLabel("No active session")
+        self.session_info_label.setFont(QFont("Arial", 9))
+        self.session_info_label.setStyleSheet("color: #8B949E; padding: 4px;")
+        
         section = QGroupBox("Combat Summary")
         section.setStyleSheet("""
             QGroupBox {
@@ -61,9 +76,14 @@ class CombatTabWidget(QWidget):
             }
         """)
         
-        layout = QGridLayout()
+        layout = QVBoxLayout()
         layout.setContentsMargins(4, 28, 4, 4)  # Top margin accounts for title bar
         layout.setSpacing(4)
+        
+        layout.addWidget(self.session_info_label)
+        
+        grid_layout = QGridLayout()
+        grid_layout.setSpacing(4)
         
         summary_items = [
             ("Total Kills", "0"),
@@ -102,8 +122,9 @@ class CombatTabWidget(QWidget):
             container_layout.addWidget(value_lbl)
             
             self.combat_summary_labels[label] = value_lbl
-            layout.addWidget(container, row, col)
+            grid_layout.addWidget(container, row, col)
         
+        layout.addLayout(grid_layout)
         section.setLayout(layout)
         return section
     
@@ -141,11 +162,12 @@ class CombatTabWidget(QWidget):
         self.kills_table.setSortingEnabled(True)
         
         header = self.kills_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        if header is not None:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         
         layout.addWidget(self.kills_table)
         
@@ -166,24 +188,28 @@ class CombatTabWidget(QWidget):
         """Update combat statistics display"""
         for label, value_lbl in self.combat_summary_labels.items():
             if "Kills" in label:
-                value_lbl.setText("0")
+                value_lbl.setText(str(self.session_stats['total_kills']))
             elif "Damage Dealt" in label:
-                value_lbl.setText("0.00")
+                value_lbl.setText(f"{self.session_stats['total_damage_dealt']:.2f}")
             elif "Damage Received" in label:
-                value_lbl.setText("0.00")
+                value_lbl.setText(f"{self.session_stats['total_damage_received']:.2f}")
             elif "Ratio" in label:
-                value_lbl.setText("0.0")
+                if self.session_stats['deaths'] > 0:
+                    ratio = self.session_stats['total_kills'] / self.session_stats['deaths']
+                    value_lbl.setText(f"{ratio:.1f}")
+                else:
+                    ratio = self.session_stats['total_kills'] if self.session_stats['total_kills'] > 0 else 0
+                    value_lbl.setText(f"{ratio:.1f}")
             elif "Critical" in label:
-                value_lbl.setText("0")
+                value_lbl.setText(str(self.session_stats['critical_hits']))
             elif "Misses" in label:
-                value_lbl.setText("0")
+                value_lbl.setText(str(self.session_stats['misses']))
         
-        self.kills_table.setRowCount(0)
+        self.update_kills_table()
         logger.debug("Combat display updated")
     
     def add_combat_event(self, event_data: Dict[str, Any]):
         """Add a combat event"""
-        logger.info(f"[COMBAT_TAB] ===========================================")
         logger.info(f"[COMBAT_TAB] >>> add_combat_event RECEIVED <<<")
         logger.info(f"[COMBAT_TAB] Event data: {event_data}")
 
@@ -191,11 +217,174 @@ class CombatTabWidget(QWidget):
         
         if event_type == 'combat':
             self.combat_data.append(event_data)
+            self.process_combat_event(event_data)
             self.update_combat_display()
             logger.debug(f"Combat event added: {event_data}")
+        elif event_type == 'global':
+            # Check if this is a kill event
+            parsed_data = event_data.get('parsed_data', {})
+            if parsed_data.get('type') in ['kill', 'team_kill']:
+                # Convert global kill to combat event format
+                kill_event = {
+                    'event_type': 'combat',
+                    'action': 'kill',
+                    'enemy': parsed_data.get('creature', 'Unknown'),
+                    'damage': parsed_data.get('value', 0),
+                    'timestamp': parsed_data.get('timestamp', datetime.now().isoformat()),
+                    'type': 'Global' if parsed_data.get('hof') else 'Kill'
+                }
+                self.combat_data.append(kill_event)
+                self.process_combat_event(kill_event)
+                self.update_combat_display()
+                logger.info(f"Global kill processed: {parsed_data.get('creature')}")
+        elif event_type == 'loot':
+            # Regular kills are tracked through loot events
+            parsed_data = event_data.get('parsed_data', {})
+            kill_event = {
+                'event_type': 'combat',
+                'action': 'kill',
+                'enemy': parsed_data.get('item_name', 'Unknown'),
+                'damage': parsed_data.get('value', 0),
+                'timestamp': parsed_data.get('timestamp', datetime.now().isoformat()),
+                'type': 'Loot'
+            }
+            self.combat_data.append(kill_event)
+            self.process_combat_event(kill_event)
+            self.update_combat_display()
+            logger.info(f"Loot kill processed: {parsed_data.get('item_name')}")
+        else:
+            logger.debug(f"Ignoring non-combat event: {event_type}")
+    
+    def process_combat_event(self, event_data: Dict[str, Any]):
+        """Process a combat event and update session stats"""
+        if not self.session_stats['session_start']:
+            from datetime import datetime
+            self.session_stats['session_start'] = datetime.now()
+        
+        # Check for explicit action first (for converted global/loot events)
+        action = event_data.get('action', '').lower()
+        parsed_data = event_data.get('parsed_data', {})
+        
+        if action == 'kill':
+            self.session_stats['total_kills'] += 1
+            logger.debug(f"Processed kill. Total kills: {self.session_stats['total_kills']}")
+        elif 'damage_taken' in parsed_data:
+            damage = parsed_data.get('damage_taken', 0)
+            self.session_stats['total_damage_received'] += float(damage)
+            logger.debug(f"Processed damage_received: {damage}")
+        elif 'miss' in parsed_data and parsed_data['miss']:
+            self.session_stats['misses'] += 1
+            logger.debug("Processed miss")
+        elif 'dodged' in parsed_data and parsed_data['dodged']:
+            self.session_stats['misses'] += 1  # Treat dodge as miss
+            logger.debug("Processed dodge as miss")
+        elif 'evaded' in parsed_data and parsed_data['evaded']:
+            self.session_stats['misses'] += 1  # Treat evade as miss
+            logger.debug("Processed evade as miss")
+        elif 'critical_hit' in parsed_data:
+            damage = parsed_data.get('critical_hit', 0)
+            self.session_stats['critical_hits'] += 1
+            self.session_stats['total_damage_dealt'] += float(damage)
+            self.session_stats['hits'] += 1
+            logger.debug(f"Processed critical_hit: {damage}")
+        elif 'damage' in parsed_data and action == '':
+            # This could be damage dealt or other damage event
+            damage = parsed_data.get('damage', 0)
+            if damage > 0:
+                self.session_stats['total_damage_dealt'] += float(damage)
+                self.session_stats['hits'] += 1
+                logger.debug(f"Processed damage_dealt: {damage}")
+        
+        logger.debug(f"Updated session stats: {self.session_stats}")
+    
+    def update_kills_table(self):
+        """Update the kills table with recent combat data"""
+        kills_data = [event for event in self.combat_data if event.get('action', '').lower() == 'kill']
+        kills_data.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        
+        self.kills_table.setRowCount(len(kills_data[:20]))  # Show last 20 kills
+        
+        for row, kill_event in enumerate(kills_data[:20]):
+            # Kill number
+            self.kills_table.setItem(row, 0, QTableWidgetItem(str(len(kills_data) - row)))
+            
+            # Enemy name
+            enemy = kill_event.get('enemy', kill_event.get('target', 'Unknown'))
+            self.kills_table.setItem(row, 1, QTableWidgetItem(enemy))
+            
+            # Damage
+            damage = kill_event.get('damage', 0)
+            self.kills_table.setItem(row, 2, QTableWidgetItem(f"{float(damage):.2f}"))
+            
+            # Time
+            timestamp = kill_event.get('timestamp', '')
+            if timestamp:
+                try:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                    time_str = dt.strftime('%H:%M:%S')
+                except:
+                    time_str = timestamp[:8]
+            else:
+                time_str = 'Unknown'
+            self.kills_table.setItem(row, 3, QTableWidgetItem(time_str))
+            
+            # Type
+            kill_type = kill_event.get('kill_type', kill_event.get('type', 'Normal'))
+            self.kills_table.setItem(row, 4, QTableWidgetItem(kill_type))
     
     def clear_data(self):
         """Clear all combat data"""
         self.combat_data = []
+        self.session_stats = {
+            'total_kills': 0,
+            'total_damage_dealt': 0.0,
+            'total_damage_received': 0.0,
+            'deaths': 0,
+            'critical_hits': 0,
+            'misses': 0,
+            'hits': 0,
+            'session_start': None
+        }
         self.update_combat_display()
         logger.info("Combat data cleared")
+    
+    def start_new_session(self):
+        """Start a new combat session"""
+        self.clear_data()
+        from datetime import datetime
+        self.session_stats['session_start'] = datetime.now()
+        logger.info("New combat session started")
+    
+    def update_session_info(self, session_id: Optional[str] = None, session_start: Optional[datetime] = None):
+        """Update session information display"""
+        if session_id and session_start:
+            session_time = session_start.strftime("%Y-%m-%d %H:%M:%S")
+            self.session_info_label.setText(f"Active Session: {session_id[:8]} (Started: {session_time})")
+        else:
+            self.session_info_label.setText("No active session")
+    
+    def get_session_summary(self) -> Dict[str, Any]:
+        """Get session summary data"""
+        duration = None
+        if self.session_stats['session_start']:
+            from datetime import datetime
+            duration = datetime.now() - self.session_stats['session_start']
+        
+        accuracy = 0
+        total_attempts = self.session_stats['hits'] + self.session_stats['misses']
+        if total_attempts > 0:
+            accuracy = (self.session_stats['hits'] / total_attempts) * 100
+        
+        return {
+            'total_kills': self.session_stats['total_kills'],
+            'total_damage_dealt': self.session_stats['total_damage_dealt'],
+            'total_damage_received': self.session_stats['total_damage_received'],
+            'deaths': self.session_stats['deaths'],
+            'critical_hits': self.session_stats['critical_hits'],
+            'misses': self.session_stats['misses'],
+            'hits': self.session_stats['hits'],
+            'accuracy': accuracy,
+            'session_duration': duration,
+            'session_start': self.session_stats['session_start']
+        }
