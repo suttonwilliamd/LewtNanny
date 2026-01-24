@@ -6,6 +6,7 @@ Adapted from LootNanny's ConfigTab with similar functionality
 import asyncio
 import os
 import json
+import logging
 from pathlib import Path
 from decimal import Decimal
 from typing import Dict, Any, Optional, List
@@ -23,6 +24,7 @@ from PyQt6.QtGui import QFont
 from src.services.loadout_service import LoadoutService, WeaponLoadout, CustomWeapon
 from src.services.game_data_service import GameDataService
 from src.services.config_manager import ConfigManager
+from src.services.cost_calculation_service import CostCalculationService
 
 
 def get_default_chat_log_path() -> str:
@@ -41,6 +43,7 @@ class ConfigSignals(QObject):
     """Signals for config tab"""
     config_changed = pyqtSignal(str, object)
     loadout_changed = pyqtSignal()
+    stats_calculated = pyqtSignal(float)  # Signal when stats calculation completes with total cost
 
 
 class ConfigTab(QWidget):
@@ -692,11 +695,13 @@ class ConfigTab(QWidget):
                 if loadout.id == loadout_id:
                     self._update_active_loadout_info(loadout)
                     self._config.set_sync("loadouts.active_loadout_id", loadout_id)
+                    self.signals.loadout_changed.emit()
                     return
         self.active_loadout_info.setText("No loadout selected")
         self.ammo_burn_text.setText("0")
         self.weapon_decay_text.setText("0.000000")
         self._config.set_sync("loadouts.active_loadout_id", None)
+        self.signals.loadout_changed.emit()
 
     def _update_active_loadout_info(self, loadout: WeaponLoadout):
         """Update the active loadout info display"""
@@ -719,22 +724,37 @@ class ConfigTab(QWidget):
         thread.start()
 
     async def _async_calculate_stats(self, loadout: WeaponLoadout):
-        """Async calculation of loadout stats"""
+        """Async calculation of loadout stats using centralized cost calculation service"""
+        logger = logging.getLogger(__name__)
+        logger.info(f"===== CONFIG TAB STATS CALCULATION START =====")
+        logger.info(f"Loadout: {loadout.name} - Weapon: {loadout.weapon}")
+        logger.info(f"Loadout components: amp={loadout.amplifier}, scope={loadout.scope}, sight1={loadout.sight_1}, sight2={loadout.sight_2}")
+        logger.info(f"Enhancers: dmg={loadout.damage_enh}, acc={loadout.accuracy_enh}, eco={loadout.economy_enh}")
+        
         try:
+            # Use the centralized cost calculation service
+            total_cost_ped = await CostCalculationService.calculate_cost_per_attack(loadout)
+            
+            logger.info(f"TOTAL COST PER ATTACK: {total_cost_ped:.6f} PED")
+            logger.info(f"===== CONFIG TAB STATS CALCULATION END =====")
+            
+            # For UI display, we need to calculate the individual components
             data_service = GameDataService()
             weapon = await data_service.get_weapon_by_name(loadout.weapon)
             if not weapon:
+                logger.error(f"Weapon not found in database: {loadout.weapon}")
                 return
 
             base_decay = float(weapon.decay) if weapon.decay else 0.0
             base_ammo = weapon.ammo if weapon.ammo else 0
-
+            
             damage_mult = 1.0 + (loadout.damage_enh * 0.1)
             economy_mult = 1.0 - (loadout.economy_enh * 0.05)
-
+            
             enhanced_decay = base_decay * damage_mult * economy_mult
             enhanced_ammo = base_ammo * damage_mult
-
+            
+            # Add attachment contributions for display
             if loadout.amplifier:
                 amp = await data_service.get_attachment_by_name(loadout.amplifier)
                 if amp:
@@ -759,11 +779,15 @@ class ConfigTab(QWidget):
                     enhanced_decay += float(sight.decay) if sight.decay else 0
                     enhanced_ammo += sight.ammo if sight.ammo else 0
 
+            # Update UI components
             self.ammo_burn_text.setText(str(int(enhanced_ammo)))
             self.weapon_decay_text.setText(f"{enhanced_decay:.6f}")
+            
+            # Emit signal with synchronized total cost
+            self.signals.stats_calculated.emit(total_cost_ped)
 
         except Exception as e:
-            print(f"Error calculating stats: {e}")
+            logger.error(f"Error calculating stats for loadout {loadout.weapon}: {e}", exc_info=True)
 
     def _open_chat_file(self):
         """Open file dialog for chat location"""

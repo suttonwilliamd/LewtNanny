@@ -32,6 +32,7 @@ from src.ui.components.combat_tab import CombatTabWidget
 from src.services.game_data_service import GameDataService
 from src.ui.components.crafting_tab import CraftingTabWidget
 from src.ui.components.weapon_selector import WeaponSelector
+from src.services.cost_calculation_service import CostCalculationService
 
 logger = logging.getLogger(__name__)
 
@@ -789,6 +790,7 @@ class TabbedMainWindow(QMainWindow):
         self.config_widget = ConfigTab(config_manager=self.config_manager)
         self.content_stack.addWidget(self.config_widget)
         self.config_widget.signals.loadout_changed.connect(self._on_loadout_changed)
+        self.config_widget.signals.stats_calculated.connect(self._on_stats_calculated)
         
         # Initialize cost per attack for the current loadout
         self.cost_per_attack = self._calculate_cost_per_attack()
@@ -797,7 +799,7 @@ class TabbedMainWindow(QMainWindow):
             self.overlay.set_cost_per_attack(self.cost_per_attack)
 
     def _on_loadout_changed(self):
-        """Handle loadout changed - update overlay with new weapon info"""
+        """Handle loadout changed - update overlay with new weapon info only, cost sync happens via stats_calculated signal"""
         try:
             if hasattr(self, 'config_widget') and self.config_widget:
                 active_loadout = self.config_widget.active_loadout_combo.currentData()
@@ -810,17 +812,27 @@ class TabbedMainWindow(QMainWindow):
                                     loadout.amplifier or "",
                                     f"{loadout.damage_enh * 0.1:.3f}" if loadout.damage_enh else ""
                                 )
-                                self.overlay.set_cost_per_attack(self.cost_per_attack)
-
-                            # Update cost per attack for total cost calculation
-                            self.cost_per_attack = self._calculate_cost_per_attack()
-                            logger.info(f"Loadout changed to: {loadout.weapon}, cost per attack: {self.cost_per_attack:.6f} PED")
-
-                            # Update total cost display with new cost per attack
-                            self._update_total_cost_display()
+                            logger.info(f"Loadout changed to: {loadout.weapon} - waiting for stats calculation to sync cost")
                             break
         except Exception as e:
             logger.error(f"Error handling loadout change: {e}")
+
+    def _on_stats_calculated(self, total_cost: float):
+        """Handle stats calculation completion - update cost per attack with synchronized value"""
+        try:
+            self.cost_per_attack = total_cost
+            logger.info(f"STATS CALCULATED: Updated cost per attack to {self.cost_per_attack:.6f} PED")
+            
+            # Update overlay with the synchronized cost
+            if self.overlay:
+                logger.info(f"STATS CALCULATED: Updating overlay with synchronized cost: {self.cost_per_attack:.6f} PED")
+                self.overlay.set_cost_per_attack(self.cost_per_attack)
+            
+            # Update total cost display
+            self._update_total_cost_display()
+            
+        except Exception as e:
+            logger.error(f"Error handling stats calculation: {e}")
 
     def _on_crafting_cost_added(self, cost: float):
         """Handle crafting cost added as spent cost (like ammo/decay)"""
@@ -1102,7 +1114,7 @@ class TabbedMainWindow(QMainWindow):
                 except (ValueError, AttributeError) as e:
                     logger.debug(f"Could not get cost from config_tab: {e}")
             
-            # Fallback: calculate using loadout data
+            # Fallback: use centralized cost calculation service
             selected_loadout = None
             for loadout in self.config_widget._loadouts:
                 if loadout.id == active_loadout:
@@ -1112,59 +1124,11 @@ class TabbedMainWindow(QMainWindow):
             if not selected_loadout:
                 return 0.0
                 
-            # Calculate cost per attack using similar logic to config_tab._async_calculate_stats
-            async def calc_cost():
-                data_service = GameDataService()
-                weapon = await data_service.get_weapon_by_name(selected_loadout.weapon)
-                if not weapon:
-                    return 0.0
-                    
-                base_decay = float(weapon.decay) if weapon.decay else 0.0
-                base_ammo = weapon.ammo if weapon.ammo else 0
-                
-                damage_mult = 1.0 + (selected_loadout.damage_enh * 0.1)
-                economy_mult = 1.0 - (selected_loadout.economy_enh * 0.05)
-                
-                enhanced_decay = base_decay * damage_mult * economy_mult
-                enhanced_ammo = base_ammo * damage_mult
-                
-                # Add amplifier decay
-                if selected_loadout.amplifier:
-                    amp = await data_service.get_attachment_by_name(selected_loadout.amplifier)
-                    if amp:
-                        enhanced_decay += float(amp.decay) if amp.decay else 0
-                        enhanced_ammo += amp.ammo if amp.ammo else 0
-                
-                # Add scope decay
-                if selected_loadout.scope:
-                    scope = await data_service.get_attachment_by_name(selected_loadout.scope)
-                    if scope:
-                        enhanced_decay += float(scope.decay) if scope.decay else 0
-                        enhanced_ammo += scope.ammo if scope.ammo else 0
-                
-                # Add sight 1 decay
-                if selected_loadout.sight_1:
-                    sight = await data_service.get_attachment_by_name(selected_loadout.sight_1)
-                    if sight:
-                        enhanced_decay += float(sight.decay) if sight.decay else 0
-                        enhanced_ammo += sight.ammo if sight.ammo else 0
-                
-                # Add sight 2 decay
-                if selected_loadout.sight_2:
-                    sight = await data_service.get_attachment_by_name(selected_loadout.sight_2)
-                    if sight:
-                        enhanced_decay += float(sight.decay) if sight.decay else 0
-                        enhanced_ammo += sight.ammo if sight.ammo else 0
-                
-                # Calculate ammo cost (ammo is in PEC, divide by 10000 to get PED)
-                ammo_cost = enhanced_ammo / 10000.0
-                
-                return enhanced_decay + ammo_cost
-            
+            # Use the centralized cost calculation service
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                cost = loop.run_until_complete(calc_cost())
+                cost = loop.run_until_complete(CostCalculationService.calculate_cost_per_attack(selected_loadout))
                 return cost
             finally:
                 loop.close()
@@ -1177,10 +1141,15 @@ class TabbedMainWindow(QMainWindow):
         """Update the total cost display based on shots taken and cost per attack"""
         try:
             if self.cost_per_attack <= 0:
-                self.cost_per_attack = self._calculate_cost_per_attack()
-                logger.debug(f"Calculated cost_per_attack: {self.cost_per_attack}")
-                if self.overlay:
-                    self.overlay.set_cost_per_attack(self.cost_per_attack)
+                calculated_cost = self._calculate_cost_per_attack()
+                # Only use fallback if it gives us a valid cost
+                if calculated_cost > 0:
+                    self.cost_per_attack = calculated_cost
+                    logger.warning(f"FALLBACK: Calculated cost_per_attack: {self.cost_per_attack:.6f} PED")
+                    if self.overlay:
+                        self.overlay.set_cost_per_attack(self.cost_per_attack)
+                else:
+                    logger.warning(f"FALLBACK: Could not calculate valid cost_per_attack (got {calculated_cost:.6f})")
             
             if self.cost_per_attack <= 0:
                 logger.debug("Cannot update total cost: cost_per_attack is still 0")
@@ -1213,8 +1182,8 @@ class TabbedMainWindow(QMainWindow):
             total_return_str = self.loot_summary_labels["Total Return"].text().replace(",", "").split()[0]
             total_return = float(total_return_str)
             
-            if total_cost > 0:
-                return_pct = (total_return / total_cost) * 100
+            if new_total > 0:
+                return_pct = (total_return / new_total) * 100
                 self.loot_summary_labels["% Return"].setText(f"{return_pct:.1f}%")
             elif total_return > 0:
                 self.loot_summary_labels["% Return"].setText("100.0%")
