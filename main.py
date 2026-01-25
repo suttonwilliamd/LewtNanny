@@ -12,6 +12,7 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QIcon
 
 from cli import main as cli_main, AppConfig
 from src.core.app_config import app_config as default_config
@@ -22,10 +23,6 @@ from src.services.config_manager import ConfigManager
 from src.services.chat_reader import ChatReader
 from src.utils.logger import setup_logger
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 
@@ -94,6 +91,11 @@ class LewtNannyApp:
         self.app = QApplication(sys.argv)
         
         self.app.setStyle('Fusion')
+        
+        # Set application icon
+        icon_path = Path(__file__).parent / 'LewtNanny.ico'
+        if icon_path.exists():
+            self.app.setWindowIcon(QIcon(str(icon_path)))
         
         self.initialize_ui()
         
