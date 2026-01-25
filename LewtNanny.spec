@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('src', 'src')],
+    datas=[('src', 'src'), ('LewtNanny.ico', '.')],
     hiddenimports=['PyQt6', 'aiosqlite', 'redis', 'twitchio', 'watchdog', 'pyautogui', 'numpy', 'pandas', 'pytesseract', 'PIL', 'pyqtgraph'],
     hookspath=[],
     hooksconfig={},

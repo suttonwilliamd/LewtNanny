@@ -37,6 +37,38 @@ class LewtNannyApp:
         
         logger.info("LewtNannyApp initialized")
     
+    def _get_icon_path(self) -> Optional[Path]:
+        """Get the path to the application icon, works both in dev and PyInstaller"""
+        import sys
+        
+        # Try PyInstaller bundled path first
+        if hasattr(sys, '_MEIPASS'):
+            # Running in PyInstaller bundle
+            bundle_dir = Path(sys._MEIPASS)
+            icon_path = bundle_dir / 'LewtNanny.ico'
+            if icon_path.exists():
+                logger.info(f"Found icon in PyInstaller bundle: {icon_path}")
+                return icon_path
+        
+        # Fallback to development paths
+        # Try current working directory
+        icon_path = Path.cwd() / 'LewtNanny.ico'
+        if icon_path.exists():
+            logger.info(f"Found icon in current directory: {icon_path}")
+            return icon_path
+        
+        # Try relative to this file (development)
+        try:
+            icon_path = Path(__file__).parent / 'LewtNanny.ico'
+            if icon_path.exists():
+                logger.info(f"Found icon relative to script: {icon_path}")
+                return icon_path
+        except:
+            pass
+            
+        logger.warning("Could not find LewtNanny.ico icon file")
+        return None
+    
     async def initialize_db(self):
         """Initialize database and config (can run before QApplication)"""
         logger.info("Initializing database and config...")
@@ -93,9 +125,12 @@ class LewtNannyApp:
         self.app.setStyle('Fusion')
         
         # Set application icon
-        icon_path = Path(__file__).parent / 'LewtNanny.ico'
-        if icon_path.exists():
+        icon_path = self._get_icon_path()
+        if icon_path and icon_path.exists():
             self.app.setWindowIcon(QIcon(str(icon_path)))
+            logger.info(f"Application icon set from: {icon_path}")
+        else:
+            logger.warning("Could not load application icon")
         
         self.initialize_ui()
         
