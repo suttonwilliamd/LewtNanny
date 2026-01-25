@@ -59,6 +59,7 @@ class ChatReader(QObject):
             'craft_success': re.compile(r'You\s+successfully\s+crafted\s+(.+)'),
             'craft_fail': re.compile(r'You\s+failed\s+to\s+craft\s+(.+)'),
             'skill': re.compile(r'You\s+(?:have\s+)?gained\s+([\d.]+)\s+experience\s+in\s+your\s+(.+?)\s+skill'),
+            'picked_up': re.compile(r'Picked up (.+?)(?: \((\d+)\))?$'),
         }
 
         self.current_session_id = None
@@ -376,6 +377,27 @@ class ChatReader(QObject):
                     'deposit': deposit,
                     'value': value,
                     'hof': is_hof,
+                    'timestamp': datetime.now().isoformat()
+                },
+                'session_id': self.current_session_id
+            }
+
+        # Check for picked up items
+        picked_up_match = self.patterns['picked_up'].search(line)
+        if picked_up_match and not event_data:
+            item_name = picked_up_match.group(1).strip()
+            quantity = int(picked_up_match.group(2)) if picked_up_match.group(2) else 1
+            # Crude oil is worth 1 PEC (0.01 PED) per unit
+            value_ped = quantity * 0.01
+            logger.info(f"[CHAT_READER] Detected PICKED_UP event: {item_name} x{quantity}")
+            event_data = {
+                'event_type': EventType.LOOT.value,
+                'activity_type': self.current_activity.value,
+                'raw_message': line,
+                'parsed_data': {
+                    'item_name': item_name,
+                    'quantity': quantity,
+                    'value': value_ped,
                     'timestamp': datetime.now().isoformat()
                 },
                 'session_id': self.current_session_id
