@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
     QHeaderView,
     QLabel,
     QPushButton,
+    QMenu,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -143,6 +144,12 @@ class LootTabCreator:
         self.parent.run_log_table.setAlternatingRowColors(True)
         self.parent.run_log_table.setSortingEnabled(True)
         self.parent.run_log_table.setShowGrid(True)
+        self.parent.run_log_table.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.parent.run_log_table.customContextMenuRequested.connect(
+            self.parent._show_run_log_context_menu
+        )
         self.parent.run_log_table.itemSelectionChanged.connect(
             self.parent._on_run_log_selection_changed
         )

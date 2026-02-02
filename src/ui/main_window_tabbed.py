@@ -43,6 +43,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QGraphicsDropShadowEffect,
     QApplication,
+    QMenu,
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QThread, pyqtSignal, QUrl
 from PyQt6.QtGui import QDesktopServices
@@ -691,6 +692,107 @@ class TabbedMainWindow(QMainWindow):
             self._update_current_session_tabs()
         else:
             self._load_session_data(session_id)
+
+    def _show_run_log_context_menu(self, position):
+        """Show context menu for run log table"""
+        item = self.run_log_table.itemAt(position)
+        if not item:
+            return
+
+        row = item.row()
+        session_id = self.run_log_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+
+        # Don't allow deleting current run
+        if session_id == "current":
+            return
+
+        menu = QMenu(self)
+
+        delete_action = menu.addAction("Delete Session")
+        delete_action.triggered.connect(lambda: self._delete_session(session_id, row))
+
+        menu.exec(self.run_log_table.mapToGlobal(position))
+
+    def _delete_session(self, session_id: str, row: int):
+        """Delete a session from the database and UI"""
+        # Show confirmation dialog
+        reply = QMessageBox.question(
+            self,
+            "Confirm Delete",
+            f"Are you sure you want to delete this session?\n\nSession ID: {session_id}\n\nThis action cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # Delete from database in background thread
+        def delete_in_background():
+            import asyncio
+
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                success = loop.run_until_complete(
+                    self.db_manager.delete_session(session_id)
+                )
+                loop.close()
+
+                logger.info(f"Database deletion result: {success}")
+
+                if success:
+                    # Remove row immediately
+                    self._remove_session_row_immediately(row)
+                    self.status_bar.showMessage(f"Session deleted: {session_id}")
+                else:
+                    logger.error("Database deletion returned False")
+                    QTimer.singleShot(
+                        0,
+                        lambda: QMessageBox.warning(
+                            self,
+                            "Delete Failed",
+                            f"Failed to delete session: {session_id}",
+                        ),
+                    )
+
+            except Exception as e:
+                logger.error(f"Error deleting session {session_id}: {e}")
+                QTimer.singleShot(
+                    0,
+                    lambda: QMessageBox.warning(
+                        self, "Delete Failed", f"Error deleting session: {e}"
+                    ),
+                )
+
+        threading.Thread(target=delete_in_background, daemon=True).start()
+
+    def _remove_session_row_immediately(self, row: int):
+        """Remove a specific row from run log table immediately"""
+        # Clear session-specific data if this session was selected
+        self._clear_session_specific_data()
+
+        # Remove row immediately
+        self.run_log_table.removeRow(row)
+
+        # Refresh analysis tab in background
+        def refresh_analysis():
+            import asyncio
+
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                if hasattr(self, "analysis_widget") and self.analysis_widget:
+                    loop.run_until_complete(self.analysis_widget.load_data())
+                loop.close()
+            except Exception as e:
+                logger.error(f"Error refreshing analysis: {e}")
+
+        threading.Thread(target=refresh_analysis, daemon=True).start()
+
+    def _remove_session_from_ui(self, row: int):
+        """Remove session row from run log table and refresh views"""
+        self._refresh_after_session_deletion(row, "")
 
     def _clear_session_specific_data(self):
         """Clear session-specific displays"""
