@@ -539,10 +539,46 @@ class SimpleAnalysisWidget(QWidget):
             self.worst_run_label.setText(f"Worst: {worst:.1f}%")
             self.hit_rate_label.setText(f"Hit Rate: {hit_rate:.1f}%")
 
+    def load_specific_session(self, session_data: Dict[str, Any]):
+        """Load analysis for a specific session"""
+        # Filter to show only the selected session
+        self.session_data = [session_data]
+        self.top_chart.set_data(self.session_data)
+        self.bottom_chart.set_data(self.session_data)
+        self.update_stats()
+
+        # Update title to show this is a single session view
+        if hasattr(self, "title_label"):
+            session_id = session_data.get("id", "Unknown")[:8]
+            self.title_label.setText(f"Analysis - Session {session_id}")
+
     def update_realtime(self):
         """Update analysis in real-time - wrapper for load_data"""
-        self.load_data()
+        try:
+            # Skip async loading during real-time updates to avoid event loop issues
+            # The analysis will be refreshed when needed via refresh() method
+            logger.debug(
+                "Skipping real-time analysis update to avoid event loop issues"
+            )
+        except Exception as e:
+            logger.error(f"Error updating analysis in real-time: {e}")
 
     def refresh(self):
         """Refresh all data"""
-        self.load_data()
+        try:
+            # Use QTimer to schedule async operation safely in Qt context
+            from PyQt6.QtCore import QTimer
+
+            def async_load():
+                try:
+                    import asyncio
+
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(self.load_data())
+                finally:
+                    loop.close()
+
+            QTimer.singleShot(0, async_load)
+        except Exception as e:
+            logger.error(f"Error refreshing analysis data: {e}")

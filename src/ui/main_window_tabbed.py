@@ -564,17 +564,303 @@ class TabbedMainWindow(QMainWindow):
         logger.info("Export all sessions called")
 
     def _load_past_runs_on_startup(self):
-        """Load past runs from database on startup"""
-        try:
-            # Implementation would load past runs into run_log_table
-            logger.info("Loading past runs on startup")
-        except Exception as e:
-            logger.error(f"Error loading past runs: {e}")
+        """Load past runs when application starts"""
+
+        def load():
+            try:
+                import asyncio
+
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    sessions = loop.run_until_complete(
+                        self.db_manager.get_all_sessions()
+                    )
+                    for session in sessions:
+                        self._add_run_to_run_log(session)
+                    logger.info(f"Loaded {len(sessions)} past runs")
+                finally:
+                    loop.close()
+            except Exception as e:
+                logger.error(f"Error loading past runs: {e}")
+
+        # Use QTimer to schedule async loading in Qt event loop
+        from PyQt6.QtCore import QTimer
+
+        QTimer.singleShot(1000, load)  # Delay 1 second to ensure UI is ready
+
+    def _add_run_to_run_log(self, session: Dict[str, Any]):
+        """Add a run entry to run log table"""
+        from PyQt6.QtCore import QTimer
+
+        def add_in_gui_thread():
+            row = self.run_log_table.rowCount()
+            self.run_log_table.insertRow(row)
+
+            start_time = session.get("start_time", "")
+            if isinstance(start_time, str):
+                try:
+                    dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                    start_time = dt.strftime("%Y-%m-%d %H:%M")
+                except:
+                    pass
+
+            duration = ""
+            end_time = session.get("end_time")
+            if end_time:
+                if isinstance(end_time, str):
+                    try:
+                        end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+                        start_dt = datetime.fromisoformat(
+                            session.get("start_time", "").replace("Z", "+00:00")
+                        )
+                        delta = end_dt - start_dt
+                        hours, remainder = divmod(int(delta.total_seconds()), 3600)
+                        minutes, seconds = divmod(remainder, 60)
+                        duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                    except:
+                        duration = "-"
+                else:
+                    delta = end_time - session.get("start_time", datetime.now())
+                    hours, remainder = divmod(int(delta.total_seconds()), 3600)
+                    minutes, seconds = divmod(remainder, 60)
+                    duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            else:
+                duration = "-"
+
+            total_cost = session.get("total_cost", 0) or 0
+            total_return = session.get("total_return", 0) or 0
+            roi = (total_return / total_cost * 100) if total_cost > 0 else 0
+
+            self.run_log_table.setItem(row, 0, QTableWidgetItem("Completed"))
+            self.run_log_table.setItem(row, 1, QTableWidgetItem(start_time))
+            self.run_log_table.setItem(row, 2, QTableWidgetItem(duration))
+            self.run_log_table.setItem(row, 3, QTableWidgetItem(f"{total_cost:.2f}"))
+            self.run_log_table.setItem(row, 4, QTableWidgetItem(f"{total_return:.2f}"))
+            self.run_log_table.setItem(row, 5, QTableWidgetItem(f"{roi:.1f}%"))
+            self.run_log_table.setItem(row, 6, QTableWidgetItem("-"))
+
+            self.run_log_table.item(row, 0).setData(
+                Qt.ItemDataRole.UserRole, session["id"]
+            )
+
+            # Get item count for this session
+            def load_item_count():
+                try:
+                    import asyncio
+
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        items = loop.run_until_complete(
+                            self.db_manager.get_session_loot_items(session["id"])
+                        )
+                        item_count = len(items)
+                        self.run_log_table.setItem(
+                            row, 6, QTableWidgetItem(str(item_count))
+                        )
+                    finally:
+                        loop.close()
+                except Exception as e:
+                    logger.error(
+                        f"Error loading item count for session {session['id']}: {e}"
+                    )
+
+            QTimer.singleShot(100, load_item_count)
+
+        # Schedule GUI update in main thread
+        QTimer.singleShot(0, add_in_gui_thread)
 
     def _on_run_log_selection_changed(self):
         """Handle run log table selection change"""
-        # Implementation would handle selection changes
+        selected_rows = self.run_log_table.selectedItems()
+        if not selected_rows:
+            self._clear_session_specific_data()
+            return
+
+        row = selected_rows[0].row()
+        session_id = self.run_log_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+
+        if not session_id:
+            self._clear_session_specific_data()
+            return
+
+        if session_id == "current":
+            self._update_item_breakdown_current_run()
+            self._load_current_session_summary()
+            self._update_current_session_tabs()
+        else:
+            self._load_session_data(session_id)
+
+    def _clear_session_specific_data(self):
+        """Clear session-specific displays"""
+        self.item_breakdown_table.setRowCount(0)
+        if hasattr(self, "skills_table"):
+            self.skills_table.setRowCount(0)
+
+        # Clear combat tab
+        if hasattr(self, "combat_tab") and self.combat_tab:
+            self.combat_tab.load_session_combat_data([])
+
+        # Reset analysis tab to show all sessions
+        if hasattr(self, "analysis_widget") and self.analysis_widget:
+            # Trigger reload of all session data
+            import threading
+
+            def reload_analysis():
+                import asyncio
+
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(self.analysis_widget.load_data())
+                    loop.close()
+                except:
+                    pass
+
+            threading.Thread(target=reload_analysis, daemon=True).start()
+
+    def _update_item_breakdown_current_run(self):
+        """Current run item breakdown is already live-updated, no need to change"""
+        # The item breakdown table is populated in real-time via _process_loot_event
+        # For current run selection, just leave it as is
         pass
+
+    def _load_current_session_summary(self):
+        """Load current session summary (already displayed)"""
+        # Current session summary is already live-upgraded
+        pass
+
+    def _update_current_session_tabs(self):
+        """Update other tabs to show current session data"""
+        # Reset skills tab - current session skills are already being added in real-time
+        # So we don't need to reload them
+
+        # Reset combat tab to show live session stats
+        if hasattr(self, "combat_tab") and self.combat_tab:
+            self.combat_tab.load_combat_data()
+
+        # Reset analysis tab to show all sessions including current
+        if hasattr(self, "analysis_widget") and self.analysis_widget:
+            # Trigger reload of all session data
+            import threading
+
+            def reload_analysis():
+                import asyncio
+
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(self.analysis_widget.load_data())
+                    loop.close()
+                except:
+                    pass
+
+            threading.Thread(target=reload_analysis, daemon=True).start()
+
+    def _load_session_data(self, session_id: str):
+        """Load all session data: item breakdown and summary"""
+
+        def load_in_background():
+            import asyncio
+
+            try:
+                # Create new event loop for background thread
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+                async def load_session_async():
+                    self.item_breakdown_table.setRowCount(0)
+
+                    # Load item breakdown
+                    items = await self.db_manager.get_session_loot_items(session_id)
+                    for item in items:
+                        row = self.item_breakdown_table.rowCount()
+                        self.item_breakdown_table.insertRow(row)
+                        self.item_breakdown_table.setItem(
+                            row, 0, QTableWidgetItem(item["item_name"])
+                        )
+                        self.item_breakdown_table.setItem(
+                            row, 1, QTableWidgetItem(str(item["quantity"]))
+                        )
+                        item_value = (
+                            item["total_value"] / item["quantity"]
+                            if item["quantity"] > 0
+                            else 0
+                        )
+                        self.item_breakdown_table.setItem(
+                            row, 2, QTableWidgetItem(f"{item_value:.4f}")
+                        )
+                        self.item_breakdown_table.setItem(
+                            row, 3, QTableWidgetItem(f"{item['markup_percent']:.0f}%")
+                        )
+                        self.item_breakdown_table.setItem(
+                            row, 4, QTableWidgetItem(f"{item['total_value']:.4f}")
+                        )
+
+                    # Load session summary
+                    sessions = await self.db_manager.get_all_sessions()
+                    session_data = next(
+                        (s for s in sessions if s["id"] == session_id), None
+                    )
+                    if session_data:
+                        total_cost = session_data.get("total_cost", 0) or 0
+                        total_return = session_data.get("total_return", 0) or 0
+                        return_pct = (
+                            (total_return / total_cost * 100) if total_cost > 0 else 0
+                        )
+
+                        # Update summary labels
+                        self.loot_summary_labels["Total Cost"].setText(
+                            f"{total_cost:.2f} PED"
+                        )
+                        self.loot_summary_labels["Total Return"].setText(
+                            f"{total_return:.2f} PED"
+                        )
+                        self.loot_summary_labels["% Return"].setText(
+                            f"{return_pct:.1f}%"
+                        )
+
+                        # Load and update creatures, globals, and HOFs counts
+                        counts = await self.db_manager.get_session_counts(session_id)
+                        self.loot_summary_labels["Creatures Looted"].setText(
+                            str(counts["creatures"])
+                        )
+                        self.loot_summary_labels["Globals"].setText(
+                            str(counts["globals"])
+                        )
+                        self.loot_summary_labels["HOFs"].setText(str(counts["hofs"]))
+
+                    # Load skills data
+                    skill_events = await self.db_manager.get_session_skills(session_id)
+                    self.skills_tab_creator.load_session_skills(skill_events)
+
+                    # Load combat data
+                    combat_events = await self.db_manager.get_session_combat_events(
+                        session_id
+                    )
+                    if hasattr(self, "combat_tab") and self.combat_tab:
+                        self.combat_tab.load_session_combat_data(combat_events)
+
+                    # Update analysis tab with specific session data
+                    if hasattr(self, "analysis_widget") and self.analysis_widget:
+                        self.analysis_widget.load_specific_session(session_data)
+
+                # Run the async function in this thread's event loop
+                loop.run_until_complete(load_session_async())
+
+            except Exception as e:
+                logger.error(f"Error loading session data: {e}")
+            finally:
+                try:
+                    loop.close()
+                except:
+                    pass
+
+        # Run in background thread to avoid blocking UI
+        import threading
+
+        threading.Thread(target=load_in_background, daemon=True).start()
 
     def on_item_breakdown_header_clicked(self, column):
         """Handle item breakdown header click for sorting"""
@@ -586,10 +872,69 @@ class TabbedMainWindow(QMainWindow):
                 else Qt.SortOrder.AscendingOrder
             )
 
-    def _process_loot_event(self, loot_data):
-        """Process loot event data"""
-        # Implementation would process loot data
-        pass
+    def _process_loot_event(self, parsed_data: Dict[str, Any]):
+        """Process loot event and add to item breakdown"""
+        item_name = parsed_data.get("item_name", "")
+        quantity = parsed_data.get("quantity", 1)
+        total_value = parsed_data.get("value", 0.0)
+
+        if not item_name:
+            return
+
+        # Calculate item value (absolute value for display)
+        item_value = abs(total_value) / quantity if quantity > 0 else 0
+        markup_percent = 0
+
+        # For spent items (negative total_value), adjust display
+        display_value = total_value
+        if total_value < 0:
+            display_value = -abs(total_value)  # Keep negative for spent items
+
+        found = False
+        for row in range(self.item_breakdown_table.rowCount()):
+            if self.item_breakdown_table.item(row, 0).text() == item_name:
+                current_count = int(self.item_breakdown_table.item(row, 1).text())
+                current_total = float(self.item_breakdown_table.item(row, 4).text())
+
+                # For spent items, add to count and adjust total
+                new_count = current_count + quantity
+                new_total = current_total + display_value
+
+                self.item_breakdown_table.setItem(
+                    row, 1, QTableWidgetItem(str(new_count))
+                )
+                self.item_breakdown_table.setItem(
+                    row, 2, QTableWidgetItem(f"{item_value:.4f}")
+                )
+                self.item_breakdown_table.setItem(
+                    row, 4, QTableWidgetItem(f"{new_total:.4f}")
+                )
+                found = True
+                break
+
+        if not found:
+            row = self.item_breakdown_table.rowCount()
+            self.item_breakdown_table.insertRow(row)
+            self.item_breakdown_table.setItem(row, 0, QTableWidgetItem(item_name))
+            self.item_breakdown_table.setItem(row, 1, QTableWidgetItem(str(quantity)))
+            self.item_breakdown_table.setItem(
+                row, 2, QTableWidgetItem(f"{item_value:.4f}")
+            )
+            self.item_breakdown_table.setItem(
+                row, 3, QTableWidgetItem(f"{markup_percent}%")
+            )
+            self.item_breakdown_table.setItem(
+                row, 4, QTableWidgetItem(f"{display_value:.4f}")
+            )
+
+        if self.current_session_id:
+            self.db_manager.save_session_loot_item_sync(
+                self.current_session_id,
+                item_name,
+                quantity,
+                total_value,
+                markup_percent,
+            )
 
     def _refresh_analysis_data(self):
         """Refresh analysis data"""
@@ -611,6 +956,41 @@ class TabbedMainWindow(QMainWindow):
         raw_message = event_data.get("raw_message", "")
         parsed_data = event_data.get("parsed_data", {})
         session_id = event_data.get("session_id", "None")
+
+        # Save event to database if we have an active session
+        if self.current_session_id and hasattr(self, "db_manager"):
+            # Add session_id to event data if not present
+            if (
+                not event_data.get("session_id")
+                or event_data.get("session_id") == "None"
+            ):
+                event_data["session_id"] = self.current_session_id
+
+            # Save event asynchronously in background
+            import asyncio
+
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, create a task
+                    asyncio.create_task(self.db_manager.add_event(event_data))
+                else:
+                    # If no running loop, run in thread
+                    import threading
+
+                    def save_event():
+                        new_loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(new_loop)
+                        try:
+                            new_loop.run_until_complete(
+                                self.db_manager.add_event(event_data)
+                            )
+                        finally:
+                            new_loop.close()
+
+                    threading.Thread(target=save_event, daemon=True).start()
+            except Exception as e:
+                logger.error(f"Error saving event to database: {e}")
 
         # Update Overlay
         if self.overlay:
