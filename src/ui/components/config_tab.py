@@ -12,11 +12,29 @@ from decimal import Decimal
 from typing import Dict, Any, Optional, List
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QGridLayout,
-    QGroupBox, QLabel, QLineEdit, QComboBox, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QSpinBox,
-    QFrame, QInputDialog, QMessageBox, QDialog, QDialogButtonBox,
-    QTabWidget, QCheckBox, QTextEdit, QFileDialog
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QFormLayout,
+    QGridLayout,
+    QGroupBox,
+    QLabel,
+    QLineEdit,
+    QComboBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
+    QSpinBox,
+    QFrame,
+    QInputDialog,
+    QMessageBox,
+    QDialog,
+    QDialogButtonBox,
+    QTabWidget,
+    QCheckBox,
+    QTextEdit,
+    QFileDialog,
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
 from PyQt6.QtGui import QFont
@@ -41,9 +59,12 @@ def chat_log_exists() -> bool:
 
 class ConfigSignals(QObject):
     """Signals for config tab"""
+
     config_changed = pyqtSignal(str, object)
     loadout_changed = pyqtSignal()
-    stats_calculated = pyqtSignal(float)  # Signal when stats calculation completes with total cost
+    stats_calculated = pyqtSignal(
+        float
+    )  # Signal when stats calculation completes with total cost
 
 
 class ConfigTab(QWidget):
@@ -54,8 +75,9 @@ class ConfigTab(QWidget):
         self.signals = ConfigSignals()
         self._theme = "dark"
 
-        from src.utils.paths import ensure_user_data_dir
-        self.db_path = str(ensure_user_data_dir() / "lewtnanny.db")
+        from src.core.multi_database_manager import MultiDatabaseManager
+
+        self.db_manager = MultiDatabaseManager()
         self._loadouts: List[WeaponLoadout] = []
         self._selected_loadout_index: Optional[int] = None
 
@@ -68,7 +90,7 @@ class ConfigTab(QWidget):
 
         self.setup_ui()
         self.connect_signals()
-        
+
         QTimer.singleShot(100, self._delayed_load)
 
     @property
@@ -209,11 +231,22 @@ class ConfigTab(QWidget):
 
         self.loadout_table = QTableWidget()
         self.loadout_table.setColumnCount(9)
-        self.loadout_table.setHorizontalHeaderLabels([
-            "Name", "Weapon", "Amp", "Scope", "Sight 1", 
-            "Sight 2", "Damage", "Accuracy", "Economy"
-        ])
-        self.loadout_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.loadout_table.setHorizontalHeaderLabels(
+            [
+                "Name",
+                "Weapon",
+                "Amp",
+                "Scope",
+                "Sight 1",
+                "Sight 2",
+                "Damage",
+                "Accuracy",
+                "Economy",
+            ]
+        )
+        self.loadout_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
         self.loadout_table.setSortingEnabled(True)
         self.loadout_table.itemSelectionChanged.connect(self._on_loadout_selected)
         self.loadout_table.setAlternatingRowColors(True)
@@ -238,10 +271,12 @@ class ConfigTab(QWidget):
         header = self.loadout_table.horizontalHeader()
         if header:
             try:
-                if hasattr(QHeaderView, 'setSectionResizeMode'):
+                if hasattr(QHeaderView, "setSectionResizeMode"):
                     header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
                     for i in range(1, 9):
-                        header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                        header.setSectionResizeMode(
+                            i, QHeaderView.ResizeMode.ResizeToContents
+                        )
             except (AttributeError, TypeError):
                 pass
 
@@ -358,7 +393,9 @@ class ConfigTab(QWidget):
                 min-width: 250px;
             }
         """)
-        self.active_loadout_combo.currentIndexChanged.connect(self._on_active_loadout_changed)
+        self.active_loadout_combo.currentIndexChanged.connect(
+            self._on_active_loadout_changed
+        )
         active_layout.addRow("Active Loadout:", self.active_loadout_combo)
 
         self.active_loadout_info = QLabel("No loadout selected")
@@ -433,14 +470,20 @@ class ConfigTab(QWidget):
 
         self.screenshots_checkbox = QCheckBox("Enable screenshots on loot/HOF")
         screenshot_enabled = self._config.get("screenshot.enabled", True)
-        self.screenshots_checkbox.setChecked(screenshot_enabled if screenshot_enabled else False)
+        self.screenshots_checkbox.setChecked(
+            screenshot_enabled if screenshot_enabled else False
+        )
         self.screenshots_checkbox.setStyleSheet("color: #E0E1E3;")
         form_layout.addRow("", self.screenshots_checkbox)
 
         self.screenshots_directory_text = QLineEdit()
         self.screenshots_directory_text.setPlaceholderText("Screenshot directory...")
-        screenshot_dir = self._config.get("screenshot.directory", "~/Documents/LewtNanny/")
-        self.screenshots_directory_text.setText(screenshot_dir if screenshot_dir else "")
+        screenshot_dir = self._config.get(
+            "screenshot.directory", "~/Documents/LewtNanny/"
+        )
+        self.screenshots_directory_text.setText(
+            screenshot_dir if screenshot_dir else ""
+        )
         self.screenshots_directory_text.setStyleSheet("""
             QLineEdit {
                 background: #1E2A3A;
@@ -456,7 +499,9 @@ class ConfigTab(QWidget):
         self.screenshots_delay = QSpinBox()
         self.screenshots_delay.setRange(0, 5000)
         screenshot_delay = self._config.get("screenshot.delay_ms", 500)
-        self.screenshots_delay.setValue(int(screenshot_delay) if screenshot_delay else 500)
+        self.screenshots_delay.setValue(
+            int(screenshot_delay) if screenshot_delay else 500
+        )
         self.screenshots_delay.setStyleSheet("""
             QSpinBox {
                 background: #1E2A3A;
@@ -469,7 +514,9 @@ class ConfigTab(QWidget):
         form_layout.addRow("Screenshot Delay (ms):", self.screenshots_delay)
 
         self.screenshot_threshold = QLineEdit()
-        self.screenshot_threshold.setPlaceholderText("Minimum PED value for screenshot...")
+        self.screenshot_threshold.setPlaceholderText(
+            "Minimum PED value for screenshot..."
+        )
         threshold = self._config.get("screenshot.threshold_ped", 10)
         self.screenshot_threshold.setText(str(threshold) if threshold else "10")
         self.screenshot_threshold.setStyleSheet("""
@@ -561,7 +608,7 @@ class ConfigTab(QWidget):
                     self.active_loadout_combo.setCurrentIndex(i)
                     self._on_active_loadout_changed(i)
                     break
-            
+
             for idx, loadout in enumerate(self._loadouts):
                 if loadout.id == saved_id:
                     self._selected_loadout_index = idx
@@ -580,13 +627,27 @@ class ConfigTab(QWidget):
 
             self.loadout_table.setItem(row, 0, QTableWidgetItem(loadout.name))
             self.loadout_table.setItem(row, 1, QTableWidgetItem(loadout.weapon))
-            self.loadout_table.setItem(row, 2, QTableWidgetItem(loadout.amplifier or "None"))
-            self.loadout_table.setItem(row, 3, QTableWidgetItem(loadout.scope or "None"))
-            self.loadout_table.setItem(row, 4, QTableWidgetItem(loadout.sight_1 or "None"))
-            self.loadout_table.setItem(row, 5, QTableWidgetItem(loadout.sight_2 or "None"))
-            self.loadout_table.setItem(row, 6, QTableWidgetItem(str(loadout.damage_enh)))
-            self.loadout_table.setItem(row, 7, QTableWidgetItem(str(loadout.accuracy_enh)))
-            self.loadout_table.setItem(row, 8, QTableWidgetItem(str(loadout.economy_enh)))
+            self.loadout_table.setItem(
+                row, 2, QTableWidgetItem(loadout.amplifier or "None")
+            )
+            self.loadout_table.setItem(
+                row, 3, QTableWidgetItem(loadout.scope or "None")
+            )
+            self.loadout_table.setItem(
+                row, 4, QTableWidgetItem(loadout.sight_1 or "None")
+            )
+            self.loadout_table.setItem(
+                row, 5, QTableWidgetItem(loadout.sight_2 or "None")
+            )
+            self.loadout_table.setItem(
+                row, 6, QTableWidgetItem(str(loadout.damage_enh))
+            )
+            self.loadout_table.setItem(
+                row, 7, QTableWidgetItem(str(loadout.accuracy_enh))
+            )
+            self.loadout_table.setItem(
+                row, 8, QTableWidgetItem(str(loadout.economy_enh))
+            )
 
     def _refresh_active_loadout_combo(self):
         """Refresh the active loadout combo box"""
@@ -629,7 +690,7 @@ class ConfigTab(QWidget):
             self,
             "Delete Loadout",
             f"Are you sure you want to delete '{loadout.name}'?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
         if reply == QMessageBox.StandardButton.Yes:
@@ -705,13 +766,16 @@ class ConfigTab(QWidget):
 
     def _update_active_loadout_info(self, loadout: WeaponLoadout):
         """Update the active loadout info display"""
-        self.active_loadout_info.setText(f"{loadout.weapon} | {loadout.amplifier or 'No Amp'} | "
-                                          f"Dmg: {loadout.damage_enh} | Acc: {loadout.accuracy_enh} | "
-                                          f"Eco: {loadout.economy_enh}")
+        self.active_loadout_info.setText(
+            f"{loadout.weapon} | {loadout.amplifier or 'No Amp'} | "
+            f"Dmg: {loadout.damage_enh} | Acc: {loadout.accuracy_enh} | "
+            f"Eco: {loadout.economy_enh}"
+        )
         self._calculate_loadout_stats(loadout)
 
     def _calculate_loadout_stats(self, loadout: WeaponLoadout):
         """Calculate ammo burn and decay for a loadout"""
+
         def run_async():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -719,7 +783,9 @@ class ConfigTab(QWidget):
                 loop.run_until_complete(self._async_calculate_stats(loadout))
             finally:
                 loop.close()
+
         import threading
+
         thread = threading.Thread(target=run_async, daemon=True)
         thread.start()
 
@@ -728,16 +794,22 @@ class ConfigTab(QWidget):
         logger = logging.getLogger(__name__)
         logger.info(f"===== CONFIG TAB STATS CALCULATION START =====")
         logger.info(f"Loadout: {loadout.name} - Weapon: {loadout.weapon}")
-        logger.info(f"Loadout components: amp={loadout.amplifier}, scope={loadout.scope}, sight1={loadout.sight_1}, sight2={loadout.sight_2}")
-        logger.info(f"Enhancers: dmg={loadout.damage_enh}, acc={loadout.accuracy_enh}, eco={loadout.economy_enh}")
-        
+        logger.info(
+            f"Loadout components: amp={loadout.amplifier}, scope={loadout.scope}, sight1={loadout.sight_1}, sight2={loadout.sight_2}"
+        )
+        logger.info(
+            f"Enhancers: dmg={loadout.damage_enh}, acc={loadout.accuracy_enh}, eco={loadout.economy_enh}"
+        )
+
         try:
             # Use the centralized cost calculation service
-            total_cost_ped = await CostCalculationService.calculate_cost_per_attack(loadout)
-            
+            total_cost_ped = await CostCalculationService.calculate_cost_per_attack(
+                loadout
+            )
+
             logger.info(f"TOTAL COST PER ATTACK: {total_cost_ped:.6f} PED")
             logger.info(f"===== CONFIG TAB STATS CALCULATION END =====")
-            
+
             # For UI display, we need to calculate the individual components
             data_service = GameDataService()
             weapon = await data_service.get_weapon_by_name(loadout.weapon)
@@ -747,13 +819,13 @@ class ConfigTab(QWidget):
 
             base_decay = float(weapon.decay) if weapon.decay else 0.0
             base_ammo = weapon.ammo if weapon.ammo else 0
-            
+
             damage_mult = 1.0 + (loadout.damage_enh * 0.1)
             economy_mult = 1.0 - (loadout.economy_enh * 0.05)
-            
+
             enhanced_decay = base_decay * damage_mult * economy_mult
             enhanced_ammo = base_ammo * damage_mult
-            
+
             # Add attachment contributions for display
             if loadout.amplifier:
                 amp = await data_service.get_attachment_by_name(loadout.amplifier)
@@ -782,17 +854,20 @@ class ConfigTab(QWidget):
             # Update UI components
             self.ammo_burn_text.setText(str(int(enhanced_ammo)))
             self.weapon_decay_text.setText(f"{enhanced_decay:.6f}")
-            
+
             # Emit signal with synchronized total cost
             self.signals.stats_calculated.emit(total_cost_ped)
 
         except Exception as e:
-            logger.error(f"Error calculating stats for loadout {loadout.weapon}: {e}", exc_info=True)
+            logger.error(
+                f"Error calculating stats for loadout {loadout.weapon}: {e}",
+                exc_info=True,
+            )
 
     def _open_chat_file(self):
         """Open file dialog for chat location"""
         path, _ = QFileDialog.getOpenFileName(
-            self, 'Open Chat Log', '', 'All Files (*.*)'
+            self, "Open Chat Log", "", "All Files (*.*)"
         )
         if path:
             self.chat_location_text.setText(path)
@@ -1000,11 +1075,17 @@ class LoadoutDialog(QDialog):
             self._sights = ["None"]
 
             for att in attachments:
-                if att.attachment_type in ['BLP Amp', 'Laser Amp', 'Energy Amp', 'Melee Amp', 'MF Amp']:
+                if att.attachment_type in [
+                    "BLP Amp",
+                    "Laser Amp",
+                    "Energy Amp",
+                    "Melee Amp",
+                    "MF Amp",
+                ]:
                     self._amplifiers.append(att.name)
-                elif att.attachment_type == 'Scope':
+                elif att.attachment_type == "Scope":
                     self._scopes.append(att.name)
-                elif att.attachment_type == 'Sight':
+                elif att.attachment_type == "Sight":
                     self._sights.append(att.name)
 
             self.amp_combo.addItems(sorted(set(self._amplifiers)))
@@ -1096,7 +1177,7 @@ class LoadoutDialog(QDialog):
             sight_2=sight_2,
             damage_enh=self.damage_spin.value(),
             accuracy_enh=self.accuracy_spin.value(),
-            economy_enh=self.economy_spin.value()
+            economy_enh=self.economy_spin.value(),
         )
 
 
@@ -1149,7 +1230,9 @@ class CreateWeaponDialog(QDialog):
 
         layout.addLayout(form_layout)
 
-        info_label = QLabel("Custom weapons are saved locally and added to the weapon list.")
+        info_label = QLabel(
+            "Custom weapons are saved locally and added to the weapon list."
+        )
         info_label.setStyleSheet("color: #888; font-size: 11px;")
         layout.addWidget(info_label)
 
@@ -1179,10 +1262,10 @@ class CreateWeaponDialog(QDialog):
             return None
 
         return {
-            'name': name,
-            'ammo': self.ammo_burn_spin.value(),
-            'decay': decay,
-            'dps': dps
+            "name": name,
+            "ammo": self.ammo_burn_spin.value(),
+            "decay": decay,
+            "dps": dps,
         }
 
     def accept(self):

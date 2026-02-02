@@ -14,7 +14,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
 from src.ui.components.weapon_selector import WeaponSelector
-from src.core.database import DatabaseManager
+from src.core.multi_database_manager import MultiDatabaseManager
 
 
 class TestWindow(QMainWindow):
@@ -22,7 +22,7 @@ class TestWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Weapon Selector Test")
         self.setMinimumSize(1200, 800)
-        
+
         # Apply dark theme
         self.setStyleSheet("""
             QMainWindow {
@@ -33,26 +33,25 @@ class TestWindow(QMainWindow):
                 color: #E0E1E3;
             }
         """)
-        
+
         # Central widget
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
         layout.setContentsMargins(10, 10, 10, 10)
-        
+
         # Create weapon selector
-        self.db_manager = DatabaseManager("data/lewtnanny.db")
-        
+        self.db_manager = MultiDatabaseManager()
+
         self.weapon_selector = WeaponSelector(
-            parent=central,
-            db_manager=self.db_manager
+            parent=central, db_manager=self.db_manager
         )
         layout.addWidget(self.weapon_selector)
-        
+
         # Connect signals for testing
         self.weapon_selector.signals.weapon_selected.connect(self._on_weapon_selected)
         self.weapon_selector.signals.cost_calculated.connect(self._on_cost_calculated)
-        
+
         print("Test window created successfully!")
         print("Features to test:")
         print("  - Weapon table with filtering")
@@ -62,38 +61,38 @@ class TestWindow(QMainWindow):
         print("  - Cost breakdown bar")
         print("  - Session stats bar")
         print("  - Loadout save/load/reset buttons")
-    
+
     def _on_weapon_selected(self, data):
         print(f"Selected: {data}")
-    
+
     def _on_cost_calculated(self, data):
         print(f"Cost calculated: {data}")
 
 
 async def init_database():
     """Initialize database and load data"""
-    db = DatabaseManager("data/lewtnanny.db")
-    await db.initialize()
+    db = MultiDatabaseManager()
+    await db.initialize_all()
     return db
 
 
 def main():
     app = QApplication(sys.argv)
-    
+
     # Set application font
     font = QFont("Segoe UI", 10)
     app.setFont(font)
-    
+
     # Initialize database
     print("Initializing database...")
     db = asyncio.run(init_database())
     weapon_count = asyncio.run(db.get_weapon_count())
     print(f"Database initialized with {weapon_count} weapons")
-    
+
     # Create and show window
     window = TestWindow()
     window.show()
-    
+
     sys.exit(app.exec())
 
 

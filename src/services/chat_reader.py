@@ -29,6 +29,7 @@ class ChatReader(QObject):
         self.last_position = 0
         self._polling = False
         self._poll_timer = None
+        self.is_paused = False
 
         # Thread-safe queue for file modification events
         self._file_change_queue = []
@@ -60,6 +61,7 @@ class ChatReader(QObject):
             'craft_fail': re.compile(r'You\s+failed\s+to\s+craft\s+(.+)'),
             'skill': re.compile(r'You\s+(?:have\s+)?gained\s+([\d.]+)\s+experience\s+in\s+your\s+(.+?)\s+skill'),
             'picked_up': re.compile(r'Picked up (.+?)(?: \((\d+)\))?$'),
+            'trade': re.compile(r'\[#\]'),  # Trade channel messages start with [#]
         }
 
         self.current_session_id = None
@@ -116,6 +118,15 @@ class ChatReader(QObject):
         """Parse a single chat line for game events (synchronous)"""
         logger.debug(f"[CHAT_READER] parse_line: {line[:80]}...")
         event_data = None
+        
+        # Check if logging is paused
+        if self.is_paused:
+            # Check if this is a trade message - trade messages should still be processed
+            trade_match = self.patterns['trade'].search(line)
+            if not trade_match:
+                logger.debug(f"[CHAT_READER] Skipping non-trade message due to pause: {line[:50]}...")
+                return None
+            logger.debug(f"[CHAT_READER] Processing trade message during pause: {line[:50]}...")
 
         # Check for loot events
         loot_match = self.patterns['loot'].search(line)
@@ -387,17 +398,41 @@ class ChatReader(QObject):
         if picked_up_match and not event_data:
             item_name = picked_up_match.group(1).strip()
             quantity = int(picked_up_match.group(2)) if picked_up_match.group(2) else 1
-            # Crude oil is worth 1 PEC (0.01 PED) per unit
-            value_ped = quantity * 0.01
-            logger.info(f"[CHAT_READER] Detected PICKED_UP event: {item_name} x{quantity}")
+            
+            # Only calculate value for crude oil, skip other items since they should have
+            # been processed by the loot message with actual values
+            if item_name == 'Crude Oil':
+                # Crude oil is worth 1 PEC (0.01 PED) per unit
+                value_ped = quantity * 0.01
+                logger.info(f"[CHAT_READER] Detected PICKED_UP event: {item_name} x{quantity}")
+                event_data = {
+                    'event_type': EventType.LOOT.value,
+                    'activity_type': self.current_activity.value,
+                    'raw_message': line,
+                    'parsed_data': {
+                        'item_name': item_name,
+                        'quantity': quantity,
+                        'value': value_ped,
+                        'timestamp': datetime.now().isoformat()
+                    },
+                    'session_id': self.current_session_id
+                }
+            else:
+                # Skip picked up processing for non-crude oil items since they should
+                # have been processed by the corresponding loot message with actual values
+                logger.info(f"[CHAT_READER] Skipping PICKED_UP event for {item_name} (should be processed by loot message)")
+                return None
+
+        # Check for trade channel messages
+        trade_match = self.patterns['trade'].search(line)
+        if trade_match and not event_data:
+            logger.info(f"[CHAT_READER] Detected TRADE event")
             event_data = {
-                'event_type': EventType.LOOT.value,
-                'activity_type': self.current_activity.value,
+                'event_type': EventType.TRADE.value,
+                'activity_type': ActivityType.TRADING.value,
                 'raw_message': line,
                 'parsed_data': {
-                    'item_name': item_name,
-                    'quantity': quantity,
-                    'value': value_ped,
+                    'message': line,
                     'timestamp': datetime.now().isoformat()
                 },
                 'session_id': self.current_session_id

@@ -6,6 +6,13 @@
     "decay": "0.05111",
     "type": "Pistol"
   },
+  "Hyperion Aurora PF-1 (L)": {
+    "ammo": 118,
+    "decay": "0.00055",
+    "type": "Power Fist",
+    "damage": 5.3,
+    "dps": 6.8
+  },
   "0x0F382C8C91E58C82AA7 (L)": {
     "ammo": 1364,
     "decay": "0.04551",
@@ -3950,16 +3957,6 @@
     "ammo": 1117,
     "decay": "0.00003",
     "type": "Carbine"
-  },
-  "Frontier Hunting Rifle": {
-    "ammo": 100,
-    "decay": "0.002",
-    "type": "Rifle"
-  },
-  "Frontier Hunting Rifle, Adjusted": {
-    "ammo": 180,
-    "decay": "0.002",
-    "type": "Rifle"
   },
   "EWE LC-120 Purpose (L)": {
     "ammo": 1258,

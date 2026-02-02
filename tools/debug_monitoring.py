@@ -10,8 +10,9 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from src.services.config_manager import ConfigManager
 from src.services.chat_reader import ChatReader
-from src.core.database import DatabaseManager
+from src.core.multi_database_manager import MultiDatabaseManager
 from src.models.models import ActivityType
+
 
 async def debug_monitoring():
     print("=" * 60)
@@ -19,8 +20,8 @@ async def debug_monitoring():
     print("=" * 60)
 
     # Initialize
-    db = DatabaseManager()
-    await db.initialize()
+    db = MultiDatabaseManager()
+    await db.initialize_all()
     config = ConfigManager()
     await config.initialize()
 
@@ -30,9 +31,13 @@ async def debug_monitoring():
 
     # Track events
     events = []
+
     def on_event(e):
         events.append(e)
-        print(f"*** SIGNAL RECEIVED: {e['event_type']} - {e.get('parsed_data', {}).get('items', 'N/A')}")
+        print(
+            f"*** SIGNAL RECEIVED: {e['event_type']} - {e.get('parsed_data', {}).get('items', 'N/A')}"
+        )
+
     chat_reader.new_event.connect(on_event)
 
     # Get chat path
@@ -54,7 +59,7 @@ async def debug_monitoring():
     # Simulate getting loot - append a fake loot line to the chat.log
     print(f"\n--- Simulating new loot by appending to chat.log ---")
     fake_loot = "2026-01-21 15:30:00 [System] [] You received Shrapnel x (999) Value: 0.0999 PED\n"
-    with open(chat_path, 'a', encoding='utf-8') as f:
+    with open(chat_path, "a", encoding="utf-8") as f:
         f.write(fake_loot)
     print(f"Wrote fake loot line: {fake_loot.strip()}")
 
@@ -63,7 +68,9 @@ async def debug_monitoring():
     await asyncio.sleep(1)
 
     # Check if timer is active
-    print(f"Poll timer active: {chat_reader._poll_timer.isActive() if chat_reader._poll_timer else 'No timer'}")
+    print(
+        f"Poll timer active: {chat_reader._poll_timer.isActive() if chat_reader._poll_timer else 'No timer'}"
+    )
 
     await asyncio.sleep(1)
 
@@ -86,5 +93,6 @@ async def debug_monitoring():
     print("\n" + "=" * 60)
 
     await db.close()
+
 
 asyncio.run(debug_monitoring())

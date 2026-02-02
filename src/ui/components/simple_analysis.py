@@ -9,9 +9,21 @@ from datetime import datetime
 from statistics import mean
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton,
-    QFrame, QSlider, QGroupBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QGridLayout, QSpacerItem, QSizePolicy
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QComboBox,
+    QPushButton,
+    QFrame,
+    QSlider,
+    QGroupBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
+    QGridLayout,
+    QSpacerItem,
+    QSizePolicy,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush
@@ -29,13 +41,13 @@ class SimpleAnalysisChartWidget(QWidget):
         self.max_runs = 50
         self.show_trend_line = True
         self.colors = {
-            'positive': QColor(76, 175, 80),
-            'negative': QColor(244, 67, 54),
-            'neutral': QColor(33, 150, 243),
-            'break_even': QColor(255, 152, 0),
-            'grid': QColor(60, 60, 60),
-            'text': QColor(200, 200, 200),
-            'background': QColor(13, 17, 23)
+            "positive": QColor(76, 175, 80),
+            "negative": QColor(244, 67, 54),
+            "neutral": QColor(33, 150, 243),
+            "break_even": QColor(255, 152, 0),
+            "grid": QColor(60, 60, 60),
+            "text": QColor(200, 200, 200),
+            "background": QColor(13, 17, 23),
         }
         self.setMinimumHeight(250)
         logger.debug("SimpleAnalysisChartWidget initialized")
@@ -75,22 +87,28 @@ class SimpleAnalysisChartWidget(QWidget):
 
     def draw_empty_state(self, painter: QPainter):
         """Draw empty state message"""
-        painter.fillRect(self.rect(), self.colors['background'])
-        painter.setPen(self.colors['text'])
+        painter.fillRect(self.rect(), self.colors["background"])
+        painter.setPen(self.colors["text"])
         painter.setFont(QFont("Arial", 12))
-        painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "No data to display")
+        painter.drawText(
+            self.rect(), Qt.AlignmentFlag.AlignCenter, "No data to display"
+        )
 
     def get_filtered_data(self):
         """Get filtered data based on settings"""
-        return self.data[:self.max_runs]
+        return self.data[: self.max_runs]
 
     def draw_grid(self, painter: QPainter, chart_rect, num_points, min_y, max_y):
         """Draw chart grid"""
-        painter.setPen(QPen(self.colors['grid'], 1))
+        painter.setPen(QPen(self.colors["grid"], 1))
 
         if num_points > 0:
             for i in range(num_points + 1):
-                x = chart_rect.left() + (i * chart_rect.width()) / num_points if num_points > 0 else chart_rect.center().x()
+                x = (
+                    chart_rect.left() + (i * chart_rect.width()) / num_points
+                    if num_points > 0
+                    else chart_rect.center().x()
+                )
                 painter.drawLine(int(x), chart_rect.top(), int(x), chart_rect.bottom())
 
         num_y_lines = 5
@@ -98,14 +116,18 @@ class SimpleAnalysisChartWidget(QWidget):
             y = chart_rect.bottom() - (i * chart_rect.height()) / num_y_lines
             painter.drawLine(chart_rect.left(), int(y), chart_rect.right(), int(y))
 
-    def draw_break_even_line(self, painter: QPainter, chart_rect, min_y, max_y, value=0):
+    def draw_break_even_line(
+        self, painter: QPainter, chart_rect, min_y, max_y, value=0
+    ):
         """Draw break-even reference line"""
         y_100 = self.value_to_y(value, min_y, max_y, chart_rect)
         if chart_rect.top() <= y_100 <= chart_rect.bottom():
-            painter.setPen(QPen(self.colors['break_even'], 2, Qt.PenStyle.DashLine))
-            painter.drawLine(chart_rect.left(), int(y_100), chart_rect.right(), int(y_100))
+            painter.setPen(QPen(self.colors["break_even"], 2, Qt.PenStyle.DashLine))
+            painter.drawLine(
+                chart_rect.left(), int(y_100), chart_rect.right(), int(y_100)
+            )
 
-            painter.setPen(self.colors['break_even'])
+            painter.setPen(self.colors["break_even"])
             painter.setFont(QFont("Arial", 8))
             painter.drawText(chart_rect.right() + 5, int(y_100 + 4), f"{value:.0f}")
 
@@ -129,7 +151,7 @@ class SimpleAnalysisChartWidget(QWidget):
         slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
         intercept = (sum_y - slope * sum_x) / n
 
-        painter.setPen(QPen(self.colors['break_even'], 2, Qt.PenStyle.DashLine))
+        painter.setPen(QPen(self.colors["break_even"], 2, Qt.PenStyle.DashLine))
 
         y_start = intercept
         y_end = slope * (n - 1) + intercept
@@ -147,7 +169,7 @@ class SimpleAnalysisChartWidget(QWidget):
         if len(points) < 2:
             return
 
-        painter.setPen(QPen(self.colors['neutral'], 2))
+        painter.setPen(QPen(self.colors["neutral"], 2))
 
         for i in range(len(points) - 1):
             x1 = self.index_to_x(i, len(points), chart_rect)
@@ -161,14 +183,16 @@ class SimpleAnalysisChartWidget(QWidget):
             y = self.value_to_y(value, min_y, max_y, chart_rect)
 
             if value >= 0:
-                color = self.colors['positive']
+                color = self.colors["positive"]
             else:
-                color = self.colors['negative']
+                color = self.colors["negative"]
 
             painter.setBrush(QBrush(color))
             painter.setPen(QPen(color.darker(150), 1))
             radius = 4
-            painter.drawEllipse(int(x) - radius, int(y) - radius, radius * 2, radius * 2)
+            painter.drawEllipse(
+                int(x) - radius, int(y) - radius, radius * 2, radius * 2
+            )
 
     def draw_scatter_points(self, painter: QPainter, chart_rect, points, max_val):
         """Draw scatter plot points"""
@@ -177,18 +201,20 @@ class SimpleAnalysisChartWidget(QWidget):
             y = chart_rect.bottom() - (return_val / max_val) * chart_rect.height()
 
             if return_val >= cost:
-                color = self.colors['positive']
+                color = self.colors["positive"]
             else:
-                color = self.colors['negative']
+                color = self.colors["negative"]
 
             painter.setBrush(QBrush(color))
             painter.setPen(QPen(color.darker(150), 1))
             radius = 5
-            painter.drawEllipse(int(x) - radius, int(y) - radius, radius * 2, radius * 2)
+            painter.drawEllipse(
+                int(x) - radius, int(y) - radius, radius * 2, radius * 2
+            )
 
     def draw_axis_labels(self, painter: QPainter, chart_rect, num_points, min_y, max_y):
         """Draw axis labels"""
-        painter.setPen(self.colors['text'])
+        painter.setPen(self.colors["text"])
         painter.setFont(QFont("Arial", 8))
 
         for i in range(0, num_points, max(1, num_points // 10)):
@@ -211,10 +237,12 @@ class SimpleAnalysisChartWidget(QWidget):
 
     def draw_scatter_axis_labels(self, painter: QPainter, chart_rect, max_val):
         """Draw scatter plot axis labels"""
-        painter.setPen(self.colors['text'])
+        painter.setPen(self.colors["text"])
         painter.setFont(QFont("Arial", 8))
 
-        painter.drawText(chart_rect.center().x() - 30, chart_rect.bottom() + 15, "Cost (PED)")
+        painter.drawText(
+            chart_rect.center().x() - 30, chart_rect.bottom() + 15, "Cost (PED)"
+        )
 
         painter.save()
         painter.translate(chart_rect.left() - 10, chart_rect.center().y() + 30)
@@ -232,7 +260,7 @@ class SimpleAnalysisChartWidget(QWidget):
 
     def draw_title(self, painter: QPainter, title: str):
         """Draw chart title"""
-        painter.setPen(self.colors['text'])
+        painter.setPen(self.colors["text"])
         painter.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         painter.drawText(10, 20, title)
 
@@ -242,7 +270,9 @@ class SimpleAnalysisChartWidget(QWidget):
             return chart_rect.center().x()
         return chart_rect.left() + (index / (total - 1)) * chart_rect.width()
 
-    def value_to_y(self, value: float, min_val: float, max_val: float, chart_rect) -> float:
+    def value_to_y(
+        self, value: float, min_val: float, max_val: float, chart_rect
+    ) -> float:
         """Convert value to y coordinate"""
         if max_val == min_val:
             return chart_rect.center().y()
@@ -251,7 +281,7 @@ class SimpleAnalysisChartWidget(QWidget):
 
     def draw_return_chart(self, painter: QPainter, chart_rect):
         """Draw return percentage line chart"""
-        painter.fillRect(self.rect(), self.colors['background'])
+        painter.fillRect(self.rect(), self.colors["background"])
 
         filtered_data = self.get_filtered_data()
         if not filtered_data:
@@ -260,8 +290,8 @@ class SimpleAnalysisChartWidget(QWidget):
 
         points = []
         for i, item in enumerate(filtered_data):
-            cost = float(item.get('total_cost', 0) or 0)
-            return_val = float(item.get('total_return', 0) or 0)
+            cost = float(item.get("total_cost", 0) or 0)
+            return_val = float(item.get("total_return", 0) or 0)
             return_pct = ((return_val - cost) / cost * 100) if cost > 0 else 0
             points.append((i, return_pct))
 
@@ -291,7 +321,7 @@ class SimpleAnalysisChartWidget(QWidget):
 
     def draw_cost_return_scatter(self, painter: QPainter, chart_rect):
         """Draw cost vs return scatter plot"""
-        painter.fillRect(self.rect(), self.colors['background'])
+        painter.fillRect(self.rect(), self.colors["background"])
 
         filtered_data = self.get_filtered_data()
         if not filtered_data:
@@ -300,8 +330,8 @@ class SimpleAnalysisChartWidget(QWidget):
 
         points = []
         for item in filtered_data:
-            cost = float(item.get('total_cost', 0) or 0)
-            return_val = float(item.get('total_return', 0) or 0)
+            cost = float(item.get("total_cost", 0) or 0)
+            return_val = float(item.get("total_return", 0) or 0)
             if cost > 0:
                 points.append((cost, return_val))
 
@@ -317,8 +347,10 @@ class SimpleAnalysisChartWidget(QWidget):
 
         self.draw_scatter_points(painter, chart_rect, points, max_val)
 
-        painter.setPen(QPen(self.colors['break_even'], 2, Qt.PenStyle.DashLine))
-        painter.drawLine(chart_rect.left(), chart_rect.bottom(), chart_rect.right(), chart_rect.top())
+        painter.setPen(QPen(self.colors["break_even"], 2, Qt.PenStyle.DashLine))
+        painter.drawLine(
+            chart_rect.left(), chart_rect.bottom(), chart_rect.right(), chart_rect.top()
+        )
 
         self.draw_scatter_axis_labels(painter, chart_rect, max_val)
         self.draw_title(painter, "Cost to Kill vs Return")
@@ -343,10 +375,14 @@ class SimpleAnalysisWidget(QWidget):
         stats_bar = self.create_stats_bar()
         layout.addWidget(stats_bar)
 
-        top_chart_frame = self.create_chart_frame("Run TT Return (%)", "return_percentage")
+        top_chart_frame = self.create_chart_frame(
+            "Run TT Return (%)", "return_percentage"
+        )
         layout.addWidget(top_chart_frame)
 
-        bottom_chart_frame = self.create_chart_frame("Cost to Kill vs Return", "cost_vs_return")
+        bottom_chart_frame = self.create_chart_frame(
+            "Cost to Kill vs Return", "cost_vs_return"
+        )
         layout.addWidget(bottom_chart_frame)
 
         layout.addStretch()
@@ -455,11 +491,11 @@ class SimpleAnalysisWidget(QWidget):
         if not session_data:
             return
 
-        session_id = session_data.get('id', '')
+        session_id = session_data.get("id", "")
 
         found_existing = False
         for i, session in enumerate(self.session_data):
-            if session.get('id') == session_id:
+            if session.get("id") == session_id:
                 self.session_data[i] = session_data
                 found_existing = True
                 break
@@ -476,15 +512,15 @@ class SimpleAnalysisWidget(QWidget):
         if not self.session_data:
             return
 
-        filtered_data = self.session_data[:self.top_chart.max_runs]
+        filtered_data = self.session_data[: self.top_chart.max_runs]
 
         returns = []
         profit_runs = 0
         total_runs = 0
 
         for item in filtered_data:
-            cost = float(item.get('total_cost', 0) or 0)
-            return_val = float(item.get('total_return', 0) or 0)
+            cost = float(item.get("total_cost", 0) or 0)
+            return_val = float(item.get("total_return", 0) or 0)
             if cost > 0:
                 return_pct = (return_val - cost) / cost * 100
                 returns.append(return_pct)
@@ -502,6 +538,10 @@ class SimpleAnalysisWidget(QWidget):
             self.best_run_label.setText(f"Best: {best:.1f}%")
             self.worst_run_label.setText(f"Worst: {worst:.1f}%")
             self.hit_rate_label.setText(f"Hit Rate: {hit_rate:.1f}%")
+
+    def update_realtime(self):
+        """Update analysis in real-time - wrapper for load_data"""
+        self.load_data()
 
     def refresh(self):
         """Refresh all data"""
