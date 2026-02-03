@@ -17,7 +17,7 @@ from PyQt6.QtGui import QIcon
 from cli import main as cli_main, AppConfig
 from src.core.app_config import app_config as default_config
 
-from src.ui.main_window_tabbed import TabbedMainWindow as MainWindow
+from src.ui.mainwindow import TabbedMainWindow as MainWindow
 from src.core.multi_database_manager import MultiDatabaseManager
 from src.services.config_manager import ConfigManager
 from src.services.chat_reader import ChatReader
@@ -100,9 +100,7 @@ class LewtNannyApp:
         try:
             chat_reader = ChatReader(self.db_manager, self.config_manager)
 
-            logger.info(
-                "[MAIN] Connecting chat_reader.new_event to main_window.handle_new_event"
-            )
+            logger.info("[MAIN] Connecting chat_reader.new_event to main_window.handle_new_event")
             chat_reader.new_event.connect(self.main_window.handle_new_event)
 
             # Pass chat_reader to main_window for session management
