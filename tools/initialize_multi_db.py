@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Initialize multi-database structure for LewtNanny
-Replaces the single large lewtnanny.db with multiple specialized databases
+Initialize multiple specialized databases
 """
 
 import asyncio
@@ -66,44 +66,8 @@ async def main():
     return 0
 
 
-async def cleanup_old_database():
-    """Optional cleanup of old database after verification"""
-    db_manager = MultiDatabaseManager()
-    old_db = db_manager.db_dir / "lewtnanny.db"
-
-    if not old_db.exists():
-        print("ℹ️  No old lewtnanny.db found")
-        return
-
-    # Check if new databases have data
-    counts = await db_manager.get_all_counts()
-    total_new_records = sum(counts.values())
-
-    if total_new_records > 0:
-        print(
-            f"\n🗑️  Old database found. New databases contain {total_new_records} records."
-        )
-        response = input(
-            "Would you like to backup and remove the old lewtnanny.db? (y/N): "
-        )
-
-        if response.lower() in ["y", "yes"]:
-            backup_path = old_db.with_suffix(".db.backup")
-            old_db.rename(backup_path)
-            print(f"✅ Old database backed up to: {backup_path}")
-        else:
-            print("ℹ️  Keeping old database for safety")
-    else:
-        print("⚠️  New databases appear empty, keeping old database")
-
-
 if __name__ == "__main__":
-    if "--cleanup" in sys.argv:
-        asyncio.run(cleanup_old_database())
-    else:
-        exit_code = asyncio.run(main())
-        if exit_code == 0:
-            print("\n" + "=" * 50)
-            response = input("Would you like to cleanup the old database now? (y/N): ")
-            if response.lower() in ["y", "yes"]:
-                asyncio.run(cleanup_old_database())
+    exit_code = asyncio.run(main())
+    if exit_code == 0:
+        print("\n" + "=" * 50)
+        print("Multi-database system initialized successfully!")

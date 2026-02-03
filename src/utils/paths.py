@@ -19,8 +19,8 @@ def get_user_data_dir() -> Path:
 
 
 def get_default_db_path() -> Path:
-    """Get the default database path in user data directory"""
-    return get_user_data_dir() / "lewtnanny.db"
+    """Get the default database path in user data directory - user_data.db for session data"""
+    return get_user_data_dir() / "user_data.db"
 
 
 def get_default_log_path() -> Path:
@@ -47,6 +47,7 @@ def migrate_from_legacy(legacy_path: Path, new_path: Path) -> bool:
 
     try:
         import shutil
+
         if new_path.exists():
             return False  # Don't overwrite existing data
 
@@ -60,4 +61,5 @@ def migrate_from_legacy(legacy_path: Path, new_path: Path) -> bool:
 
 
 import logging
+
 logger = logging.getLogger(__name__)

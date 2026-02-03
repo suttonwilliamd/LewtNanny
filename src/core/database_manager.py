@@ -34,7 +34,7 @@ class DatabaseManager:
         self.attachments_db = self.db_dir / "attachments.db"
         self.resources_db = self.db_dir / "resources.db"
         self.crafting_db = self.db_dir / "crafting.db"
-        self.main_db = self.db_dir / "lewtnanny.db"
+        self.main_db = self.db_dir / "user_data.db"
 
         logger.info(f"DatabaseManager initialized with directory: {self.db_dir}")
 
@@ -234,10 +234,10 @@ class DatabaseManager:
     async def get_counts(self) -> Dict[str, int]:
         """Get counts of all data tables"""
         return {
-            'weapons': await self.get_weapon_count(),
-            'attachments': await self.get_attachment_count(),
-            'resources': await self.get_resource_count(),
-            'blueprints': await self.get_blueprint_count()
+            "weapons": await self.get_weapon_count(),
+            "attachments": await self.get_attachment_count(),
+            "resources": await self.get_resource_count(),
+            "blueprints": await self.get_blueprint_count(),
         }
 
     async def close_all(self):
@@ -256,6 +256,7 @@ class WeaponsDatabase:
 
     def __init__(self, db_path: Optional[Path] = None):
         from src.utils.paths import ensure_user_data_dir
+
         if db_path:
             self.db_path = db_path
         else:
@@ -276,8 +277,7 @@ class WeaponsDatabase:
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
-                "SELECT * FROM weapons WHERE name = ? LIMIT 1",
-                (name,)
+                "SELECT * FROM weapons WHERE name = ? LIMIT 1", (name,)
             )
             row = await cursor.fetchone()
             return dict(row) if row else None
@@ -286,12 +286,15 @@ class WeaponsDatabase:
         """Search weapons by name"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("""
+            cursor = await db.execute(
+                """
                 SELECT * FROM weapons
                 WHERE name LIKE ?
                 ORDER BY name
                 LIMIT ?
-            """, (f"%{query}%", limit))
+            """,
+                (f"%{query}%", limit),
+            )
             weapons = []
             async for row in cursor:
                 weapons.append(dict(row))
@@ -301,11 +304,14 @@ class WeaponsDatabase:
         """Get weapons by type"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("""
+            cursor = await db.execute(
+                """
                 SELECT * FROM weapons
                 WHERE weapon_type = ?
                 ORDER BY dps DESC
-            """, (weapon_type,))
+            """,
+                (weapon_type,),
+            )
             weapons = []
             async for row in cursor:
                 weapons.append(dict(row))
@@ -315,12 +321,15 @@ class WeaponsDatabase:
         """Get top weapons by DPS"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("""
+            cursor = await db.execute(
+                """
                 SELECT * FROM weapons
                 WHERE dps > 0
                 ORDER BY dps DESC
                 LIMIT ?
-            """, (limit,))
+            """,
+                (limit,),
+            )
             weapons = []
             async for row in cursor:
                 weapons.append(dict(row))
@@ -335,24 +344,27 @@ class WeaponsDatabase:
     async def insert_weapon(self, weapon_data: dict):
         """Insert a single weapon"""
         async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("""
+            await db.execute(
+                """
                 INSERT OR REPLACE INTO weapons
                 (id, name, ammo, decay, weapon_type, dps, eco, range_value, damage, reload_time, hits, data_updated)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                weapon_data.get('id'),
-                weapon_data.get('name'),
-                weapon_data.get('ammo', 0),
-                weapon_data.get('decay', 0),
-                weapon_data.get('weapon_type'),
-                weapon_data.get('dps'),
-                weapon_data.get('eco'),
-                weapon_data.get('range_value', 0),
-                weapon_data.get('damage', 0),
-                weapon_data.get('reload_time', 0),
-                weapon_data.get('hits', 0),
-                weapon_data.get('data_updated')
-            ))
+            """,
+                (
+                    weapon_data.get("id"),
+                    weapon_data.get("name"),
+                    weapon_data.get("ammo", 0),
+                    weapon_data.get("decay", 0),
+                    weapon_data.get("weapon_type"),
+                    weapon_data.get("dps"),
+                    weapon_data.get("eco"),
+                    weapon_data.get("range_value", 0),
+                    weapon_data.get("damage", 0),
+                    weapon_data.get("reload_time", 0),
+                    weapon_data.get("hits", 0),
+                    weapon_data.get("data_updated"),
+                ),
+            )
             await db.commit()
 
 
@@ -361,6 +373,7 @@ class AttachmentsDatabase:
 
     def __init__(self, db_path: Optional[Path] = None):
         from src.utils.paths import ensure_user_data_dir
+
         if db_path:
             self.db_path = db_path
         else:
@@ -380,11 +393,14 @@ class AttachmentsDatabase:
         """Get attachments by type"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("""
+            cursor = await db.execute(
+                """
                 SELECT * FROM attachments
                 WHERE attachment_type = ?
                 ORDER BY name
-            """, (attachment_type,))
+            """,
+                (attachment_type,),
+            )
             attachments = []
             async for row in cursor:
                 attachments.append(dict(row))
@@ -394,11 +410,14 @@ class AttachmentsDatabase:
         """Search attachments by name"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("""
+            cursor = await db.execute(
+                """
                 SELECT * FROM attachments
                 WHERE name LIKE ?
                 ORDER BY name
-            """, (f"%{query}%",))
+            """,
+                (f"%{query}%",),
+            )
             attachments = []
             async for row in cursor:
                 attachments.append(dict(row))
@@ -409,8 +428,7 @@ class AttachmentsDatabase:
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
-                "SELECT * FROM attachments WHERE name = ? LIMIT 1",
-                (name,)
+                "SELECT * FROM attachments WHERE name = ? LIMIT 1", (name,)
             )
             row = await cursor.fetchone()
             return dict(row) if row else None
@@ -424,23 +442,26 @@ class AttachmentsDatabase:
     async def insert_attachment(self, attachment_data: dict):
         """Insert a single attachment"""
         async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("""
+            await db.execute(
+                """
                 INSERT OR REPLACE INTO attachments
                 (id, name, attachment_type, ammo, decay, damage_bonus, ammo_bonus, decay_modifier, economy_bonus, range_bonus, data_updated)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                attachment_data.get('id'),
-                attachment_data.get('name'),
-                attachment_data.get('attachment_type'),
-                attachment_data.get('ammo', 0),
-                attachment_data.get('decay', 0),
-                attachment_data.get('damage_bonus', 0),
-                attachment_data.get('ammo_bonus', 0),
-                attachment_data.get('decay_modifier', 0),
-                attachment_data.get('economy_bonus', 0),
-                attachment_data.get('range_bonus', 0),
-                attachment_data.get('data_updated')
-            ))
+            """,
+                (
+                    attachment_data.get("id"),
+                    attachment_data.get("name"),
+                    attachment_data.get("attachment_type"),
+                    attachment_data.get("ammo", 0),
+                    attachment_data.get("decay", 0),
+                    attachment_data.get("damage_bonus", 0),
+                    attachment_data.get("ammo_bonus", 0),
+                    attachment_data.get("decay_modifier", 0),
+                    attachment_data.get("economy_bonus", 0),
+                    attachment_data.get("range_bonus", 0),
+                    attachment_data.get("data_updated"),
+                ),
+            )
             await db.commit()
 
 
@@ -449,6 +470,7 @@ class ResourcesDatabase:
 
     def __init__(self, db_path: Optional[Path] = None):
         from src.utils.paths import ensure_user_data_dir
+
         if db_path:
             self.db_path = db_path
         else:
@@ -469,8 +491,7 @@ class ResourcesDatabase:
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
-                "SELECT * FROM resources WHERE name = ? LIMIT 1",
-                (name,)
+                "SELECT * FROM resources WHERE name = ? LIMIT 1", (name,)
             )
             row = await cursor.fetchone()
             return dict(row) if row else None
@@ -479,26 +500,34 @@ class ResourcesDatabase:
         """Search resources by name"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("""
+            cursor = await db.execute(
+                """
                 SELECT * FROM resources
                 WHERE name LIKE ?
                 ORDER BY name
                 LIMIT ?
-            """, (f"%{query}%", limit))
+            """,
+                (f"%{query}%", limit),
+            )
             resources = []
             async for row in cursor:
                 resources.append(dict(row))
             return resources
 
-    async def get_resources_by_tt_value(self, min_tt: float = 0, max_tt: float = 1000) -> list:
+    async def get_resources_by_tt_value(
+        self, min_tt: float = 0, max_tt: float = 1000
+    ) -> list:
         """Get resources within TT value range"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("""
+            cursor = await db.execute(
+                """
                 SELECT * FROM resources
                 WHERE tt_value BETWEEN ? AND ?
                 ORDER BY tt_value DESC
-            """, (min_tt, max_tt))
+            """,
+                (min_tt, max_tt),
+            )
             resources = []
             async for row in cursor:
                 resources.append(dict(row))
@@ -513,16 +542,19 @@ class ResourcesDatabase:
     async def insert_resource(self, resource_data: dict):
         """Insert a single resource"""
         async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("""
+            await db.execute(
+                """
                 INSERT OR REPLACE INTO resources
                 (name, tt_value, decay, data_updated)
                 VALUES (?, ?, ?, ?)
-            """, (
-                resource_data.get('name'),
-                resource_data.get('tt_value', 0),
-                resource_data.get('decay', 0),
-                resource_data.get('data_updated')
-            ))
+            """,
+                (
+                    resource_data.get("name"),
+                    resource_data.get("tt_value", 0),
+                    resource_data.get("decay", 0),
+                    resource_data.get("data_updated"),
+                ),
+            )
             await db.commit()
 
 
@@ -531,6 +563,7 @@ class CraftingDatabase:
 
     def __init__(self, db_path: Optional[Path] = None):
         from src.utils.paths import ensure_user_data_dir
+
         if db_path:
             self.db_path = db_path
         else:
@@ -544,7 +577,7 @@ class CraftingDatabase:
             blueprints = []
             async for row in cursor:
                 bp = dict(row)
-                bp['materials'] = await self._get_blueprint_materials(db, row['id'])
+                bp["materials"] = await self._get_blueprint_materials(db, row["id"])
                 blueprints.append(bp)
             return blueprints
 
@@ -553,29 +586,31 @@ class CraftingDatabase:
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
-                "SELECT * FROM blueprints WHERE name = ? LIMIT 1",
-                (name,)
+                "SELECT * FROM blueprints WHERE name = ? LIMIT 1", (name,)
             )
             row = await cursor.fetchone()
             if not row:
                 return None
             bp = dict(row)
-            bp['materials'] = await self._get_blueprint_materials(db, row['id'])
+            bp["materials"] = await self._get_blueprint_materials(db, row["id"])
             return bp
 
     async def search_blueprints(self, query: str) -> list:
         """Search blueprints by name"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("""
+            cursor = await db.execute(
+                """
                 SELECT * FROM blueprints
                 WHERE name LIKE ?
                 ORDER BY name
-            """, (f"%{query}%",))
+            """,
+                (f"%{query}%",),
+            )
             blueprints = []
             async for row in cursor:
                 bp = dict(row)
-                bp['materials'] = await self._get_blueprint_materials(db, row['id'])
+                bp["materials"] = await self._get_blueprint_materials(db, row["id"])
                 blueprints.append(bp)
             return blueprints
 
@@ -583,24 +618,32 @@ class CraftingDatabase:
         """Find blueprints that use a specific material"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("""
+            cursor = await db.execute(
+                """
                 SELECT DISTINCT bp.* FROM blueprints bp
                 JOIN blueprint_materials bm ON bp.id = bm.blueprint_id
                 WHERE bm.material_name LIKE ?
                 ORDER BY bp.name
-            """, (f"%{material_name}%",))
+            """,
+                (f"%{material_name}%",),
+            )
             blueprints = []
             async for row in cursor:
                 bp = dict(row)
-                bp['materials'] = await self._get_blueprint_materials(db, row['id'])
+                bp["materials"] = await self._get_blueprint_materials(db, row["id"])
                 blueprints.append(bp)
             return blueprints
 
-    async def _get_blueprint_materials(self, db: aiosqlite.Connection, blueprint_id: str) -> list:
+    async def _get_blueprint_materials(
+        self, db: aiosqlite.Connection, blueprint_id: str
+    ) -> list:
         """Get materials for a blueprint"""
-        cursor = await db.execute("""
+        cursor = await db.execute(
+            """
             SELECT * FROM blueprint_materials WHERE blueprint_id = ?
-        """, (blueprint_id,))
+        """,
+            (blueprint_id,),
+        )
         materials = []
         async for row in cursor:
             materials.append(dict(row))
@@ -616,29 +659,37 @@ class CraftingDatabase:
     async def insert_blueprint(self, blueprint_data: dict):
         """Insert a single blueprint"""
         async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("""
+            await db.execute(
+                """
                 INSERT OR REPLACE INTO blueprints
                 (id, name, result_item, result_quantity, skill_required, condition_limit, data_updated)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                blueprint_data.get('id'),
-                blueprint_data.get('name'),
-                blueprint_data.get('result_item'),
-                blueprint_data.get('result_quantity', 1),
-                blueprint_data.get('skill_required'),
-                blueprint_data.get('condition_limit'),
-                blueprint_data.get('data_updated')
-            ))
+            """,
+                (
+                    blueprint_data.get("id"),
+                    blueprint_data.get("name"),
+                    blueprint_data.get("result_item"),
+                    blueprint_data.get("result_quantity", 1),
+                    blueprint_data.get("skill_required"),
+                    blueprint_data.get("condition_limit"),
+                    blueprint_data.get("data_updated"),
+                ),
+            )
             await db.commit()
 
-    async def insert_blueprint_material(self, blueprint_id: str, material_name: str, quantity: int):
+    async def insert_blueprint_material(
+        self, blueprint_id: str, material_name: str, quantity: int
+    ):
         """Insert a blueprint material"""
         async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("""
+            await db.execute(
+                """
                 INSERT OR IGNORE INTO blueprint_materials
                 (blueprint_id, material_name, quantity)
                 VALUES (?, ?, ?)
-            """, (blueprint_id, material_name, quantity))
+            """,
+                (blueprint_id, material_name, quantity),
+            )
             await db.commit()
 
 
@@ -651,6 +702,7 @@ async def initialize_separate_databases():
 
 if __name__ == "__main__":
     import sys
+
     logging.basicConfig(level=logging.INFO)
 
     print("Initializing separate databases...")

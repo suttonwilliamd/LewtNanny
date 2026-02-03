@@ -643,7 +643,7 @@ async def cmd_session(args: argparse.Namespace, output: CLIOutput) -> int:
 async def cmd_db(args: argparse.Namespace, output: CLIOutput) -> int:
     """Database management commands"""
     try:
-        db_path = get_user_data_dir() / "lewtnanny.db"
+        db_path = get_user_data_dir() / "user_data.db"
 
         if args.subcommand == "info":
             if db_path.exists():
@@ -911,7 +911,7 @@ async def cmd_monitor_run(
     print("LewtNanny Chat Monitor - Continuous Mode")
     print("=" * 70)
     print(f"Chat Log: {chat_path}")
-    print(f"Database: {get_user_data_dir() / 'lewtnanny.db'}")
+    print(f"Database: {get_user_data_dir() / 'user_data.db'}")
 
     # Get loadout info if specified
     loadout_name = args.loadout
