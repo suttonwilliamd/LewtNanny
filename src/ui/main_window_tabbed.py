@@ -435,7 +435,7 @@ class TabbedMainWindow(QMainWindow):
         if not chat_path:
             try:
                 chat_path = self.config_manager.get("chat_monitoring.log_file_path", "")
-            except:
+            except Exception:
                 pass
 
         if not chat_path:
@@ -458,7 +458,7 @@ class TabbedMainWindow(QMainWindow):
         if not char_name:
             try:
                 char_name = self.config_manager.get("character.name", "")
-            except:
+            except Exception:
                 pass
 
         if char_name:
@@ -603,7 +603,7 @@ class TabbedMainWindow(QMainWindow):
                 try:
                     dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
                     start_time = dt.strftime("%Y-%m-%d %H:%M")
-                except:
+                except (ValueError, TypeError):
                     pass
 
             duration = ""
@@ -619,7 +619,7 @@ class TabbedMainWindow(QMainWindow):
                         hours, remainder = divmod(int(delta.total_seconds()), 3600)
                         minutes, seconds = divmod(remainder, 60)
                         duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-                    except:
+                    except (ValueError, TypeError):
                         duration = "-"
                 else:
                     delta = end_time - session.get("start_time", datetime.now())
@@ -817,7 +817,7 @@ class TabbedMainWindow(QMainWindow):
                     asyncio.set_event_loop(loop)
                     loop.run_until_complete(self.analysis_widget.load_data())
                     loop.close()
-                except:
+                except Exception:
                     pass
 
             threading.Thread(target=reload_analysis, daemon=True).start()
@@ -855,7 +855,7 @@ class TabbedMainWindow(QMainWindow):
                     asyncio.set_event_loop(loop)
                     loop.run_until_complete(self.analysis_widget.load_data())
                     loop.close()
-                except:
+                except Exception:
                     pass
 
             threading.Thread(target=reload_analysis, daemon=True).start()
@@ -956,7 +956,7 @@ class TabbedMainWindow(QMainWindow):
             finally:
                 try:
                     loop.close()
-                except:
+                except Exception:
                     pass
 
         # Run in background thread to avoid blocking UI

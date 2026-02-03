@@ -48,7 +48,6 @@ QPushButton:hover {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
                               stop: 0 #1976D2, stop: 1 #1565C0);
     border: 1px solid #30363D;
-    transform: translateY(-1px);
 }
 
 QPushButton:pressed {

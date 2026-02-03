@@ -63,7 +63,7 @@ class LewtNannyApp:
             if icon_path.exists():
                 logger.info(f"Found icon relative to script: {icon_path}")
                 return icon_path
-        except:
+        except Exception:
             pass
 
         logger.warning("Could not find LewtNanny.ico icon file")

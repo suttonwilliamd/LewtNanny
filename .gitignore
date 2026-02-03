@@ -38,6 +38,19 @@ env/
 data/config.json
 data/lewtnanny.db
 data/lewtnanny.log
+data/*.db
+
+# JSON data files (generated from DB)
+crafting.json
+sights_and_scopes.json
+weapons.json
+
+# Binary files
+*.msixbundle
+*.exe
+*.dll
+*.so
+*.dylib
 
 # OS
 Thumbs.db

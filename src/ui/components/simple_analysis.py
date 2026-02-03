@@ -55,8 +55,10 @@ class SimpleAnalysisChartWidget(QWidget):
     def set_data(self, data: List[Dict[str, Any]]):
         """Set chart data"""
         self.data = data
+        logger.info(f"Analysis: Chart data set with {len(data)} items")
+        if data and len(data) > 0:
+            logger.info(f"Analysis: First item data: {data[0]}")
         self.update()
-        logger.debug(f"Chart data updated: {len(data)} items")
 
     def set_chart_type(self, chart_type: str):
         """Set the chart type"""
@@ -196,21 +198,30 @@ class SimpleAnalysisChartWidget(QWidget):
 
     def draw_scatter_points(self, painter: QPainter, chart_rect, points, max_val):
         """Draw scatter plot points"""
+        if max_val == 0:
+            # All points are at origin (0,0), draw them in the center
+            center_x = chart_rect.left() + chart_rect.width() // 2
+            center_y = chart_rect.bottom() - chart_rect.height() // 2
+            for cost, return_val in points:
+                self._draw_single_point(painter, center_x, center_y, cost, return_val)
+            return
+
         for cost, return_val in points:
             x = chart_rect.left() + (cost / max_val) * chart_rect.width()
             y = chart_rect.bottom() - (return_val / max_val) * chart_rect.height()
+            self._draw_single_point(painter, x, y, cost, return_val)
 
-            if return_val >= cost:
-                color = self.colors["positive"]
-            else:
-                color = self.colors["negative"]
+    def _draw_single_point(self, painter: QPainter, x, y, cost, return_val):
+        """Draw a single scatter point"""
+        if return_val >= cost:
+            color = self.colors["positive"]
+        else:
+            color = self.colors["negative"]
 
-            painter.setBrush(QBrush(color))
-            painter.setPen(QPen(color.darker(150), 1))
-            radius = 5
-            painter.drawEllipse(
-                int(x) - radius, int(y) - radius, radius * 2, radius * 2
-            )
+        painter.setBrush(QBrush(color))
+        painter.setPen(QPen(color.darker(150), 1))
+        radius = 5
+        painter.drawEllipse(int(x) - radius, int(y) - radius, radius * 2, radius * 2)
 
     def draw_axis_labels(self, painter: QPainter, chart_rect, num_points, min_y, max_y):
         """Draw axis labels"""
@@ -332,7 +343,8 @@ class SimpleAnalysisChartWidget(QWidget):
         for item in filtered_data:
             cost = float(item.get("total_cost", 0) or 0)
             return_val = float(item.get("total_return", 0) or 0)
-            if cost > 0:
+            # Include points with zero cost to show early session data
+            if cost >= 0:  # Changed from > 0 to >= 0
                 points.append((cost, return_val))
 
         if not points:
@@ -387,10 +399,11 @@ class SimpleAnalysisWidget(QWidget):
 
         layout.addStretch()
 
+        # Load historical data after UI is ready
         load_timer = QTimer()
-        load_timer.timeout.connect(self._on_load_timer)
+        load_timer.timeout.connect(self._load_historical_data)
         load_timer.setSingleShot(True)
-        load_timer.start(500)
+        load_timer.start(1000)
 
     def create_stats_bar(self):
         """Create stats summary bar"""
@@ -488,10 +501,13 @@ class SimpleAnalysisWidget(QWidget):
 
     def update_with_current_session(self, session_data: dict):
         """Update analysis with current session data in real-time"""
+        logger.info(f"Analysis: update_with_current_session called with {session_data}")
         if not session_data:
+            logger.warning("Analysis: No session data provided")
             return
 
         session_id = session_data.get("id", "")
+        logger.info(f"Analysis: Updating session {session_id}")
 
         found_existing = False
         for i, session in enumerate(self.session_data):
@@ -503,9 +519,15 @@ class SimpleAnalysisWidget(QWidget):
         if not found_existing:
             self.session_data.insert(0, session_data)
 
+        logger.info(f"Analysis: Session data after update: {self.session_data}")
         self.top_chart.set_data(self.session_data)
         self.bottom_chart.set_data(self.session_data)
         self.update_stats()
+
+        # Force chart repaint
+        self.top_chart.update()
+        self.bottom_chart.update()
+        logger.info("Analysis: Charts updated and repainted")
 
     def update_stats(self):
         """Update statistics display"""
@@ -553,15 +575,137 @@ class SimpleAnalysisWidget(QWidget):
             self.title_label.setText(f"Analysis - Session {session_id}")
 
     def update_realtime(self):
-        """Update analysis in real-time - wrapper for load_data"""
+        """Update analysis in real-time with current session data"""
+        logger.info("Analysis update_realtime() called")
         try:
-            # Skip async loading during real-time updates to avoid event loop issues
-            # The analysis will be refreshed when needed via refresh() method
-            logger.debug(
-                "Skipping real-time analysis update to avoid event loop issues"
-            )
+            # Get parent window safely
+            parent = self.parent()
+            if not parent:
+                logger.warning("Analysis: No parent window found")
+                return
+
+            # Try to get current session data from UI directly
+            if hasattr(parent, "loot_summary_labels") and parent.loot_summary_labels:
+                try:
+                    cost_label = parent.loot_summary_labels.get("Total Cost")
+                    return_label = parent.loot_summary_labels.get("Total Return")
+
+                    if cost_label and return_label:
+                        cost_text = (
+                            cost_label.text()
+                            if hasattr(cost_label, "text")
+                            else "0.00 PED"
+                        )
+                        return_text = (
+                            return_label.text()
+                            if hasattr(return_label, "text")
+                            else "0.00 PED"
+                        )
+
+                        logger.info(
+                            f"Analysis: UI values - Cost: {cost_text}, Return: {return_text}"
+                        )
+
+                        total_cost = (
+                            float(cost_text.replace(",", "").split()[0])
+                            if cost_text
+                            else 0.0
+                        )
+                        total_return = (
+                            float(return_text.replace(",", "").split()[0])
+                            if return_text
+                            else 0.0
+                        )
+
+                        # Get or create session ID
+                        session_id = getattr(parent, "current_session_id", None)
+                        if not session_id:
+                            # Create a session ID from timestamp if none exists
+                            import datetime
+
+                            timestamp = getattr(
+                                parent, "current_session_start", datetime.datetime.now()
+                            )
+                            session_id = (
+                                f"session_{timestamp.strftime('%Y%m%d_%H%M%S')}"
+                            )
+
+                        # Create current session data
+                        current_session_data = {
+                            "id": session_id,
+                            "start_time": getattr(
+                                parent, "current_session_start", None
+                            ),
+                            "activity_type": "hunting",
+                            "total_cost": total_cost,
+                            "total_return": total_return,
+                            "total_markup": total_return - total_cost,
+                        }
+
+                        logger.info(
+                            f"Analysis: Created session data: {current_session_data}"
+                        )
+                        self.update_with_current_session(current_session_data)
+                        return
+
+                except Exception as ui_error:
+                    logger.error(f"Analysis: Error getting UI values: {ui_error}")
+
+            # If no active session, load historical data
+            if not getattr(parent, "current_session_id", None):
+                logger.info("Analysis: No active session, loading historical data")
+                self._load_historical_data()
+                return
+
+            logger.info("Analysis: No loot_summary_labels found, skipping update")
+
         except Exception as e:
-            logger.error(f"Error updating analysis in real-time: {e}")
+            logger.error(f"Analysis: Unexpected error in update_realtime: {e}")
+
+    def _load_historical_data(self):
+        """Load historical session data when no active session"""
+        try:
+            parent = self.parent()
+            if not parent or not hasattr(parent, "db_manager"):
+                return
+
+            # Load all sessions and take the most recent ones
+            import asyncio
+
+            def load_sessions():
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    sessions = loop.run_until_complete(
+                        parent.db_manager.get_all_sessions()
+                    )
+                    loop.close()
+
+                    if sessions:
+                        # Take the 10 most recent sessions (they should be in order)
+                        recent_sessions = sessions[:10]
+                        self.session_data = recent_sessions
+                        self.top_chart.set_data(self.session_data)
+                        self.bottom_chart.set_data(self.session_data)
+                        self.update_stats()
+                        self.top_chart.update()
+                        self.bottom_chart.update()
+                        logger.info(
+                            f"Analysis: Loaded {len(recent_sessions)} historical sessions"
+                        )
+                    else:
+                        logger.info("Analysis: No historical sessions found")
+
+                except Exception as async_error:
+                    logger.error(
+                        f"Analysis: Error in async session loading: {async_error}"
+                    )
+
+            # Run the async operation
+            load_sessions()
+
+        except Exception as e:
+            logger.error(f"Analysis: Error loading historical data: {e}")
 
     def refresh(self):
         """Refresh all data"""
@@ -582,3 +726,29 @@ class SimpleAnalysisWidget(QWidget):
             QTimer.singleShot(0, async_load)
         except Exception as e:
             logger.error(f"Error refreshing analysis data: {e}")
+
+    def _debug_test_charts(self):
+        """Debug method to test charts with sample data"""
+        logger.info("Analysis: Debug test charts called")
+
+        test_data = [
+            {
+                "id": "test_session_001",
+                "start_time": None,
+                "activity_type": "hunting",
+                "total_cost": 5.50,
+                "total_return": 3.25,
+                "total_markup": 0.0,
+            },
+            {
+                "id": "test_session_002",
+                "start_time": None,
+                "activity_type": "hunting",
+                "total_cost": 8.75,
+                "total_return": 12.50,
+                "total_markup": 0.0,
+            },
+        ]
+
+        logger.info(f"Analysis: Setting test data: {test_data}")
+        self.set_data(test_data)

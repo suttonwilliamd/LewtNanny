@@ -348,7 +348,7 @@ class CombatTabWidget(QWidget):
 
                     dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
                     time_str = dt.strftime("%H:%M:%S")
-                except:
+                except (ValueError, TypeError):
                     time_str = timestamp[:8]
             else:
                 time_str = "Unknown"

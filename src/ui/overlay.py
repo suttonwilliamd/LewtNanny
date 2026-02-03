@@ -10,18 +10,32 @@ from typing import Dict, Any, Optional
 from decimal import Decimal
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
-    QPushButton, QGridLayout
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QFrame,
+    QPushButton,
+    QGridLayout,
 )
 from PyQt6.QtCore import Qt, QTimer, QPoint, QThread, QEvent
-from PyQt6.QtGui import QFont, QPainter, QColor, QPen, QScreen, QGuiApplication, QPixmap, QMouseEvent
+from PyQt6.QtGui import (
+    QFont,
+    QPainter,
+    QColor,
+    QPen,
+    QScreen,
+    QGuiApplication,
+    QPixmap,
+    QMouseEvent,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class BorderlessLabel(QLabel):
     """Custom QLabel with guaranteed no borders"""
-    
+
     def __init__(self, text=""):
         super().__init__(text)
         self.setStyleSheet("""
@@ -36,14 +50,14 @@ class BorderlessLabel(QLabel):
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setFrameStyle(QFrame.Shape.NoFrame | QFrame.Shadow.Plain)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-    
+
     def paintEvent(self, a0):
         # Override to ensure no borders are drawn
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(QPen(Qt.GlobalColor.transparent))
         painter.fillRect(self.rect(), Qt.GlobalColor.transparent)
-        
+
         # Draw text
         painter.setPen(QPen(self.palette().color(self.palette().ColorRole.Text)))
         painter.drawText(self.rect(), self.alignment(), self.text())
@@ -53,7 +67,14 @@ class BorderlessLabel(QLabel):
 class ScreenshotWorker(QThread):
     """Background worker to take screenshot after delay"""
 
-    def __init__(self, delay_ms: int, screenshot_dir: str, event_type: str, value: float, player: str):
+    def __init__(
+        self,
+        delay_ms: int,
+        screenshot_dir: str,
+        event_type: str,
+        value: float,
+        player: str,
+    ):
         super().__init__()
         self.delay_ms = delay_ms
         self.screenshot_dir = screenshot_dir
@@ -63,6 +84,7 @@ class ScreenshotWorker(QThread):
 
     def run(self):
         import time
+
         time.sleep(self.delay_ms / 1000.0)
         self.take_screenshot()
 
@@ -76,7 +98,9 @@ class ScreenshotWorker(QThread):
             os.makedirs(self.screenshot_dir, exist_ok=True)
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{self.event_type}_{self.player}_{self.value:.2f}ped_{timestamp}.png"
+            filename = (
+                f"{self.event_type}_{self.player}_{self.value:.2f}ped_{timestamp}.png"
+            )
             filepath = os.path.join(self.screenshot_dir, filename)
 
             pixmap = screen.grabWindow(0)
@@ -88,18 +112,20 @@ class ScreenshotWorker(QThread):
 
 class DraggableLogoLabel(QLabel):
     """Custom QLabel that can drag the overlay window"""
-    
+
     def __init__(self, overlay_widget):
         super().__init__(None)
         self.overlay_widget = overlay_widget
         self.dragging = False
         self.drag_position = QPoint()
-        
+
     def mousePressEvent(self, ev):
         """Logo mouse press - acts as drag handle"""
         if ev.button() == Qt.MouseButton.LeftButton:
             self.dragging = True
-            self.drag_position = ev.globalPosition().toPoint() - self.overlay_widget.pos()
+            self.drag_position = (
+                ev.globalPosition().toPoint() - self.overlay_widget.pos()
+            )
             ev.accept()
 
     def mouseMoveEvent(self, ev):
@@ -123,9 +149,9 @@ class StreamerOverlayWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.Tool
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
@@ -138,16 +164,16 @@ class StreamerOverlayWidget(QWidget):
         self.character_name = ""
 
         self._stats = {
-            'globals': 0,
-            'hofs': 0,
-            'items': 0,
-            'kills': 0,
-            'wasted_shots': 0,
-            'total_cost': Decimal('0'),
-            'total_return': Decimal('0'),
+            "globals": 0,
+            "hofs": 0,
+            "items": 0,
+            "kills": 0,
+            "wasted_shots": 0,
+            "total_cost": Decimal("0"),
+            "total_return": Decimal("0"),
         }
         self._shots_taken = 0
-        self._cost_per_attack = Decimal('0')
+        self._cost_per_attack = Decimal("0")
         self._recent_loot_times = []  # Track timestamps of recent loot events for grouping
 
         self.setup_ui()
@@ -170,7 +196,7 @@ class StreamerOverlayWidget(QWidget):
         """Setup the overlay UI"""
         self.resize(210, 420)  # Use resize instead of setFixedSize to allow resizing
         self.move(100, 100)
-        
+
         # Create resize handle
         self.resize_handle = QLabel(self)
         self.resize_handle.setText("⋮")
@@ -189,7 +215,7 @@ class StreamerOverlayWidget(QWidget):
             }
         """)
         self.resize_handle.setCursor(Qt.CursorShape.SizeFDiagCursor)
-        
+
         # Position resize handle at bottom right corner
         self.update_resize_handle_position()
 
@@ -209,7 +235,7 @@ class StreamerOverlayWidget(QWidget):
         layout.setSpacing(5)
 
         self.create_main_display(layout)
-        
+
         # Add logo on top of the container
         self.create_logo_display()
 
@@ -219,24 +245,24 @@ class StreamerOverlayWidget(QWidget):
     def showEvent(self, a0):
         """Handle show event to show logo"""
         super().showEvent(a0)
-        if hasattr(self, 'logo_label'):
+        if hasattr(self, "logo_label"):
             self.logo_label.show()
 
     def hideEvent(self, a0):
         """Handle hide event to hide logo"""
         super().hideEvent(a0)
-        if hasattr(self, 'logo_label'):
+        if hasattr(self, "logo_label"):
             self.logo_label.hide()
 
     def closeEvent(self, a0):
         """Handle close event to close logo"""
-        if hasattr(self, 'logo_label'):
+        if hasattr(self, "logo_label"):
             self.logo_label.close()
         super().closeEvent(a0)
 
     def update_resize_handle_position(self):
         """Update resize handle position to bottom right corner"""
-        if hasattr(self, 'resize_handle'):
+        if hasattr(self, "resize_handle"):
             handle_size = 15
             window_size = self.size()
             x = window_size.width() - handle_size - 2
@@ -246,40 +272,42 @@ class StreamerOverlayWidget(QWidget):
     def create_logo_display(self):
         """Create logo display on top of the container"""
         import os
-        
+
         # Get the path to the logo image
         logo_path = r"C:\Users\sutto\LewtNanny\LewtNanny.png"
-        
+
         # Create logo as independent draggable widget
         self.logo_label = DraggableLogoLabel(self)
         self.logo_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.logo_label.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
         self.logo_label.setStyleSheet("border: none; background: transparent;")
         self.logo_label.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.Tool
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
         )
-        
+
         # Store logo dimensions and position
         self.logo_width = 250
         self.logo_height = 160
         logo_y = 20  # Position at the top
-        
+
         # Set logo geometry relative to main window
         main_pos = self.pos()
         self.logo_label.setGeometry(
-            main_pos.x() + 0, 
-            main_pos.y() + logo_y, 
-            self.logo_width, 
-            self.logo_height
+            main_pos.x() + 0, main_pos.y() + logo_y, self.logo_width, self.logo_height
         )
-        
+
         if os.path.exists(logo_path):
             logger.debug(f"[OVERLAY] Loading logo from: {logo_path}")
             pixmap = QPixmap(logo_path)
             if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(self.logo_width, self.logo_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                scaled_pixmap = pixmap.scaled(
+                    self.logo_width,
+                    self.logo_height,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
                 scaled_pixmap.setMask(scaled_pixmap.createHeuristicMask())
                 self.logo_label.setPixmap(scaled_pixmap)
                 logger.debug(f"[OVERLAY] Logo loaded successfully")
@@ -287,9 +315,9 @@ class StreamerOverlayWidget(QWidget):
                 logger.error(f"[OVERLAY] Failed to load pixmap from: {logo_path}")
         else:
             logger.error(f"[OVERLAY] Logo file not found at: {logo_path}")
-        
+
         # Show logo initially
-        if hasattr(self, 'logo_label'):
+        if hasattr(self, "logo_label"):
             self.logo_label.show()
 
     def create_main_display(self, layout):
@@ -356,39 +384,51 @@ class StreamerOverlayWidget(QWidget):
             seconds = int(elapsed.total_seconds() % 60)
             self.timer_label.setText(f"{hours:02d}:{minutes:02d}:{seconds:02d}")
 
-    def start_session(self, session_id: str, activity_type: str, session_start_time: Optional[datetime] = None):
+    def start_session(
+        self,
+        session_id: str,
+        activity_type: str,
+        session_start_time: Optional[datetime] = None,
+    ):
         """Start a new session"""
-        logger.info(f"[OVERLAY] start_session called: session_id={session_id}, activity_type={activity_type}")
+        logger.info(
+            f"[OVERLAY] start_session called: session_id={session_id}, activity_type={activity_type}"
+        )
         logger.info(f"[OVERLAY] Previous stats before reset: {dict(self._stats)}")
-        
-        self.session_start_time = session_start_time if session_start_time else datetime.now()
-        
+
+        self.session_start_time = (
+            session_start_time if session_start_time else datetime.now()
+        )
+
         # Only reset stats if this is a new session (not already active)
         if not self.session_active:
             self._stats = {
-                'globals': 0,
-                'hofs': 0,
-                'items': 0,
-                'kills': 0,
-                'wasted_shots': 0,
-                'total_cost': Decimal('0'),
-                'total_return': Decimal('0'),
+                "globals": 0,
+                "hofs": 0,
+                "items": 0,
+                "kills": 0,
+                "wasted_shots": 0,
+                "total_cost": Decimal("0"),
+                "total_return": Decimal("0"),
             }
             self._shots_taken = 0
             self._recent_loot_times = []
             logger.info(f"[OVERLAY] Stats reset to: {dict(self._stats)}")
-        
+
         self.session_active = True
         self.current_session_id = session_id
         self.live_label.setText("● LIVE SESSION")
-        
+
         self._update_stats_display()
         self.show()
         logger.info(f"Streamer overlay session started: {session_id}")
 
     def stop_session(self):
         """Stop current session"""
-        logger.info(f"[OVERLAY] stop_session called, session_active={self.session_active}, current_session_id={self.current_session_id}")
+        current_session_id = getattr(self, "current_session_id", None)
+        logger.info(
+            f"[OVERLAY] stop_session called, session_active={self.session_active}, current_session_id={current_session_id}"
+        )
         logger.info(f"[OVERLAY] Stats before stop: {dict(self._stats)}")
         self.session_active = False
         self.session_start_time = None
@@ -423,9 +463,9 @@ class StreamerOverlayWidget(QWidget):
 
     def _update_stats_display(self):
         """Update statistics display with calculated values"""
-        cost = self._stats.get('total_cost', Decimal('0'))
-        return_val = self._stats.get('total_return', Decimal('0'))
-        kills = self._stats.get('kills', 0)
+        cost = self._stats.get("total_cost", Decimal("0"))
+        return_val = self._stats.get("total_return", Decimal("0"))
+        kills = self._stats.get("kills", 0)
 
         if cost > 0:
             return_pct = (return_val / cost) * 100
@@ -434,7 +474,9 @@ class StreamerOverlayWidget(QWidget):
             return_pct = 100.0
             return_pct_str = "100.00%"
 
-        logger.debug(f"[OVERLAY] Display update: {return_pct_str} return, spent={float(cost):.2f} PED, return={float(return_val):.3f} PED, kills={kills}")
+        logger.debug(
+            f"[OVERLAY] Display update: {return_pct_str} return, spent={float(cost):.2f} PED, return={float(return_val):.3f} PED, kills={kills}"
+        )
 
         # Update percentage with dynamic color
         self.return_percentage_label.setText(return_pct_str)
@@ -457,6 +499,7 @@ class StreamerOverlayWidget(QWidget):
         """Schedule a screenshot for global/HOF events"""
         try:
             from src.services.config_manager import ConfigManager
+
             config = ConfigManager()
 
             screenshot_enabled = config.get("screenshot.enabled", True)
@@ -464,14 +507,20 @@ class StreamerOverlayWidget(QWidget):
                 logger.debug(f"[OVERLAY] Screenshots disabled, skipping")
                 return
 
-            screenshot_dir = config.get("screenshot.directory", "~/Documents/LewtNanny/")
+            screenshot_dir = config.get(
+                "screenshot.directory", "~/Documents/LewtNanny/"
+            )
             screenshot_dir = os.path.expanduser(screenshot_dir)
 
             delay_ms = int(config.get("screenshot.delay_ms", 500))
 
-            logger.info(f"[OVERLAY] Scheduling screenshot in {delay_ms}ms for {event_type}: {player} got {value} PED")
+            logger.info(
+                f"[OVERLAY] Scheduling screenshot in {delay_ms}ms for {event_type}: {player} got {value} PED"
+            )
 
-            worker = ScreenshotWorker(delay_ms, screenshot_dir, event_type, value, player)
+            worker = ScreenshotWorker(
+                delay_ms, screenshot_dir, event_type, value, player
+            )
             worker.start()
 
         except Exception as e:
@@ -480,16 +529,16 @@ class StreamerOverlayWidget(QWidget):
     def update_stats(self, stats: Dict[str, Any]):
         """Update statistics from external source"""
         for key, value in stats.items():
-            if key == 'globals':
-                self._stats['globals'] = value
-            elif key == 'hofs':
-                self._stats['hofs'] = value
-            elif key == 'items':
-                self._stats['items'] = value
-            elif key == 'total_cost':
-                self._stats['total_cost'] = Decimal(str(value))
-            elif key == 'total_return':
-                self._stats['total_return'] = Decimal(str(value))
+            if key == "globals":
+                self._stats["globals"] = value
+            elif key == "hofs":
+                self._stats["hofs"] = value
+            elif key == "items":
+                self._stats["items"] = value
+            elif key == "total_cost":
+                self._stats["total_cost"] = Decimal(str(value))
+            elif key == "total_return":
+                self._stats["total_return"] = Decimal(str(value))
         self._update_stats_display()
 
     def add_activity(self, activity: str):
@@ -505,114 +554,169 @@ class StreamerOverlayWidget(QWidget):
         logger.debug(f"[OVERLAY] Event type: {event_data.get('event_type', 'unknown')}")
         logger.debug(f"[OVERLAY] Event data: {event_data}")
 
-        event_type = event_data.get('event_type', 'unknown')
-        parsed_data = event_data.get('parsed_data', {})
+        event_type = event_data.get("event_type", "unknown")
+        parsed_data = event_data.get("parsed_data", {})
 
         logger.debug(f"[OVERLAY] Processing event type: {event_type}")
         logger.debug(f"[OVERLAY] Parsed data: {parsed_data}")
 
-        current_return = float(self._stats.get('total_return', Decimal('0')))
-        current_cost = float(self._stats.get('total_cost', Decimal('0')))
-        logger.debug(f"[OVERLAY] Before event - total_return: {current_return:.3f}, total_cost: {current_cost:.3f}")
+        current_return = float(self._stats.get("total_return", Decimal("0")))
+        current_cost = float(self._stats.get("total_cost", Decimal("0")))
+        logger.debug(
+            f"[OVERLAY] Before event - total_return: {current_return:.3f}, total_cost: {current_cost:.3f}"
+        )
 
-        if event_type == 'loot':
-             value = parsed_data.get('value', 0)
-             item_name = parsed_data.get('item_name', '')
-             timestamp_str = parsed_data.get('timestamp', datetime.now().isoformat())
-             loot_time = datetime.fromisoformat(timestamp_str)
-             logger.debug(f"[OVERLAY] Loot event: value={value}, item={item_name}, time={loot_time}")
+        if event_type == "loot":
+            value = parsed_data.get("value", 0)
+            item_name = parsed_data.get("item_name", "")
+            timestamp_str = parsed_data.get("timestamp", datetime.now().isoformat())
+            loot_time = datetime.fromisoformat(timestamp_str)
+            logger.debug(
+                f"[OVERLAY] Loot event: value={value}, item={item_name}, time={loot_time}"
+            )
 
-             # Check if this loot event is part of a new kill (not within 2 seconds of last loot)
-             is_new_kill = True
-             current_time = datetime.now()
-             # Clean up old loot times (older than 10 seconds)
-             self._recent_loot_times = [t for t in self._recent_loot_times if (current_time - t).total_seconds() < 10]
-             if self._recent_loot_times:
-                 time_since_last_loot = (loot_time - self._recent_loot_times[-1]).total_seconds()
-                 if time_since_last_loot < 0.6:  # Within 0.6 seconds, consider same kill
-                     is_new_kill = False
-             if is_new_kill:
-                 self._stats['kills'] = self._stats.get('kills', 0) + 1
-                 logger.debug(f"[OVERLAY] New kill detected from loot: total kills={self._stats['kills']}")
-             self._recent_loot_times.append(loot_time)
+            # Check if this loot event is part of a new kill (not within 2 seconds of last loot)
+            is_new_kill = True
+            current_time = datetime.now()
+            # Clean up old loot times (older than 10 seconds)
+            self._recent_loot_times = [
+                t
+                for t in self._recent_loot_times
+                if (current_time - t).total_seconds() < 10
+            ]
+            if self._recent_loot_times:
+                time_since_last_loot = (
+                    loot_time - self._recent_loot_times[-1]
+                ).total_seconds()
+                if time_since_last_loot < 0.6:  # Within 0.6 seconds, consider same kill
+                    is_new_kill = False
+            if is_new_kill:
+                self._stats["kills"] = self._stats.get("kills", 0) + 1
+                logger.debug(
+                    f"[OVERLAY] New kill detected from loot: total kills={self._stats['kills']}"
+                )
+            self._recent_loot_times.append(loot_time)
 
-             self._stats['items'] = self._stats.get('items', 0) + 1
-             self._stats['total_return'] = self._stats.get('total_return', Decimal('0')) + Decimal(str(value))
-             new_return = float(self._stats['total_return'])
-             logger.debug(f"[OVERLAY] Loot event processed: items={self._stats['items']}, adding {value} PED to return, new total_return: {new_return:.3f}")
+            self._stats["items"] = self._stats.get("items", 0) + 1
+            self._stats["total_return"] = self._stats.get(
+                "total_return", Decimal("0")
+            ) + Decimal(str(value))
+            new_return = float(self._stats["total_return"])
+            logger.debug(
+                f"[OVERLAY] Loot event processed: items={self._stats['items']}, adding {value} PED to return, new total_return: {new_return:.3f}"
+            )
 
-        elif event_type == 'combat':
-            damage = parsed_data.get('damage', 0)
-            miss = parsed_data.get('miss', False)
-            dodge = parsed_data.get('dodged', False)  # When creature dodges your attack
-            logger.debug(f"[OVERLAY] Combat event: damage={damage}, miss={miss}, dodge={dodge}")
-            
+        elif event_type == "combat":
+            damage = parsed_data.get("damage", 0)
+            miss = parsed_data.get("miss", False)
+            dodge = parsed_data.get("dodged", False)  # When creature dodges your attack
+            logger.debug(
+                f"[OVERLAY] Combat event: damage={damage}, miss={miss}, dodge={dodge}"
+            )
+
             # Count shots that consume ammo/decay (successful hits + dodged shots)
             should_count_shot = False
-            
+
             if dodge:
                 # Track wasted shots (creature dodged your attack)
-                self._stats['wasted_shots'] = self._stats.get('wasted_shots', 0) + 1
+                self._stats["wasted_shots"] = self._stats.get("wasted_shots", 0) + 1
                 should_count_shot = True
-                logger.debug(f"[OVERLAY] Dodged shot detected: total wasted={self._stats['wasted_shots']}")
+                logger.debug(
+                    f"[OVERLAY] Dodged shot detected: total wasted={self._stats['wasted_shots']}"
+                )
             elif not miss and damage and float(damage) > 0:
-                 # Successful hit
-                 should_count_shot = True
-                 logger.debug(f"[OVERLAY] Successful hit")
+                # Successful hit
+                should_count_shot = True
+                logger.debug(f"[OVERLAY] Successful hit")
             else:
-                logger.debug(f"[OVERLAY] Combat event skipped (miss or no damage): miss={miss}, damage={damage}")
-            
+                logger.debug(
+                    f"[OVERLAY] Combat event skipped (miss or no damage): miss={miss}, damage={damage}"
+                )
+
             # Update cost for shots that consume ammo/decay
             if should_count_shot:
                 self._shots_taken += 1
                 if self._cost_per_attack > 0:
                     # Add shot cost to existing total (preserves crafting costs)
-                    current_cost = float(self._stats.get('total_cost', Decimal('0')))
+                    current_cost = float(self._stats.get("total_cost", Decimal("0")))
                     shot_cost_increment = float(self._cost_per_attack)
                     new_total_cost = current_cost + shot_cost_increment
-                    self._stats['total_cost'] = Decimal(str(new_total_cost))
-                new_cost = float(self._stats['total_cost'])
-                logger.debug(f"[OVERLAY] Combat event processed: shots={self._shots_taken}, cost_per_attack={float(self._cost_per_attack):.6f}, current_cost={current_cost:.3f}, added_shot_cost={shot_cost_increment:.6f}, new total_cost: {new_cost:.3f}")
-                
-        elif event_type == 'kill':
+                    self._stats["total_cost"] = Decimal(str(new_total_cost))
+                    new_cost = float(self._stats["total_cost"])
+                    logger.debug(
+                        f"[OVERLAY] Combat event processed: shots={self._shots_taken}, cost_per_attack={float(self._cost_per_attack):.6f}, current_cost={current_cost:.3f}, added_shot_cost={shot_cost_increment:.6f}, new total_cost: {new_cost:.3f}"
+                    )
+                else:
+                    new_cost = float(self._stats.get("total_cost", Decimal("0")))
+                    logger.debug(
+                        f"[OVERLAY] Combat event processed: shots={self._shots_taken}, cost_per_attack={float(self._cost_per_attack):.6f}, no cost increment, new total_cost: {new_cost:.3f}"
+                    )
+
+        elif event_type == "kill":
             # Track successful kills
-            self._stats['kills'] = self._stats.get('kills', 0) + 1
+            self._stats["kills"] = self._stats.get("kills", 0) + 1
             logger.debug(f"[OVERLAY] Kill event: total kills={self._stats['kills']}")
 
-        elif event_type == 'global':
-            value = parsed_data.get('value', 0)
-            player = parsed_data.get('player', '')
-            logger.debug(f"[OVERLAY] GLOBAL event: value={value}, player={player}, my_character_name={self.character_name}")
-            if self.character_name and player and player.lower() == self.character_name.lower():
-                logger.info(f"[OVERLAY] GLOBAL DETECTED! {player} got {value} PED - scheduling screenshot")
+        elif event_type == "global":
+            value = parsed_data.get("value", 0)
+            player = parsed_data.get("player", "")
+            logger.debug(
+                f"[OVERLAY] GLOBAL event: value={value}, player={player}, my_character_name={self.character_name}"
+            )
+            if (
+                self.character_name
+                and player
+                and player.lower() == self.character_name.lower()
+            ):
+                logger.info(
+                    f"[OVERLAY] GLOBAL DETECTED! {player} got {value} PED - scheduling screenshot"
+                )
                 self._schedule_screenshot("global", value, player)
             else:
-                logger.debug(f"[OVERLAY] GLOBAL event skipped (not mine): player={player}, my_character_name={self.character_name}")
+                logger.debug(
+                    f"[OVERLAY] GLOBAL event skipped (not mine): player={player}, my_character_name={self.character_name}"
+                )
 
-        elif event_type == 'hof':
-            value = parsed_data.get('value', 0)
-            player = parsed_data.get('player', '')
-            logger.debug(f"[OVERLAY] HOF event: value={value}, player={player}, my_character_name={self.character_name}")
-            if self.character_name and player and player.lower() == self.character_name.lower():
-                logger.info(f"[OVERLAY] HOF DETECTED! {player} got {value} PED - scheduling screenshot")
+        elif event_type == "hof":
+            value = parsed_data.get("value", 0)
+            player = parsed_data.get("player", "")
+            logger.debug(
+                f"[OVERLAY] HOF event: value={value}, player={player}, my_character_name={self.character_name}"
+            )
+            if (
+                self.character_name
+                and player
+                and player.lower() == self.character_name.lower()
+            ):
+                logger.info(
+                    f"[OVERLAY] HOF DETECTED! {player} got {value} PED - scheduling screenshot"
+                )
                 self._schedule_screenshot("hof", value, player)
             else:
-                logger.debug(f"[OVERLAY] HOF event skipped (not mine): player={player}, my_character_name={self.character_name}")
+                logger.debug(
+                    f"[OVERLAY] HOF event skipped (not mine): player={player}, my_character_name={self.character_name}"
+                )
 
         else:
-            logger.debug(f"[OVERLAY] Unknown event type: {event_type}, raw_message: {event_data.get('raw_message', 'N/A')}")
+            logger.debug(
+                f"[OVERLAY] Unknown event type: {event_type}, raw_message: {event_data.get('raw_message', 'N/A')}"
+            )
 
         self._update_stats_display()
         logger.debug(f"[OVERLAY] <<< add_event complete >>>")
-        logger.debug(f"[OVERLAY] Current stats: globals={self._stats.get('globals')}, hofs={self._stats.get('hofs')}, items={self._stats.get('items')}, total_cost={float(self._stats.get('total_cost', Decimal('0'))):.3f}, total_return={float(self._stats.get('total_return', Decimal('0'))):.3f}")
+        logger.debug(
+            f"[OVERLAY] Current stats: globals={self._stats.get('globals')}, hofs={self._stats.get('hofs')}, items={self._stats.get('items')}, total_cost={float(self._stats.get('total_cost', Decimal('0'))):.3f}, total_return={float(self._stats.get('total_return', Decimal('0'))):.3f}"
+        )
 
     def mousePressEvent(self, a0):
         """Mouse press for dragging or resizing"""
         if a0.button() == Qt.MouseButton.LeftButton:
             pos = a0.position().toPoint()
-            
+
             # Check if click is on resize handle
-            if hasattr(self, 'resize_handle') and self.resize_handle.geometry().contains(pos):
+            if hasattr(
+                self, "resize_handle"
+            ) and self.resize_handle.geometry().contains(pos):
                 self.resizing = True
                 self.resize_start_pos = a0.globalPosition().toPoint()
                 self.resize_start_size = self.size()
@@ -620,7 +724,9 @@ class StreamerOverlayWidget(QWidget):
             else:
                 # Start dragging from anywhere on overlay
                 self.dragging = True
-                self.drag_position = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                self.drag_position = (
+                    a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                )
                 a0.accept()
 
     def mouseMoveEvent(self, a0):
@@ -630,15 +736,15 @@ class StreamerOverlayWidget(QWidget):
                 # Handle resizing
                 global_pos = a0.globalPosition().toPoint()
                 delta = global_pos - self.resize_start_pos
-                
+
                 # Allow small resizing - minimum is just for usability
                 min_width = 100  # Allow very small width
                 min_height = 200  # Allow small height but still usable
-                
+
                 current_size = self.resize_start_size or self.size()
                 new_width = max(min_width, current_size.width() + delta.x())
                 new_height = max(min_height, current_size.height() + delta.y())
-                
+
                 self.resize(new_width, new_height)
                 self.update_resize_handle_position()
                 a0.accept()
@@ -658,7 +764,7 @@ class StreamerOverlayWidget(QWidget):
 
     def update_logo_position(self):
         """Update logo position relative to main window"""
-        if hasattr(self, 'logo_label') and hasattr(self, 'logo_width'):
+        if hasattr(self, "logo_label") and hasattr(self, "logo_width"):
             window_width = self.size().width()
             logo_x = (window_width - self.logo_width) // 2
             self.logo_label.move(self.pos().x() + logo_x, self.pos().y() + 20)
@@ -673,33 +779,32 @@ class StreamerOverlayWidget(QWidget):
     def resizeEvent(self, a0):
         """Handle resize event to update container and handle positions"""
         super().resizeEvent(a0)
-        
+
         # Update container geometry
-        if hasattr(self, 'container'):
+        if hasattr(self, "container"):
             window_size = self.size()
-            self.container.setGeometry(0, 110, window_size.width(), window_size.height() - 110)
-        
-        # Update resize handle position
-        self.update_resize_handle_position()
-        
-        # Update logo position - always center and maintain full size
-        if hasattr(self, 'logo_label') and hasattr(self, 'logo_width'):
-            window_width = self.size().width()
-            main_pos = self.pos()
-            
-            # Always center the logo, even if it extends beyond window boundaries
-            logo_x = (window_width - self.logo_width) // 2
-            
-            # Position the logo window independently
-            self.logo_label.setGeometry(
-                main_pos.x() + logo_x, 
-                main_pos.y() + 20, 
-                self.logo_width, 
-                self.logo_height
+            self.container.setGeometry(
+                0, 110, window_size.width(), window_size.height() - 110
             )
 
+        # Update resize handle position
+        self.update_resize_handle_position()
 
+        # Update logo position - always center and maintain full size
+        if hasattr(self, "logo_label") and hasattr(self, "logo_width"):
+            window_width = self.size().width()
+            main_pos = self.pos()
 
+            # Always center the logo, even if it extends beyond window boundaries
+            logo_x = (window_width - self.logo_width) // 2
+
+            # Position the logo window independently
+            self.logo_label.setGeometry(
+                main_pos.x() + logo_x,
+                main_pos.y() + 20,
+                self.logo_width,
+                self.logo_height,
+            )
 
 
 class SessionOverlay:
@@ -710,10 +815,7 @@ class SessionOverlay:
         self.config_manager = config_manager
         self.overlay_widget: Optional[StreamerOverlayWidget] = None
         self.current_weapon = None
-        self._stats = {
-            'total_cost': Decimal('0'),
-            'total_return': Decimal('0')
-        }
+        self._stats = {"total_cost": Decimal("0"), "total_return": Decimal("0")}
         logger.info("SessionOverlay initialized")
 
     def get_character_name(self) -> str:
@@ -750,11 +852,20 @@ class SessionOverlay:
             self.overlay_widget = None
         logger.info("SessionOverlay closed")
 
-    def start_session(self, session_id: str, activity_type: str, session_start_time: Optional[datetime] = None):
+    def start_session(
+        self,
+        session_id: str,
+        activity_type: str,
+        session_start_time: Optional[datetime] = None,
+    ):
         """Start a new session"""
-        logger.info(f"[OVERLAY_CONTROLLER] start_session called: session_id={session_id}, activity_type={activity_type}")
+        logger.info(
+            f"[OVERLAY_CONTROLLER] start_session called: session_id={session_id}, activity_type={activity_type}"
+        )
         if self.overlay_widget:
-            self.overlay_widget.start_session(session_id, activity_type, session_start_time)
+            self.overlay_widget.start_session(
+                session_id, activity_type, session_start_time
+            )
         logger.info(f"SessionOverlay started session: {session_id}")
 
     def stop_session(self):
@@ -765,7 +876,9 @@ class SessionOverlay:
 
     def add_event(self, event_data: Dict[str, Any]):
         """Add event to overlay"""
-        logger.info(f"[OVERLAY_CONTROLLER] add_event called with type: {event_data.get('event_type', 'unknown')}")
+        logger.info(
+            f"[OVERLAY_CONTROLLER] add_event called with type: {event_data.get('event_type', 'unknown')}"
+        )
         if self.overlay_widget:
             self.overlay_widget.add_event(event_data)
         logger.info(f"[OVERLAY_CONTROLLER] Event forwarded to overlay widget")
