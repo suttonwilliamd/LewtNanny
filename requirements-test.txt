@@ -1,6 +1,4 @@
-"""
-Test requirements for LewtNanny
-"""
+# Test requirements for LewtNanny
 
 pytest>=7.0.0
 pytest-qt>=4.2.0
