@@ -7,7 +7,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import aiosqlite
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class DataMigrationService:
     """Handles all data migration from JSON to separate SQLite databases"""
 
-    def __init__(self, db_dir: Optional[str] = None):
+    def __init__(self, db_dir: str | None = None):
         from src.utils.paths import ensure_user_data_dir
 
         if db_dir:

@@ -6,7 +6,7 @@ import logging
 import os
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 from PyQt6.QtCore import QPoint, Qt, QThread, QTimer
 from PyQt6.QtGui import (
@@ -113,6 +113,12 @@ class DraggableLogoLabel(QLabel):
 
     def mousePressEvent(self, ev):  # noqa: N802
         """Logo mouse press - acts as drag handle"""
+        if ev.button() == Qt.MouseButton.LeftButton:
+            self.dragging = True
+            self.drag_position = (
+                ev.globalPosition().toPoint() - self.overlay_widget.frameGeometry().topLeft()
+            )
+            ev.accept()
 
     def mouseMoveEvent(self, ev):  # noqa: N802
         """Logo mouse move - dragging functionality"""
@@ -230,6 +236,10 @@ class StreamerOverlayWidget(QWidget):
 
     def showEvent(self, a0):  # noqa: N802
         """Handle show event to show logo"""
+        super().showEvent(a0)
+        if hasattr(self, "logo_label"):
+            self.logo_label.show()
+            self.logo_label.raise_()  # Ensure logo stays on top
 
     def hideEvent(self, a0):  # noqa: N802
         """Handle hide event to hide logo"""
@@ -269,6 +279,8 @@ class StreamerOverlayWidget(QWidget):
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.Tool
         )
+        # Ensure logo is always on top of overlay container
+        self.logo_label.raise_()
 
         # Store logo dimensions and position
         self.logo_width = 250
@@ -744,6 +756,8 @@ class StreamerOverlayWidget(QWidget):
                 self.logo_width,
                 self.logo_height,
             )
+            # Ensure logo stays on top after repositioning
+            self.logo_label.raise_()
 
 
 class SessionOverlay:

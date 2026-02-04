@@ -3,7 +3,6 @@ Simplified, game-inspired weapon selection and attachment management
 """
 
 import logging
-from typing import Optional
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -88,7 +87,7 @@ class EquipmentSlot(QWidget):
             self.set_item(selected)
             self.item_selected.emit(self.slot_name, selected)
 
-    def set_item(self, item_name: Optional[str]):
+    def set_item(self, item_name: str | None):
         """Set the item in this slot"""
         self.current_item = item_name
         if item_name:

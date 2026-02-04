@@ -8,7 +8,7 @@ import logging
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import (
@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QStatusBar,
+    QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
@@ -45,6 +46,20 @@ class TabbedMainWindow(QMainWindow):
     """Main application window with custom tab bar and persistent bottom control bar"""
 
     TAB_NAMES = ["Loot", "Analysis", "Skills", "Combat", "Crafting", "Twitch", "Config"]
+
+    # Type annotations for UI elements
+    tab_buttons: dict[str, QPushButton]
+    status_indicator: QLabel | None
+    start_run_btn: QPushButton | None
+    streamer_ui_btn: QPushButton | None
+    run_log_table: Any | None
+    item_breakdown_table: Any | None
+    loot_summary_labels: dict[str, Any]
+    chat_log_path: str
+    chat_location_text: Any | None
+    character_name: str
+    _refresh_after_session_deletion: str
+    toggle_monitoring: str
 
     def __init__(self, db_manager, config_manager):
         super().__init__()
@@ -71,6 +86,9 @@ class TabbedMainWindow(QMainWindow):
         self.session_manager = SessionManager(self)
         self.cost_manager = CostManager(self)
 
+        # Initialize overlay early so it can receive events
+        self.overlay = SessionOverlay(self.db_manager, self.config_manager)
+
         # Initialize UI creators
         self.layout_creator = MainLayoutCreator(self)
         self.loot_tab_creator = LootTabCreator(self)
@@ -80,23 +98,6 @@ class TabbedMainWindow(QMainWindow):
         self.setup_menubar()
         self.setup_status_bar()
         self.setup_timer()
-
-        # Initialize overlay early so it can receive events
-        self.overlay = SessionOverlay(self.db_manager, self.config_manager)
-
-        # Stub attributes for mypy
-        self.tab_buttons: dict[str, QPushButton] = {}
-        self.status_indicator: Optional[QLabel] = None
-        self.start_run_btn: Optional[QPushButton] = None
-        self.streamer_ui_btn: Optional[QPushButton] = None
-        self.run_log_table: Optional[Any] = None
-        self.item_breakdown_table: Optional[Any] = None
-        self.loot_summary_labels: dict[str, Any] = {}
-        self.chat_log_path: str = ""
-        self.chat_location_text: Optional[Any] = None
-        self.character_name: str = ""
-        self._refresh_after_session_deletion: str = ""
-        self.toggle_monitoring: str = ""
 
         logger.info("TabbedMainWindow initialization complete")
 
@@ -121,65 +122,16 @@ class TabbedMainWindow(QMainWindow):
 
         logger.debug("Main UI setup complete")
 
-        QTimer.singleShot(500, self._load_past_runs_on_startup)
-
-    def on_tab_clicked(self, tab_name: str, button: QPushButton):
-        """Handle tab button click"""
-        self.content_stack.setCurrentIndex(self.TAB_NAMES.index(tab_name))
-
-        for name, btn in self.tab_buttons.items():
-            if name == tab_name:
-                btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #238636;
-                        color: #FFFFFF;
-                        border: none;
-                        border-radius: 4px 4px 0 0;
-                        padding: 6px 16px;
-                        font-weight: bold;
-                        font-size: 11px;
-                    }
-                """)
-            else:
-                btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: transparent;
-                        color: #8B949E;
-                        border: none;
-                        border-radius: 4px 4px 0 0;
-                        padding: 6px 16px;
-                        font-size: 11px;
-                    }
-                    QPushButton:hover {
-                        background-color: #21262D;
-                        color: #E6EDF3;
-                    }
-                """)
-
-        # Update blueprint dropdown when switching to crafting tab
-        if tab_name == "Crafting" and hasattr(self, "crafting_tab"):
-            # Use a timer to ensure the widget is fully visible
-            QTimer.singleShot(100, lambda: self.crafting_tab.update_blueprint_dropdown())
-
-        logger.debug(f"Switched to tab: {tab_name}")
-
-    def create_middle_content_area(self):
-        """Create middle content area that changes based on selected tab"""
-        self.content_stack = self.layout_creator.create_middle_content_area()
-
-        # Now create all tabs and add them to the content stack
-        self.create_loot_tab()
-        self.create_analysis_tab()
-        self.create_skills_tab()
-        self.create_combat_tab()
-        self.create_crafting_tab()
-        self.create_twitch_tab()
-        self.create_config_tab()
-
-        return self.content_stack
+        # Load past runs after everything else is initialized
+        QTimer.singleShot(2000, self._load_past_runs_on_startup)
 
     def create_loot_tab(self):
         """Create the Loot tab"""
+        # Create the run_log_table directly in main window to ensure ownership
+        from PyQt6.QtWidgets import QTableWidget
+
+        self.run_log_table = QTableWidget()
+
         loot_widget = self.loot_tab_creator.create_loot_tab()
         self.content_stack.addWidget(loot_widget)
         logger.info("Loot tab created")
@@ -196,7 +148,7 @@ class TabbedMainWindow(QMainWindow):
         logger.info("Analysis tab created with 2 core charts")
 
     def create_skills_tab(self):
-        """Create the Skills tab with skill gain tracking"""
+        """Create the Skills tab"""
         skills_widget = self.skills_tab_creator.create_skills_tab()
         self.skills_tab = skills_widget
         self.content_stack.addWidget(skills_widget)
@@ -225,22 +177,10 @@ class TabbedMainWindow(QMainWindow):
 
     def create_twitch_tab(self):
         """Create the Twitch tab"""
-        from src.services.twitch_bot import TwitchBotUI
+        from src.ui.components.streamer_ui import StreamerTabWidget
 
-        twitch_widget = QWidget()
-        twitch_layout = QVBoxLayout(twitch_widget)
-        twitch_layout.setContentsMargins(8, 8, 8, 8)
-        twitch_layout.setSpacing(8)
-
-        config_panel = TwitchBotUI.create_config_panel()
-        twitch_layout.addWidget(config_panel)
-
-        self.twitch_status_label = QLabel("Twitch Bot: Disconnected")
-        self.twitch_status_label.setStyleSheet("color: #8B949E; font-size: 12px;")
-        twitch_layout.addWidget(self.twitch_status_label)
-
-        twitch_layout.addStretch()
-
+        twitch_widget = StreamerTabWidget(self.db_manager)
+        self.twitch_tab = twitch_widget
         self.content_stack.addWidget(twitch_widget)
         logger.info("Twitch tab created")
 
@@ -248,16 +188,38 @@ class TabbedMainWindow(QMainWindow):
         """Create the Config tab using the new ConfigTab widget"""
         self.config_widget = ConfigTab(config_manager=self.config_manager)
         self.content_stack.addWidget(self.config_widget)
-        self.config_widget.signals.loadout_changed.connect(self._on_loadout_changed)
-        self.config_widget.signals.stats_calculated.connect(self._on_stats_calculated)
+        self.config_tab = self.config_widget
+        logger.info("Config tab created")
 
-        # Initialize cost per attack for the current loadout
-        self.cost_per_attack = self._calculate_cost_per_attack()
-        logger.info(
-            f"Config tab created using ConfigTab, initial cost per attack: {self.cost_per_attack:.6f} PED"
-        )
-        if self.overlay:
-            self.overlay.set_cost_per_attack(self.cost_per_attack)
+    def get_run_log_table(self):
+        """Get the run log table, ensuring it exists"""
+        if (
+            self.run_log_table is None
+            and hasattr(self, "content_stack")
+            and self.content_stack.count() > 0
+        ):
+            # Try to find it in the loot tab
+            loot_widget = self.content_stack.widget(0)  # First tab should be loot
+            if loot_widget:
+                for child in loot_widget.findChildren(QTableWidget):
+                    self.run_log_table = child
+                    break
+        return self.run_log_table
+
+    def create_middle_content_area(self):
+        """Create middle content area that changes based on selected tab"""
+        self.content_stack = self.layout_creator.create_middle_content_area()
+
+        # Now create all tabs and add them to the content stack
+        self.create_loot_tab()
+        self.create_analysis_tab()
+        self.create_skills_tab()
+        self.create_combat_tab()
+        self.create_crafting_tab()
+        self.create_twitch_tab()
+        self.create_config_tab()
+
+        return self.content_stack
 
     # Delegate to managers
     def toggle_session(self):
@@ -493,6 +455,10 @@ class TabbedMainWindow(QMainWindow):
 
     def toggle_overlay(self):
         """Toggle overlay visibility"""
+        if not self.streamer_ui_btn:
+            logger.warning("streamer_ui_btn is None, cannot toggle overlay")
+            return
+
         if self.overlay:
             if (
                 hasattr(self.overlay, "overlay_widget")
@@ -524,6 +490,42 @@ class TabbedMainWindow(QMainWindow):
         import webbrowser
 
         webbrowser.open("https://example.com/donate")
+
+    def on_tab_clicked(self, tab_name: str, button: QPushButton):
+        """Handle tab click - switch content and update button styles"""
+        # Switch to the selected tab content
+        tab_index = self.TAB_NAMES.index(tab_name)
+        self.content_stack.setCurrentIndex(tab_index)
+
+        # Update button styles - highlight selected, unhighlight others
+        for name, btn in self.tab_buttons.items():
+            if name == tab_name:
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #238636;
+                        color: #FFFFFF;
+                        border: none;
+                        border-radius: 4px 4px 0 0;
+                        padding: 6px 16px;
+                        font-weight: bold;
+                        font-size: 11px;
+                    }
+                """)
+            else:
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: transparent;
+                        color: #8B949E;
+                        border: none;
+                        border-radius: 4px 4px 0 0;
+                        padding: 6px 16px;
+                        font-size: 11px;
+                    }
+                    QPushButton:hover {
+                        background-color: #21262D;
+                        color: #E6EDF3;
+                    }
+                """)
 
     def open_settings(self):
         """Open settings dialog"""
@@ -567,15 +569,22 @@ class TabbedMainWindow(QMainWindow):
         # Use QTimer to schedule async loading in Qt event loop
         from PyQt6.QtCore import QTimer
 
-        QTimer.singleShot(1000, load)  # Delay 1 second to ensure UI is ready
+        QTimer.singleShot(2000, load)  # Delay 2 seconds to ensure UI is ready
+
+    def _on_item_breakdown_header_click(self, index):
+        """Handle item breakdown table header click for sorting"""
+        pass
 
     def _add_run_to_run_log(self, session: dict[str, Any]):
         """Add a run entry to run log table"""
         from PyQt6.QtCore import QTimer
 
         def add_in_gui_thread():
-            row = self.run_log_table.rowCount()
-            self.run_log_table.insertRow(row)
+            table = self.get_run_log_table()
+            if table is None:
+                return
+            row = table.rowCount()
+            table.insertRow(row)
 
             start_time = session.get("start_time", "")
             if isinstance(start_time, str):
@@ -612,15 +621,15 @@ class TabbedMainWindow(QMainWindow):
             total_return = session.get("total_return", 0) or 0
             roi = (total_return / total_cost * 100) if total_cost > 0 else 0
 
-            self.run_log_table.setItem(row, 0, QTableWidgetItem("Completed"))
-            self.run_log_table.setItem(row, 1, QTableWidgetItem(start_time))
-            self.run_log_table.setItem(row, 2, QTableWidgetItem(duration))
-            self.run_log_table.setItem(row, 3, QTableWidgetItem(f"{total_cost:.2f}"))
-            self.run_log_table.setItem(row, 4, QTableWidgetItem(f"{total_return:.2f}"))
-            self.run_log_table.setItem(row, 5, QTableWidgetItem(f"{roi:.1f}%"))
-            self.run_log_table.setItem(row, 6, QTableWidgetItem("-"))
+            table.setItem(row, 0, QTableWidgetItem("Completed"))
+            table.setItem(row, 1, QTableWidgetItem(start_time))
+            table.setItem(row, 2, QTableWidgetItem(duration))
+            table.setItem(row, 3, QTableWidgetItem(f"{total_cost:.2f}"))
+            table.setItem(row, 4, QTableWidgetItem(f"{total_return:.2f}"))
+            table.setItem(row, 5, QTableWidgetItem(f"{roi:.1f}%"))
+            table.setItem(row, 6, QTableWidgetItem("-"))
 
-            self.run_log_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, session["id"])
+            table.item(row, 0).setData(Qt.ItemDataRole.UserRole, session["id"])
 
             # Get item count for this session
             def load_item_count():
@@ -634,7 +643,7 @@ class TabbedMainWindow(QMainWindow):
                             self.db_manager.get_session_loot_items(session["id"])
                         )
                         item_count = len(items)
-                        self.run_log_table.setItem(row, 6, QTableWidgetItem(str(item_count)))
+                        table.setItem(row, 6, QTableWidgetItem(str(item_count)))
                     finally:
                         loop.close()
                 except Exception as e:

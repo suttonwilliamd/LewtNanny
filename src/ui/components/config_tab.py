@@ -5,7 +5,7 @@ Adapted from LootNanny's ConfigTab with similar functionality
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -1108,19 +1108,19 @@ class LoadoutDialog(QDialog):
         if not weapon:
             return None
 
-        amp: Optional[str] = self.amp_combo.currentText()
+        amp: str | None = self.amp_combo.currentText()
         if amp == "None":
             amp = None
 
-        scope: Optional[str] = self.scope_combo.currentText()
+        scope: str | None = self.scope_combo.currentText()
         if scope == "None":
             scope = None
 
-        sight_1: Optional[str] = self.sight1_combo.currentText()
+        sight_1: str | None = self.sight1_combo.currentText()
         if sight_1 == "None":
             sight_1 = None
 
-        sight_2: Optional[str] = self.sight2_combo.currentText()
+        sight_2: str | None = self.sight2_combo.currentText()
         if sight_2 == "None":
             sight_2 = None
 

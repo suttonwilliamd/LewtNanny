@@ -4,7 +4,6 @@ Clean, focused interface with essential controls and metrics
 
 import logging
 from datetime import datetime
-from typing import Optional
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont

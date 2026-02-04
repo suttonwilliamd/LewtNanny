@@ -4,7 +4,6 @@ Configuration panel for application preferences
 
 import logging
 from pathlib import Path
-from typing import Any, Optional
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QColor, QFont
@@ -480,7 +479,7 @@ class SettingsDialog(QDialog):
         super().reject()
 
 
-def show_settings_dialog(parent=None, current_settings: Optional[dict] = None) -> dict | None:
+def show_settings_dialog(parent=None, current_settings: dict | None = None) -> dict | None:
     """Show settings dialog and return new settings"""
     dialog = SettingsDialog(parent, current_settings)
     if dialog.exec() == QDialog.DialogCode.Accepted:

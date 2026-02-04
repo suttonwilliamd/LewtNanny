@@ -7,7 +7,7 @@ import json
 import logging
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QColor, QFont

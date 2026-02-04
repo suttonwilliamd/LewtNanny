@@ -3,8 +3,8 @@ Tracks combat statistics including kills, damage, and efficiency
 """
 
 import logging
-from datetime import datetime
-from typing import Any, Optional
+from datetime import datetime, timedelta
+from typing import Any
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
@@ -375,10 +375,8 @@ class CombatTabWidget(QWidget):
 
     def get_session_summary(self) -> dict[str, Any]:
         """Get session summary data"""
-        duration: Optional[datetime] = None
+        duration: timedelta | None = None
         if self.session_stats["session_start"]:
-            from datetime import datetime
-
             duration = datetime.now() - self.session_stats["session_start"]
 
         accuracy = 0

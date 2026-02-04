@@ -126,7 +126,10 @@ class LootTabCreator:
         layout.setContentsMargins(4, 28, 4, 4)  # Top margin accounts for title bar
         layout.setSpacing(4)
 
-        self.parent.run_log_table = QTableWidget()
+        # Use the table that was already created in the main window
+        if self.parent.run_log_table is None:
+            logger.error("run_log_table is None in LootTabCreator!")
+
         self.parent.run_log_table.setColumnCount(7)
         self.parent.run_log_table.setHorizontalHeaderLabels(
             ["Status", "Start Time", "Duration", "Cost", "Return", "ROI", "Items"]
@@ -195,10 +198,7 @@ class LootTabCreator:
 
         # Enable sorting on header click
         header.setSectionsClickable(True)
-        header.sectionClicked.connect(self.parent.on_item_breakdown_header_clicked)
-
-        # Track sort state for count column
-        self.parent.item_breakdown_sort_order = Qt.SortOrder.AscendingOrder
+        header.sectionClicked.connect(self.parent._on_item_breakdown_header_click)
 
         layout.addWidget(self.parent.item_breakdown_table)
 

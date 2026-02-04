@@ -8,7 +8,7 @@ import sqlite3
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import aiosqlite
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class MultiDatabaseManager:
     """Manages multiple specialized databases for better performance"""
 
-    def __init__(self, db_dir: Optional[str] = None):
+    def __init__(self, db_dir: str | None = None):
         if db_dir:
             self.db_dir = Path(db_dir)
         else:

@@ -5,7 +5,7 @@ Complete weapon selection, attachment configuration, and cost analysis
 import asyncio
 import logging
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (

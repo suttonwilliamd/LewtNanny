@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import aiosqlite
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseManager:
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         if db_path:
             self.db_path = Path(db_path)
         else:

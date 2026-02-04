@@ -4,7 +4,7 @@ Displays stylized SVG icons for different weapon types
 
 import logging
 
-from PyQt6.QtCore import QRect, QRectF, Qt
+from PyQt6.QtCore import QRect, Qt
 from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap, QRadialGradient
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 

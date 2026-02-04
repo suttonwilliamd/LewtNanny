@@ -3,13 +3,13 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from src.utils.paths import ensure_user_data_dir
 
 
 class ConfigManager:
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: str | None = None):
         if config_path:
             self.config_path = Path(config_path)
         else:
