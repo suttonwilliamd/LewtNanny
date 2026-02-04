@@ -78,11 +78,12 @@ class WeaponTableWidget(QWidget):
 
         # Configure columns
         header = self.weapon_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        if header is not None:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
 
         layout.addWidget(self.weapon_table)
 
@@ -109,7 +110,7 @@ class WeaponTableWidget(QWidget):
         # Filter visible rows
         search_lower = text.lower()
         for row, weapon in enumerate(self.weapons):
-            hide = text and search_lower not in weapon.name.lower()
+            hide = bool(text and search_lower not in weapon.name.lower())
             self.weapon_table.setRowHidden(row, hide)
 
     def clear_search(self):

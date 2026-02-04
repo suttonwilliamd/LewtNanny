@@ -4,7 +4,7 @@ Tracks combat statistics including kills, damage, and efficiency
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
@@ -324,16 +324,13 @@ class CombatTabWidget(QWidget):
 
             # Time
             timestamp = kill_event.get("timestamp", "")
+            time_str: str = "Unknown"
             if timestamp:
                 try:
-                    from datetime import datetime
-
                     dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
                     time_str = dt.strftime("%H:%M:%S")
                 except (ValueError, TypeError):
                     time_str = timestamp[:8]
-            else:
-                time_str = "Unknown"
             self.kills_table.setItem(row, 3, QTableWidgetItem(time_str))
 
             # Type
@@ -378,7 +375,7 @@ class CombatTabWidget(QWidget):
 
     def get_session_summary(self) -> dict[str, Any]:
         """Get session summary data"""
-        duration = None
+        duration: Optional[datetime] = None
         if self.session_stats["session_start"]:
             from datetime import datetime
 

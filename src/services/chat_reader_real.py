@@ -7,6 +7,7 @@ from collections import namedtuple
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 LogLine = namedtuple("LogLine", ["time", "channel", "speaker", "msg"])
 
@@ -113,7 +114,7 @@ class GlobalEvent(ChatEvent):
         target: str,
         value: int,
         hof: bool = False,
-        location: str = None,
+        location: Optional[str] = None,
     ):
         super().__init__(timestamp, "global", raw_message)
         self.player = player
@@ -131,7 +132,7 @@ class ChatLogReader:
         self.event_callback = event_callback
         self.is_running = False
         self.file_position = 0
-        self.thread = None
+        self.thread: Optional[threading.Thread] = None
 
     def start_monitoring(self):
         """Start monitoring the chat log file"""
@@ -292,6 +293,6 @@ class ChatLogReader:
         value = int(groups[2])
 
         hof = "hof" in pattern_name
-        location = groups[3] if len(groups) > 3 else None
+        location: Optional[str] = groups[3] if len(groups) > 3 else None
 
         return GlobalEvent(timestamp, raw_message, player, target, value, hof, location)

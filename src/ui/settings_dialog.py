@@ -4,6 +4,7 @@ Configuration panel for application preferences
 
 import logging
 from pathlib import Path
+from typing import Any, Optional
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QColor, QFont
@@ -215,9 +216,7 @@ class SettingsDialog(QDialog):
 
         sort_layout.addWidget(QLabel("Default Sort By:"))
         self.sort_combo = QComboBox()
-        self.sort_combo.addItems(
-            [("DPS", "dps"), ("Economy", "eco"), ("Name", "name"), ("Cost", "cost")]
-        )
+        self.sort_combo.addItems(["DPS", "Economy", "Name", "Cost"])
         self.sort_combo.setToolTip("Default sorting for weapon lists")
         sort_layout.addWidget(self.sort_combo)
 
@@ -481,7 +480,7 @@ class SettingsDialog(QDialog):
         super().reject()
 
 
-def show_settings_dialog(parent=None, current_settings: dict = None) -> dict | None:
+def show_settings_dialog(parent=None, current_settings: Optional[dict] = None) -> dict | None:
     """Show settings dialog and return new settings"""
     dialog = SettingsDialog(parent, current_settings)
     if dialog.exec() == QDialog.DialogCode.Accepted:

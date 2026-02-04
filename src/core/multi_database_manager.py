@@ -8,7 +8,7 @@ import sqlite3
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import aiosqlite
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class MultiDatabaseManager:
     """Manages multiple specialized databases for better performance"""
 
-    def __init__(self, db_dir: str = None):
+    def __init__(self, db_dir: Optional[str] = None):
         if db_dir:
             self.db_dir = Path(db_dir)
         else:
@@ -285,36 +285,43 @@ class MultiDatabaseManager:
 
     async def get_all_counts(self) -> dict[str, int]:
         """Get counts from all databases"""
-        counts = {}
+        counts: dict[str, int] = {}
 
         try:
             # User data counts
             async with aiosqlite.connect(self.databases["user_data"]) as db:
                 cursor = await db.execute("SELECT COUNT(*) FROM sessions")
-                counts["sessions"] = (await cursor.fetchone())[0]
+                row = await cursor.fetchone()
+                counts["sessions"] = row[0] if row else 0
 
                 cursor = await db.execute("SELECT COUNT(*) FROM events")
-                counts["events"] = (await cursor.fetchone())[0]
+                row = await cursor.fetchone()
+                counts["events"] = row[0] if row else 0
 
             # Game data counts
             async with aiosqlite.connect(self.databases["weapons"]) as db:
                 cursor = await db.execute("SELECT COUNT(*) FROM weapons")
-                counts["weapons"] = (await cursor.fetchone())[0]
+                row = await cursor.fetchone()
+                counts["weapons"] = row[0] if row else 0
 
             async with aiosqlite.connect(self.databases["attachments"]) as db:
                 cursor = await db.execute("SELECT COUNT(*) FROM attachments")
-                counts["attachments"] = (await cursor.fetchone())[0]
+                row = await cursor.fetchone()
+                counts["attachments"] = row[0] if row else 0
 
             async with aiosqlite.connect(self.databases["resources"]) as db:
                 cursor = await db.execute("SELECT COUNT(*) FROM resources")
-                counts["resources"] = (await cursor.fetchone())[0]
+                row = await cursor.fetchone()
+                counts["resources"] = row[0] if row else 0
 
             async with aiosqlite.connect(self.databases["crafting"]) as db:
                 cursor = await db.execute("SELECT COUNT(*) FROM blueprints")
-                counts["blueprints"] = (await cursor.fetchone())[0]
+                row = await cursor.fetchone()
+                counts["blueprints"] = row[0] if row else 0
 
                 cursor = await db.execute("SELECT COUNT(*) FROM blueprint_materials")
-                counts["blueprint_materials"] = (await cursor.fetchone())[0]
+                row = await cursor.fetchone()
+                counts["blueprint_materials"] = row[0] if row else 0
 
         except Exception as e:
             logger.error(f"Error getting counts: {e}")

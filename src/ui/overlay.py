@@ -6,7 +6,7 @@ import logging
 import os
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Optional
 
 from PyQt6.QtCore import QPoint, Qt, QThread, QTimer
 from PyQt6.QtGui import (
@@ -95,7 +95,7 @@ class ScreenshotWorker(QThread):
             filename = f"{self.event_type}_{self.player}_{self.value:.2f}ped_{timestamp}.png"
             filepath = os.path.join(self.screenshot_dir, filename)
 
-            pixmap = screen.grabWindow(0)
+            pixmap = screen.grabWindow(0)  # type: ignore[arg-type]
             pixmap.save(filepath)
             logger.info(f"[OVERLAY] Screenshot saved: {filepath}")
         except Exception as e:

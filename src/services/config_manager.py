@@ -3,18 +3,18 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from src.utils.paths import ensure_user_data_dir
 
 
 class ConfigManager:
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: Optional[str] = None):
         if config_path:
             self.config_path = Path(config_path)
         else:
             self.config_path = ensure_user_data_dir() / "config.json"
-        self.config = {}
+        self.config: dict[str, Any] = {}
 
     async def initialize(self):
         """Load configuration from file"""

@@ -6,7 +6,7 @@ import asyncio
 import logging
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import aiosqlite
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 class GameDataService:
     """Async data access service for game data using separate databases"""
 
-    def __init__(self, db_dir: Path = None):
+    def __init__(self, db_dir: Optional[Path] = None):
         if db_dir is None:
             db_dir = ensure_user_data_dir()
         self.db_dir = db_dir
@@ -366,7 +366,7 @@ class GameDataService:
         return blueprints
 
     async def calculate_blueprint_cost(
-        self, blueprint_name: str, resource_values: dict[str, float] = None
+        self, blueprint_name: str, resource_values: Optional[dict[str, float]] = None
     ) -> float:
         """Calculate total material cost for a blueprint"""
         blueprint = await self.get_blueprint_by_name(blueprint_name)

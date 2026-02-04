@@ -8,7 +8,7 @@ import logging
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import (
@@ -83,6 +83,21 @@ class TabbedMainWindow(QMainWindow):
 
         # Initialize overlay early so it can receive events
         self.overlay = SessionOverlay(self.db_manager, self.config_manager)
+
+        # Stub attributes for mypy
+        self.tab_buttons: dict[str, QPushButton] = {}
+        self.status_indicator: Optional[QLabel] = None
+        self.start_run_btn: Optional[QPushButton] = None
+        self.streamer_ui_btn: Optional[QPushButton] = None
+        self.run_log_table: Optional[Any] = None
+        self.item_breakdown_table: Optional[Any] = None
+        self.loot_summary_labels: list[QLabel] = []
+        self.chat_log_path: str = ""
+        self.chat_location_text: Optional[Any] = None
+        self.character_name: str = ""
+        self._refresh_after_session_deletion: str = ""
+        self.toggle_monitoring: str = ""
+
         logger.info("TabbedMainWindow initialization complete")
 
     def setup_ui(self):
@@ -431,14 +446,20 @@ class TabbedMainWindow(QMainWindow):
             loadout_ok = True
 
         if chat_log_ok and character_name_ok and loadout_ok:
-            self.status_indicator.status = "green"
-            self.start_run_btn.setEnabled(True)
+            if self.status_indicator is not None:
+                self.status_indicator.status = "green"
+            if self.start_run_btn is not None:
+                self.start_run_btn.setEnabled(True)
         elif chat_log_ok and (character_name_ok or loadout_ok):
-            self.status_indicator.status = "yellow"
-            self.start_run_btn.setEnabled(False)
+            if self.status_indicator is not None:
+                self.status_indicator.status = "yellow"
+            if self.start_run_btn is not None:
+                self.start_run_btn.setEnabled(False)
         else:
-            self.status_indicator.status = "red"
-            self.start_run_btn.setEnabled(False)
+            if self.status_indicator is not None:
+                self.status_indicator.status = "red"
+            if self.start_run_btn is not None:
+                self.start_run_btn.setEnabled(False)
 
     def update_status(self):
         """Update status periodically"""

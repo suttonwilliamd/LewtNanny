@@ -5,7 +5,7 @@ Adapted from LootNanny's ConfigTab with similar functionality
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -256,8 +256,8 @@ class ConfigTab(QWidget):
             }
         """)
 
-        header = self.loadout_table.horizontalHeader()
-        if header:
+        header: QHeaderView = self.loadout_table.horizontalHeader()
+        if header is not None:
             try:
                 if hasattr(QHeaderView, "setSectionResizeMode"):
                     header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
@@ -1100,27 +1100,27 @@ class LoadoutDialog(QDialog):
 
     def get_loadout(self) -> WeaponLoadout | None:
         """Get the loadout from dialog"""
-        name = self.name_edit.text()
+        name: str = self.name_edit.text()
         if not name:
             name = f"Loadout {1}"
 
-        weapon = self.weapon_combo.currentText()
+        weapon: str = self.weapon_combo.currentText()
         if not weapon:
             return None
 
-        amp = self.amp_combo.currentText()
+        amp: Optional[str] = self.amp_combo.currentText()
         if amp == "None":
             amp = None
 
-        scope = self.scope_combo.currentText()
+        scope: Optional[str] = self.scope_combo.currentText()
         if scope == "None":
             scope = None
 
-        sight_1 = self.sight1_combo.currentText()
+        sight_1: Optional[str] = self.sight1_combo.currentText()
         if sight_1 == "None":
             sight_1 = None
 
-        sight_2 = self.sight2_combo.currentText()
+        sight_2: Optional[str] = self.sight2_combo.currentText()
         if sight_2 == "None":
             sight_2 = None
 

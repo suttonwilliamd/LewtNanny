@@ -6,6 +6,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -36,11 +37,11 @@ class TwitchConfig:
 class TwitchBot:
     """Twitch IRC bot for LewtNanny"""
 
-    def __init__(self, db_manager=None, config: TwitchConfig | None = None):
+    def __init__(self, db_manager=None, config: Optional[TwitchConfig] = None):
         self.db_manager = db_manager
         self.config = config or TwitchConfig()
-        self.reader = None
-        self.writer = None
+        self.reader: Optional[asyncio.StreamReader] = None
+        self.writer: Optional[asyncio.StreamWriter] = None
         self.connected = False
         self.last_command_time: dict[str, datetime] = {}
         self.message_queue: asyncio.Queue = asyncio.Queue()
@@ -106,8 +107,9 @@ class TwitchBot:
 
         if message.startswith("PING"):
             pong_msg = "PONG :tmi.twitch.tv\r\n"
-            self.writer.write(pong_msg.encode())
-            await self.writer.drain()
+            if self.writer:
+                self.writer.write(pong_msg.encode())
+                await self.writer.drain()
             return
 
         if "PRIVMSG" in message:

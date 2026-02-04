@@ -7,7 +7,7 @@ import json
 import logging
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QColor, QFont
@@ -104,10 +104,11 @@ class CraftingTabWidget(QWidget):
                         WHERE materials IS NOT NULL AND materials != '[]' AND materials != ''
                     """)
                     rows = await cursor.fetchall()
-                    logger.info(f"Database query returned {len(rows)} blueprint rows")
+                    rows_list = list(rows) if rows else []
+                    logger.info(f"Database query returned {len(rows_list)} blueprint rows")
 
                     blueprints = {}
-                    for row in rows:
+                    for row in rows_list:
                         try:
                             materials = json.loads(row[2]) if isinstance(row[2], str) else row[2]
                             if materials and isinstance(materials, list) and len(materials) > 0:
@@ -133,11 +134,12 @@ class CraftingTabWidget(QWidget):
                             WHERE materials IS NOT NULL AND materials != '[]' AND materials != ''
                         """)
                         rows = await cursor.fetchall()
+                        rows_list = list(rows) if rows else []
                         logger.info(
-                            f"After population, database query returned {len(rows)} blueprint rows"
+                            f"After population, database query returned {len(rows_list)} blueprint rows"
                         )
 
-                        for row in rows:
+                        for row in rows_list:
                             try:
                                 materials = (
                                     json.loads(row[2]) if isinstance(row[2], str) else row[2]
@@ -253,9 +255,9 @@ class CraftingTabWidget(QWidget):
 
         layout.addStretch()
 
-    def showEvent(self, event):  # noqa: N802
+    def showEvent(self, a0):  # noqa: N802
         """Called when the widget becomes visible"""
-        super().showEvent(event)
+        super().showEvent(a0)
         # Update blueprint dropdown when widget becomes visible
         if hasattr(self, "blueprint_combo") and self.blueprint_combo:
             self.update_blueprint_dropdown()
@@ -329,12 +331,13 @@ class CraftingTabWidget(QWidget):
         self.materials_table.setAlternatingRowColors(True)
 
         header = self.materials_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        if header is not None:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
 
         layout.addWidget(self.materials_table)
         section.setLayout(layout)
@@ -594,10 +597,11 @@ class CraftingTabWidget(QWidget):
         self.materials_table.setSortingEnabled(True)
 
         header = self.materials_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        if header is not None:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
 
         layout.addWidget(self.materials_table)
 
@@ -759,11 +763,12 @@ class CraftingTabWidget(QWidget):
         self.craft_history_table.setSortingEnabled(True)
 
         header = self.craft_history_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        if header is not None:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+            header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
 
         layout.addWidget(self.craft_history_table)
 

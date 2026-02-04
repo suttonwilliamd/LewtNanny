@@ -171,11 +171,12 @@ class CostManager:
             )
 
             # Update main UI totals to include crafting costs
-            current_ui_cost = float(
-                self.parent.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0]
-            )
-            new_ui_cost = current_ui_cost + abs(cost)
-            self.parent.loot_summary_labels["Total Cost"].setText(f"{new_ui_cost:.2f} PED")
+            if len(self.parent.loot_summary_labels) > 2:  # Ensure Total Cost label exists
+                current_ui_cost = float(
+                    self.parent.loot_summary_labels[2].text().replace(",", "").split()[0]
+                )
+                new_ui_cost = current_ui_cost + abs(cost)
+                self.parent.loot_summary_labels[2].setText(f"{new_ui_cost:.2f} PED")
 
             logger.info(f"Added crafting cost: {abs(cost):.2f} PED to spent total")
 

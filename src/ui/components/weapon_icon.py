@@ -4,7 +4,7 @@ Displays stylized SVG icons for different weapon types
 
 import logging
 
-from PyQt6.QtCore import QRect, Qt
+from PyQt6.QtCore import QRect, QRectF, Qt
 from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap, QRadialGradient
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
@@ -132,11 +132,22 @@ class WeaponIconPainter:
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Barrel
-        painter.drawRect(center - 3 * scale, center - 12 * scale, 6 * scale, 18 * scale)
+        painter.drawRect(
+            int(center - 3 * scale), int(center - 12 * scale), int(6 * scale), int(18 * scale)
+        )
         # Grip
-        painter.drawRect(center - 2 * scale, center + 4 * scale, 4 * scale, 10 * scale)
+        painter.drawRect(
+            int(center - 2 * scale), int(center + 4 * scale), int(4 * scale), int(10 * scale)
+        )
         # Trigger guard
-        painter.drawArc(center - 5 * scale, center + 2 * scale, 10 * scale, 10 * scale, 0, 180 * 16)
+        painter.drawArc(
+            int(center - 5 * scale),
+            int(center + 2 * scale),
+            int(10 * scale),
+            int(10 * scale),
+            0,
+            180 * 16,
+        )
 
     @staticmethod
     def _draw_rifle(painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor):
@@ -145,13 +156,21 @@ class WeaponIconPainter:
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Stock
-        painter.drawRect(center - 18 * scale, center - 4 * scale, 12 * scale, 8 * scale)
+        painter.drawRect(
+            int(center - 18 * scale), int(center - 4 * scale), int(12 * scale), int(8 * scale)
+        )
         # Body
-        painter.drawRect(center - 6 * scale, center - 8 * scale, 20 * scale, 12 * scale)
+        painter.drawRect(
+            int(center - 6 * scale), int(center - 8 * scale), int(20 * scale), int(12 * scale)
+        )
         # Barrel
-        painter.drawRect(center + 14 * scale, center - 4 * scale, 12 * scale, 4 * scale)
+        painter.drawRect(
+            int(center + 14 * scale), int(center - 4 * scale), int(12 * scale), int(4 * scale)
+        )
         # Scope
-        painter.drawRect(center - 2 * scale, center - 14 * scale, 8 * scale, 6 * scale)
+        painter.drawRect(
+            int(center - 2 * scale), int(center - 14 * scale), int(8 * scale), int(6 * scale)
+        )
 
     @staticmethod
     def _draw_shotgun(
@@ -162,13 +181,21 @@ class WeaponIconPainter:
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Stock
-        painter.drawRect(center - 20 * scale, center - 3 * scale, 16 * scale, 6 * scale)
+        painter.drawRect(
+            int(center - 20 * scale), int(center - 3 * scale), int(16 * scale), int(6 * scale)
+        )
         # Body
-        painter.drawRect(center - 4 * scale, center - 6 * scale, 12 * scale, 8 * scale)
+        painter.drawRect(
+            int(center - 4 * scale), int(center - 6 * scale), int(12 * scale), int(8 * scale)
+        )
         # Barrels (double barrel)
-        painter.drawRect(center + 8 * scale, center - 8 * scale, 16 * scale, 10 * scale)
+        painter.drawRect(
+            int(center + 8 * scale), int(center - 8 * scale), int(16 * scale), int(10 * scale)
+        )
         # Pump
-        painter.drawRect(center - 8 * scale, center - 10 * scale, 4 * scale, 12 * scale)
+        painter.drawRect(
+            int(center - 8 * scale), int(center - 10 * scale), int(4 * scale), int(12 * scale)
+        )
 
     @staticmethod
     def _draw_melee(painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor):
@@ -185,7 +212,9 @@ class WeaponIconPainter:
         path.closeSubpath()
         painter.drawPath(path)
         # Handle
-        painter.drawRect(center - 2 * scale, center + 18 * scale, 4 * scale, 8 * scale)
+        painter.drawRect(
+            int(center - 2 * scale), int(center + 18 * scale), int(4 * scale), int(8 * scale)
+        )
 
     @staticmethod
     def _draw_flamethrower(
@@ -197,12 +226,19 @@ class WeaponIconPainter:
 
         # Tank
         painter.drawRoundedRect(
-            center - 6 * scale, center, 12 * scale, 14 * scale, 2 * scale, 2 * scale
+            int(center - 6 * scale),
+            int(center),
+            int(12 * scale),
+            int(14 * scale),
+            int(2 * scale),
+            int(2 * scale),
         )
         # Barrel
-        painter.drawRect(center - 4 * scale, center - 16 * scale, 8 * scale, 18 * scale)
+        painter.drawRect(
+            int(center - 4 * scale), int(center - 16 * scale), int(8 * scale), int(18 * scale)
+        )
         # Nozzle
-        painter.drawEllipse(center, center - 18 * scale, 6 * scale, 4 * scale)
+        painter.drawEllipse(int(center), int(center - 18 * scale), int(6 * scale), int(4 * scale))
 
     @staticmethod
     def _draw_bow(painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor):
@@ -212,16 +248,28 @@ class WeaponIconPainter:
 
         # Bow curve
         painter.drawArc(
-            center - 8 * scale, center - 16 * scale, 16 * scale, 32 * scale, 0, 180 * 16
+            int(center - 8 * scale),
+            int(center - 16 * scale),
+            int(16 * scale),
+            int(32 * scale),
+            0,
+            180 * 16,
         )
         # String
         painter.drawLine(
-            center - 8 * scale, center - 16 * scale, center - 8 * scale, center + 16 * scale
+            int(center - 8 * scale),
+            int(center - 16 * scale),
+            int(center - 8 * scale),
+            int(center + 16 * scale),
         )
         # Arrow
-        painter.drawLine(center, center - 14 * scale, center, center + 14 * scale)
+        painter.drawLine(
+            int(center), int(center - 14 * scale), int(center), int(center + 14 * scale)
+        )
         # Grip
-        painter.drawRect(center - 2 * scale, center - 2 * scale, 4 * scale, 4 * scale)
+        painter.drawRect(
+            int(center - 2 * scale), int(center - 2 * scale), int(4 * scale), int(4 * scale)
+        )
 
     @staticmethod
     def _draw_mindforce(
@@ -232,15 +280,15 @@ class WeaponIconPainter:
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Orb
-        gradient = QRadialGradient(center, center, 12 * scale)
+        gradient = QRadialGradient(center, center, int(12 * scale))
         gradient.setColorAt(0, accent.lighter(150))
         gradient.setColorAt(0.7, accent)
         gradient.setColorAt(1, Qt.GlobalColor.transparent)
         painter.setBrush(gradient)
-        painter.drawEllipse(center, center, 16 * scale, 16 * scale)
+        painter.drawEllipse(int(center), int(center), int(16 * scale), int(16 * scale))
         # Ring
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawEllipse(center, center, 20 * scale, 8 * scale)
+        painter.drawEllipse(int(center), int(center), int(20 * scale), int(8 * scale))
 
     @staticmethod
     def _draw_default(
@@ -251,8 +299,12 @@ class WeaponIconPainter:
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Generic weapon shape
-        painter.drawRect(center - 4 * scale, center - 14 * scale, 8 * scale, 24 * scale)
-        painter.drawRect(center - 6 * scale, center + 8 * scale, 12 * scale, 4 * scale)
+        painter.drawRect(
+            int(center - 4 * scale), int(center - 14 * scale), int(8 * scale), int(24 * scale)
+        )
+        painter.drawRect(
+            int(center - 6 * scale), int(center + 8 * scale), int(12 * scale), int(4 * scale)
+        )
 
 
 class WeaponIconLabel(QLabel):

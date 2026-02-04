@@ -3,11 +3,12 @@
 import logging
 import sys
 from pathlib import Path
+from typing import Optional
 
 from src.utils.paths import ensure_user_data_dir, get_default_log_path
 
 
-def setup_logger(log_file: str = None):
+def setup_logger(log_file: Optional[str] = None):
     """Setup logging configuration"""
     log_path = Path(log_file) if log_file else get_default_log_path()
     ensure_user_data_dir()

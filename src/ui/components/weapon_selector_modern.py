@@ -3,6 +3,7 @@ Simplified, game-inspired weapon selection and attachment management
 """
 
 import logging
+from typing import Optional
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -87,7 +88,7 @@ class EquipmentSlot(QWidget):
             self.set_item(selected)
             self.item_selected.emit(self.slot_name, selected)
 
-    def set_item(self, item_name: str):
+    def set_item(self, item_name: Optional[str]):
         """Set the item in this slot"""
         self.current_item = item_name
         if item_name:
@@ -249,8 +250,8 @@ class EnhancementPanel(QWidget):
         layout.addWidget(value_label)
 
         # Store reference
-        widget.slider = slider
-        widget.value_label = value_label
+        widget.slider: QSlider = slider
+        widget.value_label: QLabel = value_label
 
         return widget
 
@@ -260,7 +261,7 @@ class EnhancementPanel(QWidget):
         self.content_frame.setVisible(not self.is_collapsed)
         self.toggle_btn.setText("▶" if self.is_collapsed else "▼")
 
-    def get_values(self) -> dict:
+    def get_values(self) -> dict[str, int]:
         """Get current enhancement values"""
         return {name: widget.slider.value() for name, widget in self.sliders.items()}
 

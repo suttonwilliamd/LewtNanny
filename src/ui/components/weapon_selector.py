@@ -5,7 +5,7 @@ Complete weapon selection, attachment configuration, and cost analysis
 import asyncio
 import logging
 from decimal import Decimal
-from typing import Any
+from typing import Any, Optional
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -48,7 +48,9 @@ class SimpleValueLabel(QLabel):
         display = (
             f"{new_value:.5f}"
             if new_value < 0.01
-            else f"{new_value:.4f}" if new_value < 1 else f"{new_value:.2f}"
+            else f"{new_value:.4f}"
+            if new_value < 1
+            else f"{new_value:.2f}"
         )
         self.setText(display)
 
@@ -417,20 +419,16 @@ class WeaponSelector(QWidget):
         """)
 
         header = self.weapon_table.horizontalHeader()
-        try:
-            # Try PyQt6 standard approach
-            if hasattr(QHeaderView, "ResizeMode"):
-                header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-                for i in range(1, 5):
-                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
-            else:
-                # PyQt6 with older style enums
-                header.setSectionResizeMode(0, 3)  # Stretch
-                for i in range(1, 5):
-                    header.setSectionResizeMode(i, 1)  # ResizeToContents
-        except (AttributeError, TypeError):
-            # If all else fails, just let Qt use defaults
-            pass
+        if header is not None:
+            try:
+                # PyQt6 standard approach
+                if hasattr(QHeaderView, "ResizeMode"):
+                    header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+                    for i in range(1, 5):
+                        header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+            except (AttributeError, TypeError):
+                # Fallback - let Qt use defaults
+                pass
 
         filter_layout.addWidget(self.weapon_table)
 
@@ -527,15 +525,15 @@ class WeaponSelector(QWidget):
         enh_layout.setSpacing(8)
 
         self.damage_slider = EnhancementSlider("DAMAGE", "⚔️", "#E74C3C")
-        self.damage_slider.valueChanged.connect(self._on_enhancement_changed)
+        self.damage_slider.value_changed.connect(self._on_enhancement_changed)
         enh_layout.addWidget(self.damage_slider)
 
         self.accuracy_slider = EnhancementSlider("ACCURACY", "🎯", "#3498DB")
-        self.accuracy_slider.valueChanged.connect(self._on_enhancement_changed)
+        self.accuracy_slider.value_changed.connect(self._on_enhancement_changed)
         enh_layout.addWidget(self.accuracy_slider)
 
         self.economy_slider = EnhancementSlider("ECONOMY", "💰", "#2ECC71")
-        self.economy_slider.valueChanged.connect(self._on_enhancement_changed)
+        self.economy_slider.value_changed.connect(self._on_enhancement_changed)
         enh_layout.addWidget(self.economy_slider)
 
         attach_layout.addWidget(enh_group)

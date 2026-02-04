@@ -2,7 +2,7 @@
 
 import os
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 
 @dataclass
@@ -35,19 +35,24 @@ class AppConfig:
         config = cls()
 
         # Override from environment variables
-        if os.getenv("LEWTNANNY_UI_FRAMEWORK"):
-            config.ui_framework = os.getenv("LEWTNANNY_UI_FRAMEWORK")
-        if os.getenv("LEWTNANNY_DEBUG"):
-            config.debug_mode = os.getenv("LEWTNANNY_DEBUG").lower() in ("true", "1", "yes")
-        if os.getenv("LEWTNANNY_ENABLE_OCR"):
-            enable_ocr_value = os.getenv("LEWTNANNY_ENABLE_OCR").lower()
+        ui_framework = os.getenv("LEWTNANNY_UI_FRAMEWORK")
+        if ui_framework is not None:
+            config.ui_framework = ui_framework
+        debug_env = os.getenv("LEWTNANNY_DEBUG")
+        if debug_env is not None:
+            config.debug_mode = debug_env.lower() in ("true", "1", "yes")
+        enable_ocr_env = os.getenv("LEWTNANNY_ENABLE_OCR")
+        if enable_ocr_env is not None:
+            enable_ocr_value = enable_ocr_env.lower()
             config.enable_ocr = enable_ocr_value in ("true", "1", "yes")
-        if os.getenv("LEWTNANNY_ENABLE_CHAT"):
-            enable_chat_value = os.getenv("LEWTNANNY_ENABLE_CHAT").lower()
+        enable_chat_env = os.getenv("LEWTNANNY_ENABLE_CHAT")
+        if enable_chat_env is not None:
+            enable_chat_value = enable_chat_env.lower()
             config.enable_chat_monitoring = enable_chat_value in ("true", "1", "yes")
-        if os.getenv("LEWTNANNY_WINDOW_SIZE"):
+        window_size_env = os.getenv("LEWTNANNY_WINDOW_SIZE")
+        if window_size_env is not None:
             try:
-                width, height = map(int, os.getenv("LEWTNANNY_WINDOW_SIZE").split("x"))
+                width, height = map(int, window_size_env.split("x"))
                 config.window_size = (width, height)
             except ValueError:
                 pass  # Use default if parsing fails

@@ -4,6 +4,7 @@ Clean, focused interface with essential controls and metrics
 
 import logging
 from datetime import datetime
+from typing import Optional
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -337,10 +338,11 @@ class StreamlinedDashboard(QWidget):
         self.event_table.setAlternatingRowColors(True)
 
         header = self.event_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        header.setDefaultSectionSize(0, 60)
-        header.setDefaultSectionSize(1, 120)
+        if header is not None:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            header.setDefaultSectionSize(0, 60)  # type: ignore[call-overload]
+            header.setDefaultSectionSize(1, 120)  # type: ignore[call-overload]
 
         panel_layout.addWidget(self.event_table)
         panel.setLayout(panel_layout)
@@ -362,7 +364,7 @@ class StreamlinedDashboard(QWidget):
     def _on_monitoring_toggled(self, checked: bool):
         """Toggle monitoring state"""
         self.is_monitoring = checked
-        self.monitor_toggled.emit(checked)
+        self.monitor_toggled.emit(checked)  # type: ignore[attr-defined]
 
         # Update button text and style
         if hasattr(self, "monitor_btn"):
