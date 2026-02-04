@@ -1,5 +1,4 @@
-"""Cost calculation and management logic for the main window
-"""
+"""Cost calculation and management logic for the main window"""
 
 import asyncio
 import logging
@@ -20,9 +19,7 @@ class CostManager:
             new_cost = self.calculate_cost_per_attack()
             if new_cost > 0:
                 self.parent.cost_per_attack = new_cost
-                logger.info(
-                    f"Cost per attack calculated: {self.parent.cost_per_attack:.6f} PED"
-                )
+                logger.info(f"Cost per attack calculated: {self.parent.cost_per_attack:.6f} PED")
                 if self.parent.overlay:
                     self.parent.overlay.set_cost_per_attack(self.parent.cost_per_attack)
                 self.update_total_cost_display()
@@ -30,15 +27,10 @@ class CostManager:
     def calculate_cost_per_attack(self) -> float:
         """Calculate cost per attack from the active loadout"""
         try:
-            if (
-                not hasattr(self.parent, "config_widget")
-                or not self.parent.config_widget
-            ):
+            if not hasattr(self.parent, "config_widget") or not self.parent.config_widget:
                 return 0.0
 
-            active_loadout = (
-                self.parent.config_widget.active_loadout_combo.currentData()
-            )
+            active_loadout = self.parent.config_widget.active_loadout_combo.currentData()
             if not active_loadout:
                 return 0.0
 
@@ -93,9 +85,7 @@ class CostManager:
                         f"FALLBACK: Calculated cost_per_attack: {self.parent.cost_per_attack:.6f} PED"
                     )
                     if self.parent.overlay:
-                        self.parent.overlay.set_cost_per_attack(
-                            self.parent.cost_per_attack
-                        )
+                        self.parent.overlay.set_cost_per_attack(self.parent.cost_per_attack)
                 else:
                     logger.warning(
                         f"FALLBACK: Could not calculate valid cost_per_attack (got {calculated_cost:.6f})"
@@ -120,15 +110,10 @@ class CostManager:
 
             # Get current total cost and add only the incremental shot cost
             current_total = float(
-                self.parent.loot_summary_labels["Total Cost"]
-                .text()
-                .replace(",", "")
-                .split()[0]
+                self.parent.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0]
             )
             new_total = current_total + shot_cost_delta
-            self.parent.loot_summary_labels["Total Cost"].setText(
-                f"{new_total:.2f} PED"
-            )
+            self.parent.loot_summary_labels["Total Cost"].setText(f"{new_total:.2f} PED")
 
             # Store current shot cost for next calculation
             self.parent._last_shot_cost = shot_cost
@@ -139,18 +124,13 @@ class CostManager:
                 self.parent.overlay.overlay_widget._update_stats_display()
 
             total_return_str = (
-                self.parent.loot_summary_labels["Total Return"]
-                .text()
-                .replace(",", "")
-                .split()[0]
+                self.parent.loot_summary_labels["Total Return"].text().replace(",", "").split()[0]
             )
             total_return = float(total_return_str)
 
             if new_total > 0:
                 return_pct = (total_return / new_total) * 100
-                self.parent.loot_summary_labels["% Return"].setText(
-                    f"{return_pct:.1f}%"
-                )
+                self.parent.loot_summary_labels["% Return"].setText(f"{return_pct:.1f}%")
             elif total_return > 0:
                 self.parent.loot_summary_labels["% Return"].setText("100.0%")
 
@@ -173,14 +153,10 @@ class CostManager:
                 and hasattr(self.parent.overlay.overlay_widget, "_stats")
             ):
                 current_cost = float(
-                    self.parent.overlay.overlay_widget._stats.get(
-                        "total_cost", Decimal("0")
-                    )
+                    self.parent.overlay.overlay_widget._stats.get("total_cost", Decimal("0"))
                 )
                 new_cost = current_cost + abs(cost)  # Cost is positive for spending
-                self.parent.overlay.overlay_widget._stats["total_cost"] = Decimal(
-                    str(new_cost)
-                )
+                self.parent.overlay.overlay_widget._stats["total_cost"] = Decimal(str(new_cost))
 
                 # Update overlay display
                 self.parent.overlay.overlay_widget._update_stats_display()
@@ -196,15 +172,10 @@ class CostManager:
 
             # Update main UI totals to include crafting costs
             current_ui_cost = float(
-                self.parent.loot_summary_labels["Total Cost"]
-                .text()
-                .replace(",", "")
-                .split()[0]
+                self.parent.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0]
             )
             new_ui_cost = current_ui_cost + abs(cost)
-            self.parent.loot_summary_labels["Total Cost"].setText(
-                f"{new_ui_cost:.2f} PED"
-            )
+            self.parent.loot_summary_labels["Total Cost"].setText(f"{new_ui_cost:.2f} PED")
 
             logger.info(f"Added crafting cost: {abs(cost):.2f} PED to spent total")
 

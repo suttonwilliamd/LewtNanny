@@ -152,9 +152,7 @@ class CombatTabWidget(QWidget):
 
         self.kills_table = QTableWidget()
         self.kills_table.setColumnCount(5)
-        self.kills_table.setHorizontalHeaderLabels(
-            ["#", "Enemy", "Damage", "Time", "Type"]
-        )
+        self.kills_table.setHorizontalHeaderLabels(["#", "Enemy", "Damage", "Time", "Type"])
         self.kills_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.kills_table.setAlternatingRowColors(True)
         self.kills_table.setSortingEnabled(True)
@@ -196,9 +194,7 @@ class CombatTabWidget(QWidget):
                 value_lbl.setText(f"{self.session_stats['total_damage_received']:.2f}")
             elif "Ratio" in label:
                 if self.session_stats["deaths"] > 0:
-                    ratio = (
-                        self.session_stats["total_kills"] / self.session_stats["deaths"]
-                    )
+                    ratio = self.session_stats["total_kills"] / self.session_stats["deaths"]
                     value_lbl.setText(f"{ratio:.1f}")
                 else:
                     ratio = (
@@ -237,9 +233,7 @@ class CombatTabWidget(QWidget):
                     "action": "kill",
                     "enemy": parsed_data.get("creature", "Unknown"),
                     "damage": parsed_data.get("value", 0),
-                    "timestamp": parsed_data.get(
-                        "timestamp", datetime.now().isoformat()
-                    ),
+                    "timestamp": parsed_data.get("timestamp", datetime.now().isoformat()),
                     "type": "Global" if parsed_data.get("hof") else "Kill",
                 }
                 self.combat_data.append(kill_event)
@@ -277,9 +271,7 @@ class CombatTabWidget(QWidget):
 
         if action == "kill":
             self.session_stats["total_kills"] += 1
-            logger.debug(
-                f"Processed kill. Total kills: {self.session_stats['total_kills']}"
-            )
+            logger.debug(f"Processed kill. Total kills: {self.session_stats['total_kills']}")
         elif "damage_taken" in parsed_data:
             damage = parsed_data.get("damage_taken", 0)
             self.session_stats["total_damage_received"] += float(damage)
@@ -312,9 +304,7 @@ class CombatTabWidget(QWidget):
     def update_kills_table(self):
         """Update the kills table with recent combat data"""
         kills_data = [
-            event
-            for event in self.combat_data
-            if event.get("action", "").lower() == "kill"
+            event for event in self.combat_data if event.get("action", "").lower() == "kill"
         ]
         kills_data.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
@@ -322,9 +312,7 @@ class CombatTabWidget(QWidget):
 
         for row, kill_event in enumerate(kills_data[:20]):
             # Kill number
-            self.kills_table.setItem(
-                row, 0, QTableWidgetItem(str(len(kills_data) - row))
-            )
+            self.kills_table.setItem(row, 0, QTableWidgetItem(str(len(kills_data) - row)))
 
             # Enemy name
             enemy = kill_event.get("enemy", kill_event.get("target", "Unknown"))
@@ -460,15 +448,11 @@ class CombatTabWidget(QWidget):
                 self.kills_table.setItem(row, 2, QTableWidgetItem(f"{damage:.2f}"))
 
         elif event_type == "damage_dealt":
-            self.session_stats["total_damage_dealt"] += float(
-                event_data.get("damage", 0)
-            )
+            self.session_stats["total_damage_dealt"] += float(event_data.get("damage", 0))
             self.session_stats["hits"] += 1
 
         elif event_type == "damage_received":
-            self.session_stats["total_damage_received"] += float(
-                event_data.get("damage", 0)
-            )
+            self.session_stats["total_damage_received"] += float(event_data.get("damage", 0))
 
         elif event_type == "death":
             self.session_stats["deaths"] += 1

@@ -1,5 +1,4 @@
-"""Basic test configuration and utilities for LewtNanny
-"""
+"""Basic test configuration and utilities for LewtNanny"""
 
 import sys
 from pathlib import Path
@@ -36,15 +35,15 @@ def mock_config_manager():
 def sample_weapon_data():
     """Sample weapon data for testing"""
     return {
-        'id': '1',
-        'name': 'Korss H400 (L)',
-        'damage': 28,
-        'ammo_burn': 11,
-        'decay': 0.10,
-        'hits': 36,
-        'range': 55,
-        'reload_time': 3.0,
-        'weapon_type': 'Pistol'
+        "id": "1",
+        "name": "Korss H400 (L)",
+        "damage": 28,
+        "ammo_burn": 11,
+        "decay": 0.10,
+        "hits": 36,
+        "range": 55,
+        "reload_time": 3.0,
+        "weapon_type": "Pistol",
     }
 
 
@@ -52,12 +51,12 @@ def sample_weapon_data():
 def sample_attachment_data():
     """Sample attachment data for testing"""
     return {
-        'id': 'a1',
-        'name': 'A106 Amplifier',
-        'type': 'amplifier',
-        'damage_bonus': 0.5,
-        'ammo_bonus': 0,
-        'decay_modifier': 0.25
+        "id": "a1",
+        "name": "A106 Amplifier",
+        "type": "amplifier",
+        "damage_bonus": 0.5,
+        "ammo_bonus": 0,
+        "decay_modifier": 0.25,
     }
 
 
@@ -65,15 +64,12 @@ def sample_attachment_data():
 def sample_event_data():
     """Sample event data for testing"""
     return {
-        'timestamp': '2024-01-19T10:30:00',
-        'event_type': 'loot',
-        'activity_type': 'hunting',
-        'raw_message': 'You looted 10 PED',
-        'parsed_data': {
-            'amount': 10,
-            'currency': 'PED'
-        },
-        'session_id': 'test_session_123'
+        "timestamp": "2024-01-19T10:30:00",
+        "event_type": "loot",
+        "activity_type": "hunting",
+        "raw_message": "You looted 10 PED",
+        "parsed_data": {"amount": 10, "currency": "PED"},
+        "session_id": "test_session_123",
     }
 
 
@@ -111,9 +107,7 @@ def mock_qt_app():
 # Skip UI tests on headless environments
 def pytest_configure(config):
     """Configure pytest for UI tests"""
-    config.addinivalue_line(
-        "markers", "skip_ci: mark test to skip in CI environment"
-    )
+    config.addinivalue_line("markers", "skip_ci: mark test to skip in CI environment")
 
 
 def pytest_collection_modifyitems(config, items):

@@ -1,5 +1,4 @@
-"""Loot tab UI creation methods
-"""
+"""Loot tab UI creation methods"""
 
 import logging
 
@@ -38,9 +37,7 @@ class LootTabCreator:
         loot_layout.addWidget(run_log_section, 1)  # Give run log stretch priority
 
         item_breakdown_section = self.create_item_breakdown_section()
-        loot_layout.addWidget(
-            item_breakdown_section, 1
-        )  # Give item breakdown stretch priority
+        loot_layout.addWidget(item_breakdown_section, 1)  # Give item breakdown stretch priority
 
         logger.info("Loot tab created")
         return loot_widget
@@ -134,15 +131,11 @@ class LootTabCreator:
         self.parent.run_log_table.setHorizontalHeaderLabels(
             ["Status", "Start Time", "Duration", "Cost", "Return", "ROI", "Items"]
         )
-        self.parent.run_log_table.setSelectionBehavior(
-            QTableWidget.SelectionBehavior.SelectRows
-        )
+        self.parent.run_log_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.parent.run_log_table.setAlternatingRowColors(True)
         self.parent.run_log_table.setSortingEnabled(True)
         self.parent.run_log_table.setShowGrid(True)
-        self.parent.run_log_table.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu
-        )
+        self.parent.run_log_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.parent.run_log_table.customContextMenuRequested.connect(
             self.parent._show_run_log_context_menu
         )

@@ -40,13 +40,17 @@ class CostCalculationService:
             damage_mult = 1.0 + (loadout.damage_enh * 0.1)  # 10% per damage enhancer
             economy_mult = 1.0 - (loadout.economy_enh * 0.05)  # 5% reduction per economy enhancer
 
-            logger.debug(f"Multipliers: damage_mult={damage_mult:.3f}, economy_mult={economy_mult:.3f}")
+            logger.debug(
+                f"Multipliers: damage_mult={damage_mult:.3f}, economy_mult={economy_mult:.3f}"
+            )
 
             # Enhanced values after applying enhancers
             enhanced_decay = base_decay * damage_mult * economy_mult
             enhanced_ammo = base_ammo * damage_mult
 
-            logger.debug(f"After weapon enhancers: decay={enhanced_decay:.6f} PED, ammo={enhanced_ammo:.1f} PEC")
+            logger.debug(
+                f"After weapon enhancers: decay={enhanced_decay:.6f} PED, ammo={enhanced_ammo:.1f} PEC"
+            )
 
             # Add amplifier contribution
             if loadout.amplifier:
@@ -83,7 +87,9 @@ class CostCalculationService:
                     sight_ammo = sight.ammo if sight.ammo else 0
                     enhanced_decay += sight_decay
                     enhanced_ammo += sight_ammo
-                    logger.debug(f"Sight 1 added: decay={sight_decay:.6f} PED, ammo={sight_ammo} PEC")
+                    logger.debug(
+                        f"Sight 1 added: decay={sight_decay:.6f} PED, ammo={sight_ammo} PEC"
+                    )
                 else:
                     logger.warning(f"Sight 1 not found: {loadout.sight_1}")
 
@@ -96,7 +102,9 @@ class CostCalculationService:
                     sight_ammo = sight.ammo if sight.ammo else 0
                     enhanced_decay += sight_decay
                     enhanced_ammo += sight_ammo
-                    logger.debug(f"Sight 2 added: decay={sight_decay:.6f} PED, ammo={sight_ammo} PEC")
+                    logger.debug(
+                        f"Sight 2 added: decay={sight_decay:.6f} PED, ammo={sight_ammo} PEC"
+                    )
                 else:
                     logger.warning(f"Sight 2 not found: {loadout.sight_2}")
 
@@ -104,7 +112,9 @@ class CostCalculationService:
             ammo_cost_ped = enhanced_ammo / 10000.0
             total_cost_ped = enhanced_decay + ammo_cost_ped
 
-            logger.debug(f"FINAL RESULTS: decay={enhanced_decay:.6f} PED, ammo={enhanced_ammo:.1f} PEC ({ammo_cost_ped:.6f} PED)")
+            logger.debug(
+                f"FINAL RESULTS: decay={enhanced_decay:.6f} PED, ammo={enhanced_ammo:.1f} PEC ({ammo_cost_ped:.6f} PED)"
+            )
             logger.debug(f"TOTAL COST PER ATTACK: {total_cost_ped:.6f} PED")
 
             return total_cost_ped

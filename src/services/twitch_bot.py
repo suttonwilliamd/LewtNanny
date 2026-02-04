@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TwitchConfig:
     """Twitch bot configuration"""
+
     oauth_token: str = ""
     bot_name: str = ""
     channel: str = ""
@@ -53,10 +54,7 @@ class TwitchBot:
             return False
 
         try:
-            self.reader, self.writer = await asyncio.open_connection(
-                'irc.chat.twitch.tv',
-                6667
-            )
+            self.reader, self.writer = await asyncio.open_connection("irc.chat.twitch.tv", 6667)
 
             auth_msg = f"PASS oauth:{self.config.oauth_token}\r\n"
             auth_msg += f"NICK {self.config.bot_name}\r\n"
@@ -97,7 +95,7 @@ class TwitchBot:
                 if self.reader:
                     data = await self.reader.readline()
                     if data:
-                        await self._process_message(data.decode('utf-8', errors='ignore'))
+                        await self._process_message(data.decode("utf-8", errors="ignore"))
             except Exception as e:
                 logger.error(f"Error reading Twitch message: {e}")
                 await asyncio.sleep(1)
@@ -106,26 +104,26 @@ class TwitchBot:
         """Process incoming Twitch message"""
         logger.debug(f"Twitch message: {message.strip()}")
 
-        if message.startswith('PING'):
+        if message.startswith("PING"):
             pong_msg = "PONG :tmi.twitch.tv\r\n"
             self.writer.write(pong_msg.encode())
             await self.writer.drain()
             return
 
-        if 'PRIVMSG' in message:
+        if "PRIVMSG" in message:
             await self._handle_privmsg(message)
 
     async def _handle_privmsg(self, message: str):
         """Handle PRIVMSG from Twitch"""
         try:
-            parts = message.split(':', 2)
+            parts = message.split(":", 2)
             if len(parts) < 3:
                 return
 
-            user_info = parts[1].split('!')[0]
-            username = user_info.split('@')[0]
-            parts[1].split('#')[1] if '#' in parts[1] else ''
-            msg_content = parts[2].strip() if len(parts) > 2 else ''
+            user_info = parts[1].split("!")[0]
+            username = user_info.split("@")[0]
+            parts[1].split("#")[1] if "#" in parts[1] else ""
+            msg_content = parts[2].strip() if len(parts) > 2 else ""
 
             if msg_content.startswith(self.config.command_prefix):
                 command = msg_content[1:].split()[0].lower()
@@ -144,23 +142,23 @@ class TwitchBot:
 
         response = ""
 
-        if command == 'info':
+        if command == "info":
             response = self._cmd_info()
-        elif command == 'commands':
+        elif command == "commands":
             response = self._cmd_commands()
-        elif command == 'toploots':
+        elif command == "toploots":
             response = await self._cmd_toploots()
-        elif command == 'allreturns':
+        elif command == "allreturns":
             response = await self._cmd_allreturns()
-        elif command == 'stats':
+        elif command == "stats":
             response = await self._cmd_stats()
-        elif command == 'loadout':
+        elif command == "loadout":
             response = self._cmd_loadout()
-        elif command == 'bestrun':
+        elif command == "bestrun":
             response = await self._cmd_bestrun()
-        elif command == 'worstrun':
+        elif command == "worstrun":
             response = await self._cmd_worstrun()
-        elif command == 'skills':
+        elif command == "skills":
             response = await self._cmd_skills()
 
         if response:
@@ -171,7 +169,7 @@ class TwitchBot:
         if command not in self.last_command_time:
             return True
 
-        cooldown = self.config.cooldown_info if command == 'info' else self.config.cooldown_commands
+        cooldown = self.config.cooldown_info if command == "info" else self.config.cooldown_commands
         elapsed = (datetime.now() - self.last_command_time[command]).total_seconds()
         return elapsed >= cooldown
 

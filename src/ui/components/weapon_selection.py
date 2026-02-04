@@ -31,6 +31,7 @@ from src.services.weapon_service import (
 
 class WeaponSelectionSignals(QObject):
     """Signals for weapon selection component"""
+
     weapon_selected = pyqtSignal(WeaponStats)
     search_changed = pyqtSignal(str)
 
@@ -68,9 +69,9 @@ class WeaponTableWidget(QWidget):
         # Weapon table
         self.weapon_table = QTableWidget()
         self.weapon_table.setColumnCount(5)
-        self.weapon_table.setHorizontalHeaderLabels([
-            "Name", "Type", "Damage", "Ammo/Shot", "Decay"
-        ])
+        self.weapon_table.setHorizontalHeaderLabels(
+            ["Name", "Type", "Damage", "Ammo/Shot", "Decay"]
+        )
         self.weapon_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.weapon_table.setSortingEnabled(True)
         self.weapon_table.itemSelectionChanged.connect(self.on_weapon_selected)
@@ -208,12 +209,12 @@ class AttachmentSelectorWidget(QWidget):
 
         # Add amplifiers
         for attachment in self.attachments:
-            if attachment.attachment_type == 'amplifier':
+            if attachment.attachment_type == "amplifier":
                 self.amplifier_combo.addItem(attachment.name, attachment)
 
         # Add scopes
         for attachment in self.attachments:
-            if attachment.attachment_type == 'scope':
+            if attachment.attachment_type == "scope":
                 self.scope_combo.addItem(attachment.name, attachment)
 
     def on_selection_changed(self):
@@ -269,8 +270,13 @@ class CostAnalysisWidget(QWidget):
 
         # Apply monospace font to cost labels
         cost_font = QFont("Consolas, Monaco, monospace", 9)
-        for label in [self.base_cost_label, self.enhanced_cost_label,
-                     self.total_cost_label, self.ammo_cost_label, self.decay_cost_label]:
+        for label in [
+            self.base_cost_label,
+            self.enhanced_cost_label,
+            self.total_cost_label,
+            self.ammo_cost_label,
+            self.decay_cost_label,
+        ]:
             label.setFont(cost_font)
 
         cost_layout.addWidget(self.base_cost_label, 0, 0)
@@ -312,11 +318,15 @@ class CostAnalysisWidget(QWidget):
         # Update cost labels
         base_cost = enhanced_stats.base_weapon.calculate_base_cost_per_shot()
         self.base_cost_label.setText(f"Base Cost: {base_cost:.6f} PED/shot")
-        self.enhanced_cost_label.setText(f"Enhanced Cost: {enhanced_stats.total_cost_per_shot:.6f} PED/shot")
-        self.total_cost_label.setText(f"Total Cost: {enhanced_stats.total_cost_per_shot:.6f} PED/shot")
+        self.enhanced_cost_label.setText(
+            f"Enhanced Cost: {enhanced_stats.total_cost_per_shot:.6f} PED/shot"
+        )
+        self.total_cost_label.setText(
+            f"Total Cost: {enhanced_stats.total_cost_per_shot:.6f} PED/shot"
+        )
 
         # Calculate component costs
-        ammo_cost = enhanced_stats.ammo_burn / Decimal('10000')
+        ammo_cost = enhanced_stats.ammo_burn / Decimal("10000")
         decay_cost = enhanced_stats.decay
 
         self.ammo_cost_label.setText(f"Ammo Cost: {ammo_cost:.6f} PED/shot")

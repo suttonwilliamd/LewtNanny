@@ -54,9 +54,7 @@ class ConfigSignals(QObject):
 
     config_changed = pyqtSignal(str, object)
     loadout_changed = pyqtSignal()
-    stats_calculated = pyqtSignal(
-        float
-    )  # Signal when stats calculation completes with total cost
+    stats_calculated = pyqtSignal(float)  # Signal when stats calculation completes with total cost
 
 
 class ConfigTab(QWidget):
@@ -236,9 +234,7 @@ class ConfigTab(QWidget):
                 "Economy",
             ]
         )
-        self.loadout_table.setSelectionBehavior(
-            QTableWidget.SelectionBehavior.SelectRows
-        )
+        self.loadout_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.loadout_table.setSortingEnabled(True)
         self.loadout_table.itemSelectionChanged.connect(self._on_loadout_selected)
         self.loadout_table.setAlternatingRowColors(True)
@@ -266,9 +262,7 @@ class ConfigTab(QWidget):
                 if hasattr(QHeaderView, "setSectionResizeMode"):
                     header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
                     for i in range(1, 9):
-                        header.setSectionResizeMode(
-                            i, QHeaderView.ResizeMode.ResizeToContents
-                        )
+                        header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
             except (AttributeError, TypeError):
                 pass
 
@@ -385,9 +379,7 @@ class ConfigTab(QWidget):
                 min-width: 250px;
             }
         """)
-        self.active_loadout_combo.currentIndexChanged.connect(
-            self._on_active_loadout_changed
-        )
+        self.active_loadout_combo.currentIndexChanged.connect(self._on_active_loadout_changed)
         active_layout.addRow("Active Loadout:", self.active_loadout_combo)
 
         self.active_loadout_info = QLabel("No loadout selected")
@@ -462,20 +454,14 @@ class ConfigTab(QWidget):
 
         self.screenshots_checkbox = QCheckBox("Enable screenshots on loot/HOF")
         screenshot_enabled = self._config.get("screenshot.enabled", True)
-        self.screenshots_checkbox.setChecked(
-            screenshot_enabled if screenshot_enabled else False
-        )
+        self.screenshots_checkbox.setChecked(screenshot_enabled if screenshot_enabled else False)
         self.screenshots_checkbox.setStyleSheet("color: #E0E1E3;")
         form_layout.addRow("", self.screenshots_checkbox)
 
         self.screenshots_directory_text = QLineEdit()
         self.screenshots_directory_text.setPlaceholderText("Screenshot directory...")
-        screenshot_dir = self._config.get(
-            "screenshot.directory", "~/Documents/LewtNanny/"
-        )
-        self.screenshots_directory_text.setText(
-            screenshot_dir if screenshot_dir else ""
-        )
+        screenshot_dir = self._config.get("screenshot.directory", "~/Documents/LewtNanny/")
+        self.screenshots_directory_text.setText(screenshot_dir if screenshot_dir else "")
         self.screenshots_directory_text.setStyleSheet("""
             QLineEdit {
                 background: #1E2A3A;
@@ -491,9 +477,7 @@ class ConfigTab(QWidget):
         self.screenshots_delay = QSpinBox()
         self.screenshots_delay.setRange(0, 5000)
         screenshot_delay = self._config.get("screenshot.delay_ms", 500)
-        self.screenshots_delay.setValue(
-            int(screenshot_delay) if screenshot_delay else 500
-        )
+        self.screenshots_delay.setValue(int(screenshot_delay) if screenshot_delay else 500)
         self.screenshots_delay.setStyleSheet("""
             QSpinBox {
                 background: #1E2A3A;
@@ -506,9 +490,7 @@ class ConfigTab(QWidget):
         form_layout.addRow("Screenshot Delay (ms):", self.screenshots_delay)
 
         self.screenshot_threshold = QLineEdit()
-        self.screenshot_threshold.setPlaceholderText(
-            "Minimum PED value for screenshot..."
-        )
+        self.screenshot_threshold.setPlaceholderText("Minimum PED value for screenshot...")
         threshold = self._config.get("screenshot.threshold_ped", 10)
         self.screenshot_threshold.setText(str(threshold) if threshold else "10")
         self.screenshot_threshold.setStyleSheet("""
@@ -619,27 +601,13 @@ class ConfigTab(QWidget):
 
             self.loadout_table.setItem(row, 0, QTableWidgetItem(loadout.name))
             self.loadout_table.setItem(row, 1, QTableWidgetItem(loadout.weapon))
-            self.loadout_table.setItem(
-                row, 2, QTableWidgetItem(loadout.amplifier or "None")
-            )
-            self.loadout_table.setItem(
-                row, 3, QTableWidgetItem(loadout.scope or "None")
-            )
-            self.loadout_table.setItem(
-                row, 4, QTableWidgetItem(loadout.sight_1 or "None")
-            )
-            self.loadout_table.setItem(
-                row, 5, QTableWidgetItem(loadout.sight_2 or "None")
-            )
-            self.loadout_table.setItem(
-                row, 6, QTableWidgetItem(str(loadout.damage_enh))
-            )
-            self.loadout_table.setItem(
-                row, 7, QTableWidgetItem(str(loadout.accuracy_enh))
-            )
-            self.loadout_table.setItem(
-                row, 8, QTableWidgetItem(str(loadout.economy_enh))
-            )
+            self.loadout_table.setItem(row, 2, QTableWidgetItem(loadout.amplifier or "None"))
+            self.loadout_table.setItem(row, 3, QTableWidgetItem(loadout.scope or "None"))
+            self.loadout_table.setItem(row, 4, QTableWidgetItem(loadout.sight_1 or "None"))
+            self.loadout_table.setItem(row, 5, QTableWidgetItem(loadout.sight_2 or "None"))
+            self.loadout_table.setItem(row, 6, QTableWidgetItem(str(loadout.damage_enh)))
+            self.loadout_table.setItem(row, 7, QTableWidgetItem(str(loadout.accuracy_enh)))
+            self.loadout_table.setItem(row, 8, QTableWidgetItem(str(loadout.economy_enh)))
 
     def _refresh_active_loadout_combo(self):
         """Refresh the active loadout combo box"""
@@ -795,9 +763,7 @@ class ConfigTab(QWidget):
 
         try:
             # Use the centralized cost calculation service
-            total_cost_ped = await CostCalculationService.calculate_cost_per_attack(
-                loadout
-            )
+            total_cost_ped = await CostCalculationService.calculate_cost_per_attack(loadout)
 
             logger.info(f"TOTAL COST PER ATTACK: {total_cost_ped:.6f} PED")
             logger.info("===== CONFIG TAB STATS CALCULATION END =====")
@@ -858,9 +824,7 @@ class ConfigTab(QWidget):
 
     def _open_chat_file(self):
         """Open file dialog for chat location"""
-        path, _ = QFileDialog.getOpenFileName(
-            self, "Open Chat Log", "", "All Files (*.*)"
-        )
+        path, _ = QFileDialog.getOpenFileName(self, "Open Chat Log", "", "All Files (*.*)")
         if path:
             self.chat_location_text.setText(path)
             self._save_chat_location(path)
@@ -1222,9 +1186,7 @@ class CreateWeaponDialog(QDialog):
 
         layout.addLayout(form_layout)
 
-        info_label = QLabel(
-            "Custom weapons are saved locally and added to the weapon list."
-        )
+        info_label = QLabel("Custom weapons are saved locally and added to the weapon list.")
         info_label.setStyleSheet("color: #888; font-size: 11px;")
         layout.addWidget(info_label)
 

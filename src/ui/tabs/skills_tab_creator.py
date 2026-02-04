@@ -1,5 +1,4 @@
-"""Skills tab UI creation methods
-"""
+"""Skills tab UI creation methods"""
 
 import logging
 from typing import Any
@@ -63,9 +62,7 @@ class SkillsTabCreator:
         layout.addWidget(label)
 
         self.parent.total_skill_gain_value = QLabel("0.00")
-        self.parent.total_skill_gain_value.setFont(
-            QFont("Consolas", 12, QFont.Weight.Bold)
-        )
+        self.parent.total_skill_gain_value.setFont(QFont("Consolas", 12, QFont.Weight.Bold))
         self.parent.total_skill_gain_value.setStyleSheet("""
             color: #E6EDF3;
             background-color: #0D1117;
@@ -106,9 +103,7 @@ class SkillsTabCreator:
         self.parent.skills_table.setHorizontalHeaderLabels(
             ["#", "Skill Name", "Value", "Procs", "Proc %"]
         )
-        self.parent.skills_table.setSelectionBehavior(
-            QTableWidget.SelectionBehavior.SelectRows
-        )
+        self.parent.skills_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.parent.skills_table.setAlternatingRowColors(True)
         self.parent.skills_table.setSortingEnabled(True)
 
@@ -163,9 +158,7 @@ class SkillsTabCreator:
                 self.parent.skills_table.setItem(
                     existing_row, 2, QTableWidgetItem(f"{new_value:.2f}")
                 )
-                self.parent.skills_table.setItem(
-                    existing_row, 3, QTableWidgetItem(str(new_procs))
-                )
+                self.parent.skills_table.setItem(existing_row, 3, QTableWidgetItem(str(new_procs)))
             else:
                 # Add new skill row
                 row = self.parent.skills_table.rowCount()
@@ -173,9 +166,7 @@ class SkillsTabCreator:
 
                 self.parent.skills_table.setItem(row, 0, QTableWidgetItem(str(row + 1)))
                 self.parent.skills_table.setItem(row, 1, QTableWidgetItem(skill_name))
-                self.parent.skills_table.setItem(
-                    row, 2, QTableWidgetItem(f"{gain_value:.2f}")
-                )
+                self.parent.skills_table.setItem(row, 2, QTableWidgetItem(f"{gain_value:.2f}"))
                 self.parent.skills_table.setItem(row, 3, QTableWidgetItem("1"))
 
             # Recalculate proc % for all rows
@@ -186,9 +177,7 @@ class SkillsTabCreator:
             for r in range(self.parent.skills_table.rowCount()):
                 procs = int(self.parent.skills_table.item(r, 3).text())
                 proc_percent = (procs / total_procs) * 100 if total_procs > 0 else 100
-                self.parent.skills_table.setItem(
-                    r, 4, QTableWidgetItem(f"{proc_percent:.0f}%")
-                )
+                self.parent.skills_table.setItem(r, 4, QTableWidgetItem(f"{proc_percent:.0f}%"))
 
             logger.info("[UI] Skill event added to table")
 
@@ -213,31 +202,23 @@ class SkillsTabCreator:
 
             if existing_row is not None:
                 # Update existing skill
-                current_value = float(
-                    self.parent.skills_table.item(existing_row, 2).text()
-                )
+                current_value = float(self.parent.skills_table.item(existing_row, 2).text())
                 new_value = current_value + gain_value
 
-                current_procs = int(
-                    self.parent.skills_table.item(existing_row, 3).text()
-                )
+                current_procs = int(self.parent.skills_table.item(existing_row, 3).text())
                 new_procs = current_procs + 1
 
                 self.parent.skills_table.setItem(
                     existing_row, 2, QTableWidgetItem(f"{new_value:.2f}")
                 )
-                self.parent.skills_table.setItem(
-                    existing_row, 3, QTableWidgetItem(str(new_procs))
-                )
+                self.parent.skills_table.setItem(existing_row, 3, QTableWidgetItem(str(new_procs)))
             else:
                 # Add new skill
                 row = self.parent.skills_table.rowCount()
                 self.parent.skills_table.insertRow(row)
                 self.parent.skills_table.setItem(row, 0, QTableWidgetItem(str(row + 1)))
                 self.parent.skills_table.setItem(row, 1, QTableWidgetItem(skill_name))
-                self.parent.skills_table.setItem(
-                    row, 2, QTableWidgetItem(f"{gain_value:.2f}")
-                )
+                self.parent.skills_table.setItem(row, 2, QTableWidgetItem(f"{gain_value:.2f}"))
                 self.parent.skills_table.setItem(row, 3, QTableWidgetItem("1"))
 
             # Update percentages
@@ -249,6 +230,4 @@ class SkillsTabCreator:
             for r in range(self.parent.skills_table.rowCount()):
                 procs = int(self.parent.skills_table.item(r, 3).text())
                 proc_percent = (procs / total_procs * 100) if total_procs > 0 else 0
-                self.parent.skills_table.setItem(
-                    r, 4, QTableWidgetItem(f"{proc_percent:.0f}%")
-                )
+                self.parent.skills_table.setItem(r, 4, QTableWidgetItem(f"{proc_percent:.0f}%"))

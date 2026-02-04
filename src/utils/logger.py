@@ -1,5 +1,4 @@
-"""Simple logging setup for LewtNanny
-"""
+"""Simple logging setup for LewtNanny"""
 
 import logging
 import sys
@@ -15,11 +14,8 @@ def setup_logger(log_file: str = None):
 
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_path),
-            logging.StreamHandler(sys.stdout)
-        ]
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.FileHandler(log_path), logging.StreamHandler(sys.stdout)],
     )
 
     return logging.getLogger(__name__)

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Test script for the new WeaponSelector component
-"""
+"""Test script for the new WeaponSelector component"""
 
 import asyncio
 import sys
@@ -41,9 +40,7 @@ class TestWindow(QMainWindow):
         # Create weapon selector
         self.db_manager = MultiDatabaseManager()
 
-        self.weapon_selector = WeaponSelector(
-            parent=central, db_manager=self.db_manager
-        )
+        self.weapon_selector = WeaponSelector(parent=central, db_manager=self.db_manager)
         layout.addWidget(self.weapon_selector)
 
         # Connect signals for testing

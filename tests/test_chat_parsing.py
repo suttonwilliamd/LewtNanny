@@ -1,5 +1,4 @@
-"""Test the real chat log parsing functionality
-"""
+"""Test the real chat log parsing functionality"""
 
 import sys
 from pathlib import Path
@@ -9,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from src.services.chat_reader_real import ChatLogReader
+
     print("[OK] ChatLogReader imported successfully")
 except ImportError as e:
     print(f"X Failed to import ChatLogReader: {e}")
@@ -27,16 +27,20 @@ def test_chat_parsing():
 
     def event_callback(event):
         events_received.append(event)
-        print(f"[{event.timestamp.strftime('%H:%M:%S')}] {event.event_type.upper()}: {event.raw_message}")
+        print(
+            f"[{event.timestamp.strftime('%H:%M:%S')}] {event.event_type.upper()}: {event.raw_message}"
+        )
 
-        if hasattr(event, 'damage'):
+        if hasattr(event, "damage"):
             print(f"  - Damage: {event.damage}, Critical: {getattr(event, 'critical', False)}")
-        elif hasattr(event, 'items'):
+        elif hasattr(event, "items"):
             print(f"  - Items: {event.items}")
-        elif hasattr(event, 'skill_name'):
+        elif hasattr(event, "skill_name"):
             print(f"  - Skill: {event.skill_name}, Amount: {event.amount}")
-        elif hasattr(event, 'value'):
-            print(f"  - Player: {getattr(event, 'player', 'N/A')}, Target: {getattr(event, 'target', 'N/A')}, Value: {event.value} PED")
+        elif hasattr(event, "value"):
+            print(
+                f"  - Player: {getattr(event, 'player', 'N/A')}, Target: {getattr(event, 'target', 'N/A')}, Value: {event.value} PED"
+            )
 
     # Create chat reader
     reader = ChatLogReader(str(sample_log), event_callback)
@@ -53,7 +57,7 @@ def test_chat_parsing():
         return False
 
     # Test specific events
-    expected_events = ['damage', 'critical', 'miss', 'skill', 'loot', 'global', 'skill_improved']
+    expected_events = ["damage", "critical", "miss", "skill", "loot", "global", "skill_improved"]
     found_events = {event.event_type for event in events_received}
 
     print(f"\nEvent types found: {found_events}")

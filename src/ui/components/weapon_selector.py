@@ -48,9 +48,7 @@ class SimpleValueLabel(QLabel):
         display = (
             f"{new_value:.5f}"
             if new_value < 0.01
-            else f"{new_value:.4f}"
-            if new_value < 1
-            else f"{new_value:.2f}"
+            else f"{new_value:.4f}" if new_value < 1 else f"{new_value:.2f}"
         )
         self.setText(display)
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Test chat parsing functionality
-"""
+"""Test chat parsing functionality"""
 
 import asyncio
 import sys
@@ -32,24 +31,26 @@ async def test_chat_parsing():
     def on_new_event(event_data):
         events.append(event_data)
         print(f"[OK] Event detected: {event_data['event_type']}")
-        if event_data['event_type'] == 'loot':
-            parsed = event_data['parsed_data']
+        if event_data["event_type"] == "loot":
+            parsed = event_data["parsed_data"]
             print(f"   Item: {parsed.get('item_name', 'N/A')} x({parsed.get('quantity', 'N/A')})")
             print(f"   Value: {parsed.get('value', 'N/A')} PED")
-        elif event_data['event_type'] == 'combat':
-            parsed = event_data['parsed_data']
-            if parsed.get('critical'):
+        elif event_data["event_type"] == "combat":
+            parsed = event_data["parsed_data"]
+            if parsed.get("critical"):
                 print(f"   [CRITICAL] Hit: {parsed.get('damage', 0)} damage!")
-            elif parsed.get('miss'):
+            elif parsed.get("miss"):
                 print("   [MISS] Missed!")
             else:
                 print(f"   Damage: {parsed.get('damage', 0)}")
-        elif event_data['event_type'] == 'skill':
-            parsed = event_data['parsed_data']
+        elif event_data["event_type"] == "skill":
+            parsed = event_data["parsed_data"]
             print(f"   Skill: {parsed.get('skill', 'N/A')} +{parsed.get('experience', 0)} exp")
-        elif event_data['event_type'] == 'global':
-            parsed = event_data['parsed_data']
-            print(f"   [GLOBAL] {parsed.get('type', 'Global')}: {parsed.get('player', 'N/A')} killed {parsed.get('creature', 'N/A')} for {parsed.get('value', 0)} PED!")
+        elif event_data["event_type"] == "global":
+            parsed = event_data["parsed_data"]
+            print(
+                f"   [GLOBAL] {parsed.get('type', 'Global')}: {parsed.get('player', 'N/A')} killed {parsed.get('creature', 'N/A')} for {parsed.get('value', 0)} PED!"
+            )
 
     chat_reader.new_event.connect(on_new_event)
 
@@ -75,6 +76,7 @@ async def test_chat_parsing():
 
     # Cleanup
     await db_manager.close()
+
 
 if __name__ == "__main__":
     asyncio.run(test_chat_parsing())

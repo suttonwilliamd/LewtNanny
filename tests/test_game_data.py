@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Test and demo script for the new GameDataService
-"""
+"""Test and demo script for the new GameDataService"""
 
 import asyncio
 import sys

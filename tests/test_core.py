@@ -26,7 +26,7 @@ class TestWeaponModels(unittest.TestCase):
             weapon_type="Rifle",
             dps=Decimal("10.5"),
             eco=Decimal("150.0"),
-            range_=50
+            range_=50,
         )
 
         self.assertEqual(weapon.id, "test_weapon")
@@ -47,7 +47,7 @@ class TestWeaponModels(unittest.TestCase):
             ammo=100,
             decay="0.05",  # String
             weapon_type="Pistol",
-            dps="10.5",    # String
+            dps="10.5",  # String
         )
 
         self.assertIsInstance(weapon.decay, Decimal)
@@ -128,7 +128,7 @@ class TestLoadoutService(unittest.TestCase):
             sight_2="Test Sight 2",
             damage_enh=10,
             accuracy_enh=5,
-            economy_enh=5
+            economy_enh=5,
         )
 
         # Create
@@ -153,9 +153,7 @@ class TestLoadoutService(unittest.TestCase):
         existing = loop.run_until_complete(service.get_loadout_by_name(self.test_loadout_name))
         if existing is None:
             loadout = WeaponLoadout(
-                name=self.test_loadout_name,
-                weapon="Test Weapon",
-                damage_enh=10
+                name=self.test_loadout_name, weapon="Test Weapon", damage_enh=10
             )
             loop.run_until_complete(service.create_loadout(loadout))
 
@@ -188,6 +186,7 @@ class TestGameDataService(unittest.TestCase):
     def setUpClass(cls):
         """Initialize service"""
         from src.services.game_data_service import GameDataService
+
         cls.service = GameDataService()
 
     def test_get_counts(self):
@@ -195,12 +194,12 @@ class TestGameDataService(unittest.TestCase):
         loop = asyncio.get_event_loop()
         counts = loop.run_until_complete(self.service.get_counts())
 
-        self.assertIn('weapons', counts)
-        self.assertIn('attachments', counts)
-        self.assertIn('resources', counts)
+        self.assertIn("weapons", counts)
+        self.assertIn("attachments", counts)
+        self.assertIn("resources", counts)
 
         # Should have data from migration
-        self.assertGreater(counts['weapons'], 0)
+        self.assertGreater(counts["weapons"], 0)
 
     def test_search_weapons(self):
         """Test weapon search"""
@@ -236,7 +235,9 @@ class TestWeaponCalculator(unittest.TestCase):
 
         # Calculate for a weapon
         stats = loop.run_until_complete(
-            calculator.calculate_enhanced_stats("ArMatrix BC-100 (L)", damage_enhancement=10, economy_enhancement=5)
+            calculator.calculate_enhanced_stats(
+                "ArMatrix BC-100 (L)", damage_enhancement=10, economy_enhancement=5
+            )
         )
 
         self.assertIsNotNone(stats)
@@ -256,11 +257,11 @@ class TestAttachmentFiltering(unittest.TestCase):
         loop = asyncio.get_event_loop()
 
         all_attachments = loop.run_until_complete(service.get_all_attachments())
-        scopes = [a for a in all_attachments if a.attachment_type == 'Scope']
+        scopes = [a for a in all_attachments if a.attachment_type == "Scope"]
 
         # Verify all are actually scopes
         for scope in scopes:
-            self.assertEqual(scope.attachment_type, 'Scope')
+            self.assertEqual(scope.attachment_type, "Scope")
 
     def test_filter_sights(self):
         """Test filtering sights from attachments"""
@@ -270,11 +271,11 @@ class TestAttachmentFiltering(unittest.TestCase):
         loop = asyncio.get_event_loop()
 
         all_attachments = loop.run_until_complete(service.get_all_attachments())
-        sights = [a for a in all_attachments if a.attachment_type == 'Sight']
+        sights = [a for a in all_attachments if a.attachment_type == "Sight"]
 
         # Verify all are actually sights
         for sight in sights:
-            self.assertEqual(sight.attachment_type, 'Sight')
+            self.assertEqual(sight.attachment_type, "Sight")
 
 
 if __name__ == "__main__":

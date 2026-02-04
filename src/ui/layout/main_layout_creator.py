@@ -1,5 +1,4 @@
-"""Main window UI layout creation methods
-"""
+"""Main window UI layout creation methods"""
 
 import logging
 
@@ -78,9 +77,7 @@ class MainLayoutCreator:
                 """)
 
             btn.clicked.connect(
-                lambda checked, name=tab_name, button=btn: self.parent.on_tab_clicked(
-                    name, button
-                )
+                lambda checked, name=tab_name, button=btn: self.parent.on_tab_clicked(name, button)
             )
             self.parent.tab_buttons[tab_name] = btn
             tab_bar_layout.addWidget(btn)

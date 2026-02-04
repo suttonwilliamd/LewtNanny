@@ -172,7 +172,7 @@ class EnhancementPanel(QWidget):
         enhancements = [
             ("damage", "⚔", "#E53935"),
             ("accuracy", "🎯", "#1E88E5"),
-            ("economy", "💰", "#43A047")
+            ("economy", "💰", "#43A047"),
         ]
 
         for name, icon, color in enhancements:
@@ -237,7 +237,9 @@ class EnhancementPanel(QWidget):
         # Value label
         value_label = QLabel("0")
         value_label.setFont(QFont("Consolas", 10, QFont.Weight.Bold))
-        value_label.setStyleSheet("color: #E6EDF3; background-color: #21262D; padding: 2px 6px; border-radius: 4px;")
+        value_label.setStyleSheet(
+            "color: #E6EDF3; background-color: #21262D; padding: 2px 6px; border-radius: 4px;"
+        )
         value_label.setFixedWidth(30)
         value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -260,10 +262,7 @@ class EnhancementPanel(QWidget):
 
     def get_values(self) -> dict:
         """Get current enhancement values"""
-        return {
-            name: widget.slider.value()
-            for name, widget in self.sliders.items()
-        }
+        return {name: widget.slider.value() for name, widget in self.sliders.items()}
 
 
 class ModernWeaponSelector(QWidget):
@@ -503,9 +502,9 @@ class ModernWeaponSelector(QWidget):
         if weapon_name:
             # Emit weapon selected signal
             data = {
-                'weapon': weapon_name,
-                'type': 'selected',
-                'attachments': self.current_attachments
+                "weapon": weapon_name,
+                "type": "selected",
+                "attachments": self.current_attachments,
             }
             self.weapon_selected.emit(data)
             self._calculate_performance()
@@ -529,9 +528,9 @@ class ModernWeaponSelector(QWidget):
         base_dps = 25.0
         base_cost = 0.05
 
-        damage_enh = enhancements.get('damage', 0)
-        enhancements.get('accuracy', 0)
-        economy_enh = enhancements.get('economy', 0)
+        damage_enh = enhancements.get("damage", 0)
+        enhancements.get("accuracy", 0)
+        economy_enh = enhancements.get("economy", 0)
 
         # Apply enhancement bonuses
         dps = base_dps * (1 + damage_enh * 0.05)
@@ -542,11 +541,11 @@ class ModernWeaponSelector(QWidget):
 
         # Emit performance data
         performance_data = {
-            'dps': dps,
-            'cost_per_shot': cost,
-            'dpp': dpp,
-            'efficiency': efficiency,
-            'total_cost': cost
+            "dps": dps,
+            "cost_per_shot": cost,
+            "dpp": dpp,
+            "efficiency": efficiency,
+            "total_cost": cost,
         }
 
         self.cost_calculated.emit(performance_data)

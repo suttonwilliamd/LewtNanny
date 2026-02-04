@@ -32,11 +32,11 @@ class StreamerTabWidget(QWidget):
         self.current_session_id: str | None = None
         self.current_session_start: datetime | None = None
         self._stats = {
-            'globals': 0,
-            'hofs': 0,
-            'items': 0,
-            'total_cost': Decimal('0'),
-            'total_return': Decimal('0'),
+            "globals": 0,
+            "hofs": 0,
+            "items": 0,
+            "total_cost": Decimal("0"),
+            "total_return": Decimal("0"),
         }
 
         self.setup_ui()
@@ -178,6 +178,7 @@ class StreamerTabWidget(QWidget):
         """Load weapon details synchronously"""
         try:
             import asyncio
+
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(self._load_weapon_async(weapon_name))
@@ -205,7 +206,9 @@ class StreamerTabWidget(QWidget):
         self.weapon_combo.clear()
         self.weapon_combo.addItem("No weapon selected")
         for weapon in weapons:
-            self.weapon_combo.addItem(weapon if isinstance(weapon, str) else weapon.get('name', str(weapon)))
+            self.weapon_combo.addItem(
+                weapon if isinstance(weapon, str) else weapon.get("name", str(weapon))
+            )
 
     def update_weapon_display(self, weapon_name: str):
         """Update weapon display from external source (e.g., loadout)"""
@@ -242,7 +245,7 @@ class StreamerTabWidget(QWidget):
             ("Globals", "0", "#FFD700"),
             ("HOFs", "0", "#FF6B6B"),
             ("Items Looted", "0", "#4FC3F7"),
-            ("Active Weapon", "None", "#B388FF")
+            ("Active Weapon", "None", "#B388FF"),
         ]
 
         for i, (label, default, color) in enumerate(metrics_items):
@@ -337,6 +340,7 @@ class StreamerTabWidget(QWidget):
         """Load available weapons from database"""
         try:
             import asyncio
+
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(self._load_weapons_async())
@@ -359,11 +363,11 @@ class StreamerTabWidget(QWidget):
         self.current_session_id = session_id
         self.current_session_start = datetime.now()
         self._stats = {
-            'globals': 0,
-            'hofs': 0,
-            'items': 0,
-            'total_cost': Decimal('0'),
-            'total_return': Decimal('0'),
+            "globals": 0,
+            "hofs": 0,
+            "items": 0,
+            "total_cost": Decimal("0"),
+            "total_return": Decimal("0"),
         }
         self.status_label.setText(f"ACTIVITY: {activity_type.upper()}")
         self.status_label.setStyleSheet("color: #238636;")
@@ -388,8 +392,8 @@ class StreamerTabWidget(QWidget):
 
     def _update_stats_display(self):
         """Update statistics display with calculated values"""
-        cost = self._stats.get('total_cost', Decimal('0'))
-        return_val = self._stats.get('total_return', Decimal('0'))
+        cost = self._stats.get("total_cost", Decimal("0"))
+        return_val = self._stats.get("total_return", Decimal("0"))
 
         if cost > 0:
             return_pct = (return_val / cost) * 100
@@ -409,13 +413,15 @@ class StreamerTabWidget(QWidget):
             self.streamer_metrics["Return %"].setText(return_pct_str)
         if "Profit/Loss" in self.streamer_metrics:
             self.streamer_metrics["Profit/Loss"].setText(profit_str)
-            self.streamer_metrics["Profit/Loss"].setStyleSheet(f"color: {profit_color}; font-weight: bold; font-family: Consolas; font-size: 14px;")
+            self.streamer_metrics["Profit/Loss"].setStyleSheet(
+                f"color: {profit_color}; font-weight: bold; font-family: Consolas; font-size: 14px;"
+            )
         if "Globals" in self.streamer_metrics:
-            self.streamer_metrics["Globals"].setText(str(self._stats.get('globals', 0)))
+            self.streamer_metrics["Globals"].setText(str(self._stats.get("globals", 0)))
         if "HOFs" in self.streamer_metrics:
-            self.streamer_metrics["HOFs"].setText(str(self._stats.get('hofs', 0)))
+            self.streamer_metrics["HOFs"].setText(str(self._stats.get("hofs", 0)))
         if "Items Looted" in self.streamer_metrics:
-            self.streamer_metrics["Items Looted"].setText(str(self._stats.get('items', 0)))
+            self.streamer_metrics["Items Looted"].setText(str(self._stats.get("items", 0)))
 
     def add_activity(self, activity: str):
         """Add activity to ticker"""
@@ -440,27 +446,29 @@ class StreamerTabWidget(QWidget):
         logger.info(f"[STREAMER_UI] Event type: {event_data.get('event_type', 'unknown')}")
         logger.info(f"[STREAMER_UI] Event data: {event_data}")
 
-        event_type = event_data.get('event_type', 'unknown')
-        parsed_data = event_data.get('parsed_data', {})
+        event_type = event_data.get("event_type", "unknown")
+        parsed_data = event_data.get("parsed_data", {})
 
         logger.info(f"[STREAMER_UI] Processing event type: {event_type}")
 
         activity_str = ""
 
-        if event_type == 'loot':
-            item_name = parsed_data.get('item_name', 'Unknown')
-            quantity = parsed_data.get('quantity', 1)
-            value = parsed_data.get('value', 0)
+        if event_type == "loot":
+            item_name = parsed_data.get("item_name", "Unknown")
+            quantity = parsed_data.get("quantity", 1)
+            value = parsed_data.get("value", 0)
             activity_str = f"💰 {item_name} x ({quantity}) ({value} PED)"
 
-            self._stats['items'] = self._stats.get('items', 0) + 1
-            self._stats['total_return'] = self._stats.get('total_return', Decimal('0')) + Decimal(str(value))
+            self._stats["items"] = self._stats.get("items", 0) + 1
+            self._stats["total_return"] = self._stats.get("total_return", Decimal("0")) + Decimal(
+                str(value)
+            )
 
-        elif event_type == 'combat':
-            damage = parsed_data.get('damage', 0)
-            decay = parsed_data.get('decay', 0)
-            critical = parsed_data.get('critical', False)
-            miss = parsed_data.get('miss', False)
+        elif event_type == "combat":
+            damage = parsed_data.get("damage", 0)
+            decay = parsed_data.get("decay", 0)
+            critical = parsed_data.get("critical", False)
+            miss = parsed_data.get("miss", False)
             if miss:
                 activity_str = "❌ MISS"
             elif critical:
@@ -468,31 +476,37 @@ class StreamerTabWidget(QWidget):
             else:
                 activity_str = f"⚔️ {damage} dmg"
             if decay and float(decay) > 0:
-                self._stats['total_cost'] = self._stats.get('total_cost', Decimal('0')) + Decimal(str(decay))
+                self._stats["total_cost"] = self._stats.get("total_cost", Decimal("0")) + Decimal(
+                    str(decay)
+                )
 
-        elif event_type == 'skill':
-            skill = parsed_data.get('skill', '')
-            exp = parsed_data.get('experience', 0)
+        elif event_type == "skill":
+            skill = parsed_data.get("skill", "")
+            exp = parsed_data.get("experience", 0)
             activity_str = f"📈 {skill} +{exp} exp"
 
-        elif event_type == 'global':
-            player = parsed_data.get('player', '')
-            creature = parsed_data.get('creature', '')
-            value = parsed_data.get('value', 0)
+        elif event_type == "global":
+            player = parsed_data.get("player", "")
+            creature = parsed_data.get("creature", "")
+            value = parsed_data.get("value", 0)
             activity_str = f"🌟 GLOBAL! {player} → {creature} ({value} PED)"
-            self._stats['globals'] = self._stats.get('globals', 0) + 1
-            self._stats['total_return'] = self._stats.get('total_return', Decimal('0')) + Decimal(str(value))
+            self._stats["globals"] = self._stats.get("globals", 0) + 1
+            self._stats["total_return"] = self._stats.get("total_return", Decimal("0")) + Decimal(
+                str(value)
+            )
 
-        elif event_type == 'hof':
-            player = parsed_data.get('player', '')
-            creature = parsed_data.get('creature', '')
-            value = parsed_data.get('value', 0)
+        elif event_type == "hof":
+            player = parsed_data.get("player", "")
+            creature = parsed_data.get("creature", "")
+            value = parsed_data.get("value", 0)
             activity_str = f"🏆 HOF! {player} → {creature} ({value} PED)"
-            self._stats['hofs'] = self._stats.get('hofs', 0) + 1
-            self._stats['total_return'] = self._stats.get('total_return', Decimal('0')) + Decimal(str(value))
+            self._stats["hofs"] = self._stats.get("hofs", 0) + 1
+            self._stats["total_return"] = self._stats.get("total_return", Decimal("0")) + Decimal(
+                str(value)
+            )
 
         else:
-            raw_message = event_data.get('raw_message', '')
+            raw_message = event_data.get("raw_message", "")
             activity_str = raw_message[:50] if raw_message else event_type
 
         if activity_str:

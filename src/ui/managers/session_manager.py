@@ -1,5 +1,4 @@
-"""Session management logic for the main window
-"""
+"""Session management logic for the main window"""
 
 import asyncio
 import logging
@@ -29,9 +28,7 @@ class SessionManager:
     def start_session(self):
         """Start a new tracking session"""
         try:
-            self.parent.current_session_id = (
-                f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            )
+            self.parent.current_session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             self.parent.current_session_start = datetime.now()
 
             self.parent.start_run_btn.setText("Stop Run")
@@ -50,9 +47,7 @@ class SessionManager:
                 }
             """)
 
-            self.parent.db_manager.create_session_sync(
-                self.parent.current_session_id, "hunting"
-            )
+            self.parent.db_manager.create_session_sync(self.parent.current_session_id, "hunting")
 
             self._add_current_run_entry()
 
@@ -86,12 +81,8 @@ class SessionManager:
                 chat_path = None
                 if hasattr(self.parent, "config_widget") and self.parent.config_widget:
                     if hasattr(self.parent.config_widget, "chat_location_text"):
-                        chat_path = (
-                            self.parent.config_widget.chat_location_text.text().strip()
-                        )
-                elif (
-                    hasattr(self.parent, "chat_log_path") and self.parent.chat_log_path
-                ):
+                        chat_path = self.parent.config_widget.chat_location_text.text().strip()
+                elif hasattr(self.parent, "chat_log_path") and self.parent.chat_log_path:
                     chat_path = self.parent.chat_log_path.text().strip()
 
                 if chat_path and Path(chat_path).exists():
@@ -105,13 +96,9 @@ class SessionManager:
                             "Session started - Failed to start monitoring"
                         )
                 else:
-                    self.parent.status_bar.showMessage(
-                        "Session started - No valid chat.log path"
-                    )
+                    self.parent.status_bar.showMessage("Session started - No valid chat.log path")
             else:
-                self.parent.status_bar.showMessage(
-                    "Session started - Chat reader not available"
-                )
+                self.parent.status_bar.showMessage("Session started - Chat reader not available")
 
             if self.parent.overlay:
                 self.parent.overlay.start_session(
@@ -124,9 +111,7 @@ class SessionManager:
             self.parent._refresh_analysis_data()
 
             logger.info(f"Session started: {self.parent.current_session_id}")
-            self.parent.status_bar.showMessage(
-                f"Session started: {self.parent.current_session_id}"
-            )
+            self.parent.status_bar.showMessage(f"Session started: {self.parent.current_session_id}")
 
         except Exception as e:
             logger.error(f"Error starting session: {e}", exc_info=True)
@@ -147,9 +132,7 @@ class SessionManager:
         self.parent.run_log_table.setItem(row, 5, QTableWidgetItem("0.0%"))
         self.parent.run_log_table.setItem(row, 6, QTableWidgetItem("0"))
 
-        self.parent.run_log_table.item(row, 0).setData(
-            Qt.ItemDataRole.UserRole, "current"
-        )
+        self.parent.run_log_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, "current")
         self.parent.run_log_table.item(row, 0).setForeground(QColor("#3FB950"))
 
     def stop_session(self):
@@ -165,10 +148,7 @@ class SessionManager:
                     self.parent.overlay.stop_session()
 
                 total_cost = float(
-                    self.parent.loot_summary_labels["Total Cost"]
-                    .text()
-                    .replace(",", "")
-                    .split()[0]
+                    self.parent.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0]
                 )
                 total_return = float(
                     self.parent.loot_summary_labels["Total Return"]
@@ -183,9 +163,7 @@ class SessionManager:
                     )
                 )
 
-                self._convert_current_run_to_completed(
-                    session_id, total_cost, total_return
-                )
+                self._convert_current_run_to_completed(session_id, total_cost, total_return)
 
                 self.parent.current_session_id = None
                 self.parent.current_session_start = None
@@ -211,10 +189,7 @@ class SessionManager:
                 """)
 
                 # Disable crafting "Add to Session" button
-                if (
-                    hasattr(self.parent, "crafting_widget")
-                    and self.parent.crafting_widget
-                ):
+                if hasattr(self.parent, "crafting_widget") and self.parent.crafting_widget:
                     self.parent.crafting_widget.set_session_active(False)
 
                 # Update combat tab to show no active session
@@ -244,27 +219,17 @@ class SessionManager:
                 roi = (total_return / total_cost * 100) if total_cost > 0 else 0
 
                 self.parent.run_log_table.setItem(row, 0, QTableWidgetItem("Completed"))
-                self.parent.run_log_table.item(row, 0).setData(
-                    Qt.ItemDataRole.UserRole, session_id
-                )
+                self.parent.run_log_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, session_id)
                 self.parent.run_log_table.item(row, 0).setForeground(QColor("#E6EDF3"))
 
                 self.parent.run_log_table.item(row, 1).text()
                 self.parent.run_log_table.setItem(row, 2, QTableWidgetItem(duration))
-                self.parent.run_log_table.setItem(
-                    row, 3, QTableWidgetItem(f"{total_cost:.2f}")
-                )
-                self.parent.run_log_table.setItem(
-                    row, 4, QTableWidgetItem(f"{total_return:.2f}")
-                )
-                self.parent.run_log_table.setItem(
-                    row, 5, QTableWidgetItem(f"{roi:.1f}%")
-                )
+                self.parent.run_log_table.setItem(row, 3, QTableWidgetItem(f"{total_cost:.2f}"))
+                self.parent.run_log_table.setItem(row, 4, QTableWidgetItem(f"{total_return:.2f}"))
+                self.parent.run_log_table.setItem(row, 5, QTableWidgetItem(f"{roi:.1f}%"))
 
                 item_count = self.parent.item_breakdown_table.rowCount()
-                self.parent.run_log_table.setItem(
-                    row, 6, QTableWidgetItem(str(item_count))
-                )
+                self.parent.run_log_table.setItem(row, 6, QTableWidgetItem(str(item_count)))
                 break
 
         self.parent.run_log_table.sortItems(1, Qt.SortOrder.DescendingOrder)
