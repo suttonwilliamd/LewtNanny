@@ -1,36 +1,29 @@
-"""
-Settings Dialog
+"""Settings Dialog
 Configuration panel for application preferences
 """
 
 import logging
 from pathlib import Path
-from typing import Optional
 
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
     QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
+    QFileDialog,
+    QFontComboBox,
     QGridLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
-    QComboBox,
-    QSpinBox,
-    QCheckBox,
     QPushButton,
+    QSpinBox,
     QTabWidget,
-    QTabBar,
-    QFileDialog,
-    QSlider,
-    QColorDialog,
-    QFontComboBox,
-    QListWidget,
-    QListWidgetItem,
-    QAbstractItemView,
+    QVBoxLayout,
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QFont, QColor
 
 from src.utils.paths import get_user_data_dir
 
@@ -42,7 +35,7 @@ class SettingsDialog(QDialog):
 
     settingsApplied = pyqtSignal(dict)
 
-    def __init__(self, parent=None, current_settings: Optional[dict] = None):
+    def __init__(self, parent=None, current_settings: dict | None = None):
         super().__init__(parent)
 
         self.current_settings = current_settings or self._get_default_settings()
@@ -509,7 +502,7 @@ class SettingsDialog(QDialog):
         super().reject()
 
 
-def show_settings_dialog(parent=None, current_settings: dict = None) -> Optional[dict]:
+def show_settings_dialog(parent=None, current_settings: dict = None) -> dict | None:
     """Show settings dialog and return new settings"""
     dialog = SettingsDialog(parent, current_settings)
     if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -519,6 +512,7 @@ def show_settings_dialog(parent=None, current_settings: dict = None) -> Optional
 
 if __name__ == "__main__":
     import sys
+
     from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)

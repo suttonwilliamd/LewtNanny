@@ -1,32 +1,19 @@
-"""
-Simplified analysis tab with 2 core charts: Run TT Return % and Cost to Kill vs Return
+"""Simplified analysis tab with 2 core charts: Run TT Return % and Cost to Kill vs Return
 """
 
-import logging
 import asyncio
-from typing import List, Dict, Any, Optional
-from datetime import datetime
-from statistics import mean
+import logging
+from typing import Any
 
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
-    QComboBox,
-    QPushButton,
-    QFrame,
-    QSlider,
-    QGroupBox,
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
-    QGridLayout,
-    QSpacerItem,
-    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QBrush
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +23,7 @@ class SimpleAnalysisChartWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.data: List[Dict[str, Any]] = []
+        self.data: list[dict[str, Any]] = []
         self.chart_type = "return_percentage"
         self.max_runs = 50
         self.show_trend_line = True
@@ -52,7 +39,7 @@ class SimpleAnalysisChartWidget(QWidget):
         self.setMinimumHeight(250)
         logger.debug("SimpleAnalysisChartWidget initialized")
 
-    def set_data(self, data: List[Dict[str, Any]]):
+    def set_data(self, data: list[dict[str, Any]]):
         """Set chart data"""
         self.data = data
         logger.info(f"Analysis: Chart data set with {len(data)} items")
@@ -144,7 +131,7 @@ class SimpleAnalysisChartWidget(QWidget):
         n = len(points)
         sum_x = sum(x_coords)
         sum_y = sum(y_values)
-        sum_xy = sum(x * y for x, y in zip(x_coords, y_values))
+        sum_xy = sum(x * y for x, y in zip(x_coords, y_values, strict=False))
         sum_x2 = sum(x * x for x in x_coords)
 
         if n * sum_x2 - sum_x * sum_x == 0:
@@ -184,10 +171,7 @@ class SimpleAnalysisChartWidget(QWidget):
             x = self.index_to_x(i, len(points), chart_rect)
             y = self.value_to_y(value, min_y, max_y, chart_rect)
 
-            if value >= 0:
-                color = self.colors["positive"]
-            else:
-                color = self.colors["negative"]
+            color = self.colors["positive"] if value >= 0 else self.colors["negative"]
 
             painter.setBrush(QBrush(color))
             painter.setPen(QPen(color.darker(150), 1))
@@ -213,10 +197,7 @@ class SimpleAnalysisChartWidget(QWidget):
 
     def _draw_single_point(self, painter: QPainter, x, y, cost, return_val):
         """Draw a single scatter point"""
-        if return_val >= cost:
-            color = self.colors["positive"]
-        else:
-            color = self.colors["negative"]
+        color = self.colors["positive"] if return_val >= cost else self.colors["negative"]
 
         painter.setBrush(QBrush(color))
         painter.setPen(QPen(color.darker(150), 1))
@@ -374,7 +355,7 @@ class SimpleAnalysisWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.db_manager = None
-        self.session_data: List[Dict[str, Any]] = []
+        self.session_data: list[dict[str, Any]] = []
         self.setup_ui()
         logger.info("SimpleAnalysisWidget initialized")
 
@@ -561,7 +542,7 @@ class SimpleAnalysisWidget(QWidget):
             self.worst_run_label.setText(f"Worst: {worst:.1f}%")
             self.hit_rate_label.setText(f"Hit Rate: {hit_rate:.1f}%")
 
-    def load_specific_session(self, session_data: Dict[str, Any]):
+    def load_specific_session(self, session_data: dict[str, Any]):
         """Load analysis for a specific session"""
         # Filter to show only the selected session
         self.session_data = [session_data]

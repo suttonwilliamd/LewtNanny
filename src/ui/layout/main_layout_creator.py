@@ -1,20 +1,17 @@
-"""
-Main window UI layout creation methods
+"""Main window UI layout creation methods
 """
 
 import logging
-from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QFrame,
-    QStackedWidget,
-    QPushButton,
-    QLabel,
-    QComboBox,
-)
-from PyQt6.QtCore import Qt, QTimer
+
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QStackedWidget,
+)
 
 from ..components.status_indicator import StatusIndicator
 

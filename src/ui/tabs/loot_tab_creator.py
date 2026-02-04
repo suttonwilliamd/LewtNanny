@@ -1,23 +1,19 @@
-"""
-Loot tab UI creation methods
+"""Loot tab UI creation methods
 """
 
 import logging
-from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QGridLayout,
-    QGroupBox,
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
-    QLabel,
-    QPushButton,
-    QMenu,
-)
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QGridLayout,
+    QGroupBox,
+    QHeaderView,
+    QLabel,
+    QTableWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 logger = logging.getLogger(__name__)
 

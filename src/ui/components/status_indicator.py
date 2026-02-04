@@ -1,11 +1,9 @@
-"""
-Status indicator component with glow effect
+"""Status indicator component with glow effect
 """
 
-from PyQt6.QtWidgets import QLabel
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QGraphicsDropShadowEffect
+from PyQt6.QtWidgets import QGraphicsDropShadowEffect, QLabel
 
 
 class StatusIndicator(QLabel):

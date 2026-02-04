@@ -1,16 +1,12 @@
-"""
-Multi-database manager for LewtNanny
+"""Multi-database manager for LewtNanny
 Separates game data into dedicated database files for better organization
 """
 
 import asyncio
-import aiosqlite
 import logging
 from pathlib import Path
-from typing import Dict, Optional, Any
-from datetime import datetime
-from decimal import Decimal
-import json
+
+import aiosqlite
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +14,7 @@ logger = logging.getLogger(__name__)
 class DatabaseManager:
     """Manages multiple database files for different data categories"""
 
-    def __init__(self, db_dir: Optional[Path] = None):
+    def __init__(self, db_dir: Path | None = None):
         from src.utils.paths import ensure_user_data_dir
 
         if db_dir:
@@ -28,7 +24,7 @@ class DatabaseManager:
 
         self.db_dir.mkdir(parents=True, exist_ok=True)
 
-        self.databases: Dict[str, aiosqlite.Connection] = {}
+        self.databases: dict[str, aiosqlite.Connection] = {}
 
         self.weapons_db = self.db_dir / "weapons.db"
         self.attachments_db = self.db_dir / "attachments.db"
@@ -231,7 +227,7 @@ class DatabaseManager:
             row = await cursor.fetchone()
             return row[0] if row else 0
 
-    async def get_counts(self) -> Dict[str, int]:
+    async def get_counts(self) -> dict[str, int]:
         """Get counts of all data tables"""
         return {
             "weapons": await self.get_weapon_count(),
@@ -254,7 +250,7 @@ class DatabaseManager:
 class WeaponsDatabase:
     """Database operations for weapons"""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         from src.utils.paths import ensure_user_data_dir
 
         if db_path:
@@ -272,7 +268,7 @@ class WeaponsDatabase:
                 weapons.append(dict(row))
             return weapons
 
-    async def get_weapon_by_name(self, name: str) -> Optional[dict]:
+    async def get_weapon_by_name(self, name: str) -> dict | None:
         """Get weapon by name"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
@@ -371,7 +367,7 @@ class WeaponsDatabase:
 class AttachmentsDatabase:
     """Database operations for attachments"""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         from src.utils.paths import ensure_user_data_dir
 
         if db_path:
@@ -423,7 +419,7 @@ class AttachmentsDatabase:
                 attachments.append(dict(row))
             return attachments
 
-    async def get_attachment_by_name(self, name: str) -> Optional[dict]:
+    async def get_attachment_by_name(self, name: str) -> dict | None:
         """Get attachment by name"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
@@ -468,7 +464,7 @@ class AttachmentsDatabase:
 class ResourcesDatabase:
     """Database operations for resources"""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         from src.utils.paths import ensure_user_data_dir
 
         if db_path:
@@ -486,7 +482,7 @@ class ResourcesDatabase:
                 resources.append(dict(row))
             return resources
 
-    async def get_resource_by_name(self, name: str) -> Optional[dict]:
+    async def get_resource_by_name(self, name: str) -> dict | None:
         """Get resource by name"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
@@ -561,7 +557,7 @@ class ResourcesDatabase:
 class CraftingDatabase:
     """Database operations for crafting blueprints"""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         from src.utils.paths import ensure_user_data_dir
 
         if db_path:
@@ -581,7 +577,7 @@ class CraftingDatabase:
                 blueprints.append(bp)
             return blueprints
 
-    async def get_blueprint_by_name(self, name: str) -> Optional[dict]:
+    async def get_blueprint_by_name(self, name: str) -> dict | None:
         """Get blueprint by name with materials"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
@@ -701,7 +697,6 @@ async def initialize_separate_databases():
 
 
 if __name__ == "__main__":
-    import sys
 
     logging.basicConfig(level=logging.INFO)
 

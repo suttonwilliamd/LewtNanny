@@ -1,17 +1,16 @@
-"""
-Loadout Service
+"""Loadout Service
 Handles saving, loading, and managing weapon loadouts
 """
 
 import asyncio
-import aiosqlite
 import json
 import logging
-from dataclasses import dataclass, asdict
-from decimal import Decimal
-from typing import Dict, List, Optional, Any
-from pathlib import Path
+from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
+from typing import Any
+
+import aiosqlite
 
 logger = logging.getLogger(__name__)
 
@@ -20,20 +19,20 @@ logger = logging.getLogger(__name__)
 class WeaponLoadout:
     """Complete weapon loadout configuration"""
 
-    id: Optional[int] = None
+    id: int | None = None
     name: str = ""
     weapon: str = ""
-    amplifier: Optional[str] = None
-    scope: Optional[str] = None
-    sight_1: Optional[str] = None
-    sight_2: Optional[str] = None
+    amplifier: str | None = None
+    scope: str | None = None
+    sight_1: str | None = None
+    sight_2: str | None = None
     damage_enh: int = 0
     accuracy_enh: int = 0
     economy_enh: int = 0
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary"""
         return {
             "id": self.id,
@@ -51,7 +50,7 @@ class WeaponLoadout:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "WeaponLoadout":
+    def from_dict(cls, data: dict[str, Any]) -> "WeaponLoadout":
         """Create from dictionary"""
         return cls(
             id=data.get("id"),
@@ -73,15 +72,15 @@ class WeaponLoadout:
 class CustomWeapon:
     """Custom user-defined weapon"""
 
-    id: Optional[int] = None
+    id: int | None = None
     name: str = ""
     decay: Decimal = Decimal("0")
     ammo_burn: int = 0
     dps: Decimal = Decimal("0")
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary"""
         return {
             "id": self.id,
@@ -94,7 +93,7 @@ class CustomWeapon:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "CustomWeapon":
+    def from_dict(cls, data: dict[str, Any]) -> "CustomWeapon":
         """Create from dictionary"""
         return cls(
             id=data.get("id"),
@@ -167,8 +166,8 @@ class LoadoutService:
         async with aiosqlite.connect(self.db_manager.databases["user_data"]) as db:
             cursor = await db.execute(
                 """
-                INSERT INTO loadouts 
-                (name, weapon, amplifier, scope, sight_1, sight_2, 
+                INSERT INTO loadouts
+                (name, weapon, amplifier, scope, sight_1, sight_2,
                  damage_enh, accuracy_enh, economy_enh, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -192,7 +191,7 @@ class LoadoutService:
             logger.info(f"Created loadout: {loadout.name} (ID: {loadout.id})")
             return loadout.id
 
-    async def get_loadout(self, loadout_id: int) -> Optional[WeaponLoadout]:
+    async def get_loadout(self, loadout_id: int) -> WeaponLoadout | None:
         """Get a loadout by ID"""
         await self.initialize()
 
@@ -204,7 +203,7 @@ class LoadoutService:
             row = await cursor.fetchone()
             return WeaponLoadout.from_dict(dict(row)) if row else None
 
-    async def get_loadout_by_name(self, name: str) -> Optional[WeaponLoadout]:
+    async def get_loadout_by_name(self, name: str) -> WeaponLoadout | None:
         """Get a loadout by name"""
         await self.initialize()
 
@@ -214,7 +213,7 @@ class LoadoutService:
             row = await cursor.fetchone()
             return WeaponLoadout.from_dict(dict(row)) if row else None
 
-    async def get_all_loadouts(self) -> List[WeaponLoadout]:
+    async def get_all_loadouts(self) -> list[WeaponLoadout]:
         """Get all loadouts"""
         await self.initialize()
 
@@ -335,7 +334,7 @@ class LoadoutService:
             logger.error(f"Error importing loadouts: {e}")
             raise
 
-    async def search_loadouts(self, query: str) -> List[WeaponLoadout]:
+    async def search_loadouts(self, query: str) -> list[WeaponLoadout]:
         """Search loadouts by name"""
         await self.initialize()
 
@@ -361,7 +360,7 @@ class LoadoutService:
         async with aiosqlite.connect(self.db_manager.databases["user_data"]) as db:
             cursor = await db.execute(
                 """
-                INSERT INTO custom_weapons 
+                INSERT INTO custom_weapons
                 (name, decay, ammo, dps, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?)
             """,
@@ -381,7 +380,7 @@ class LoadoutService:
             logger.info(f"Created custom weapon: {weapon.name} (ID: {weapon.id})")
             return new_id
 
-    async def get_all_custom_weapons(self) -> List[CustomWeapon]:
+    async def get_all_custom_weapons(self) -> list[CustomWeapon]:
         """Get all custom weapons"""
         await self.initialize()
 
@@ -393,7 +392,7 @@ class LoadoutService:
                 weapons.append(CustomWeapon.from_dict(dict(row)))
             return weapons
 
-    async def get_custom_weapon(self, weapon_id: int) -> Optional[CustomWeapon]:
+    async def get_custom_weapon(self, weapon_id: int) -> CustomWeapon | None:
         """Get a custom weapon by ID"""
         await self.initialize()
 
@@ -405,7 +404,7 @@ class LoadoutService:
             row = await cursor.fetchone()
             return CustomWeapon.from_dict(dict(row)) if row else None
 
-    async def get_custom_weapon_by_name(self, name: str) -> Optional[CustomWeapon]:
+    async def get_custom_weapon_by_name(self, name: str) -> CustomWeapon | None:
         """Get a custom weapon by name"""
         await self.initialize()
 
@@ -470,10 +469,10 @@ class LoadoutService:
 async def save_loadout(
     name: str,
     weapon: str,
-    amplifier: Optional[str] = None,
-    scope: Optional[str] = None,
-    sight_1: Optional[str] = None,
-    sight_2: Optional[str] = None,
+    amplifier: str | None = None,
+    scope: str | None = None,
+    sight_1: str | None = None,
+    sight_2: str | None = None,
     damage_enh: int = 0,
     accuracy_enh: int = 0,
     economy_enh: int = 0,
@@ -494,7 +493,7 @@ async def save_loadout(
     return await service.create_loadout(loadout)
 
 
-async def load_loadouts() -> List[WeaponLoadout]:
+async def load_loadouts() -> list[WeaponLoadout]:
     """Load all loadouts"""
     service = LoadoutService()
     return await service.get_all_loadouts()
@@ -507,7 +506,6 @@ async def delete_loadout(name: str) -> bool:
 
 
 if __name__ == "__main__":
-    import sys
 
     logging.basicConfig(level=logging.INFO)
 
@@ -536,7 +534,7 @@ if __name__ == "__main__":
             print(f"  - {l.name}: {l.weapon}")
 
         # Export
-        json_data = await service.export_loadouts()
+        await service.export_loadouts()
         print(f"\nExported {len(loadouts)} loadouts to JSON")
 
         # Clean up test

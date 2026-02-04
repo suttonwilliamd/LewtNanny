@@ -1,12 +1,11 @@
-"""
-Game data models for weapons, attachments, resources, and blueprints
+"""Game data models for weapons, attachments, resources, and blueprints
 Provides typed dataclasses for all game item data
 """
 
 from dataclasses import dataclass, field
-from decimal import Decimal
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from decimal import Decimal
+from typing import Any
 
 
 @dataclass
@@ -17,13 +16,13 @@ class Weapon:
     ammo: int
     decay: Decimal
     weapon_type: str
-    dps: Optional[Decimal] = None
-    eco: Optional[Decimal] = None
+    dps: Decimal | None = None
+    eco: Decimal | None = None
     range_value: int = 0
     damage: Decimal = Decimal('0')
     reload_time: Decimal = Decimal('0')
     hits: int = 0
-    data_updated: Optional[datetime] = None
+    data_updated: datetime | None = None
 
     def __post_init__(self):
         if isinstance(self.decay, str):
@@ -51,7 +50,7 @@ class Attachment:
     decay_modifier: Decimal = Decimal('0')
     economy_bonus: Decimal = Decimal('0')
     range_bonus: int = 0
-    data_updated: Optional[datetime] = None
+    data_updated: datetime | None = None
 
     def __post_init__(self):
         if isinstance(self.decay, str):
@@ -72,7 +71,7 @@ class Resource:
     name: str
     tt_value: Decimal
     decay: Decimal = Decimal('0')
-    data_updated: Optional[datetime] = None
+    data_updated: datetime | None = None
 
     def __post_init__(self):
         if isinstance(self.tt_value, str):
@@ -94,12 +93,12 @@ class Blueprint:
     """Crafting blueprint with materials"""
     id: str
     name: str
-    materials: List[BlueprintMaterial] = field(default_factory=list)
-    result_item: Optional[str] = None
+    materials: list[BlueprintMaterial] = field(default_factory=list)
+    result_item: str | None = None
     result_quantity: int = 1
-    skill_required: Optional[str] = None
-    condition_limit: Optional[int] = None
-    data_updated: Optional[datetime] = None
+    skill_required: str | None = None
+    condition_limit: int | None = None
+    data_updated: datetime | None = None
 
 
 @dataclass
@@ -151,7 +150,7 @@ class EnhancedWeaponStats:
     damage_per_ped: Decimal
     effective_range: int
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
             'damage': float(self.damage),

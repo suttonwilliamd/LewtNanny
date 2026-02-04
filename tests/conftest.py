@@ -1,12 +1,11 @@
-"""
-Basic test configuration and utilities for LewtNanny
+"""Basic test configuration and utilities for LewtNanny
 """
 
-import pytest
 import sys
 from pathlib import Path
-from typing import Generator, Any
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
+
+import pytest
 
 # Add src to path for imports
 src_path = Path(__file__).parent.parent / "src"
@@ -88,16 +87,16 @@ def temp_db_file(tmp_path):
 
 class MockQtApplication:
     """Mock Qt application for testing without GUI"""
-    
+
     def __init__(self):
         self.exec_called = False
         self.widgets = []
-    
+
     def exec(self):
         """Mock exec to avoid starting GUI event loop"""
         self.exec_called = True
         return 0
-    
+
     def quit(self):
         """Mock quit"""
         pass
@@ -120,7 +119,7 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(config, items):
     """Modify test collection to skip UI tests in CI"""
     import os
-    
+
     if os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"):
         skip_ui = pytest.mark.skip(reason="UI tests skipped in CI")
         for item in items:

@@ -1,21 +1,20 @@
-"""
-Skills tab UI creation methods
+"""Skills tab UI creation methods
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Any
+
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
     QGroupBox,
-    QTableWidget,
-    QTableWidgetItem,
+    QHBoxLayout,
     QHeaderView,
     QLabel,
-    QHBoxLayout,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +123,7 @@ class SkillsTabCreator:
         section.setLayout(layout)
         return section
 
-    def add_skill_event(self, event_data: Dict[str, Any]):
+    def add_skill_event(self, event_data: dict[str, Any]):
         """Add a skill event to the skills tab"""
         event_type = event_data.get("event_type", "")
         parsed_data = event_data.get("parsed_data", {})
@@ -191,9 +190,9 @@ class SkillsTabCreator:
                     r, 4, QTableWidgetItem(f"{proc_percent:.0f}%")
                 )
 
-            logger.info(f"[UI] Skill event added to table")
+            logger.info("[UI] Skill event added to table")
 
-    def load_session_skills(self, skill_events: List[Dict[str, Any]]):
+    def load_session_skills(self, skill_events: list[dict[str, Any]]):
         """Load skills for a specific session"""
         self.parent.skills_table.setRowCount(0)
 

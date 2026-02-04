@@ -1,20 +1,18 @@
-"""
-Database manager for LewtNanny using SQLite for performance
+"""Database manager for LewtNanny using SQLite for performance
 Uses the new data migration service for loading JSON game data
 """
 
-import sqlite3
-import asyncio
-import aiosqlite
+import json
 import logging
 from datetime import datetime
-from pathlib import Path
-from typing import List, Dict, Optional, Any
-import json
 from decimal import Decimal
+from pathlib import Path
+from typing import Any
 
-from src.models.models import Weapon, CraftingBlueprint
-from src.utils.paths import get_user_data_dir, ensure_user_data_dir
+import aiosqlite
+
+from src.models.models import CraftingBlueprint, Weapon
+from src.utils.paths import ensure_user_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +169,7 @@ class DatabaseManager:
 
         weapons_path = self.db_path.parent / "weapons.json"
         if weapons_path.exists():
-            with open(weapons_path, "r", encoding="utf-8") as f:
+            with open(weapons_path, encoding="utf-8") as f:
                 weapons_data = json.load(f)
 
             weapons_migrated = 0
@@ -207,7 +205,7 @@ class DatabaseManager:
 
         crafting_path = self.db_path.parent / "crafting.json"
         if crafting_path.exists():
-            with open(crafting_path, "r", encoding="utf-8") as f:
+            with open(crafting_path, encoding="utf-8") as f:
                 crafting_data = json.load(f)
 
             blueprints_migrated = 0
@@ -307,7 +305,7 @@ class DatabaseManager:
             logger.error(f"Migration error: {e}")
             await self._legacy_migrate_json_data(db)
 
-    async def get_all_weapons(self) -> List[Weapon]:
+    async def get_all_weapons(self) -> list[Weapon]:
         """Get all weapons from database"""
         weapons = []
 
@@ -334,13 +332,13 @@ class DatabaseManager:
         logger.debug(f"Retrieved {len(weapons)} weapons from database")
         return weapons
 
-    async def get_weapon_by_name(self, name: str) -> Optional[Weapon]:
+    async def get_weapon_by_name(self, name: str) -> Weapon | None:
         """Get weapon by name or ID"""
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
                 """
                 SELECT id, name, ammo, decay, weapon_type, dps, eco, range_value
-                FROM weapons 
+                FROM weapons
                 WHERE name = ? OR id = ?
             """,
                 (name, name),
@@ -360,7 +358,7 @@ class DatabaseManager:
                 )
         return None
 
-    async def search_weapons(self, query: str, limit: int = 50) -> List[Weapon]:
+    async def search_weapons(self, query: str, limit: int = 50) -> list[Weapon]:
         """Search weapons by name"""
         weapons = []
 
@@ -368,7 +366,7 @@ class DatabaseManager:
             cursor = await db.execute(
                 """
                 SELECT id, name, ammo, decay, weapon_type, dps, eco, range_value
-                FROM weapons 
+                FROM weapons
                 WHERE name LIKE ? OR id LIKE ?
                 ORDER BY name
                 LIMIT ?
@@ -393,7 +391,7 @@ class DatabaseManager:
         logger.debug(f"Search for '{query}' returned {len(weapons)} weapons")
         return weapons
 
-    async def get_weapons_by_type(self, weapon_type: str) -> List[Weapon]:
+    async def get_weapons_by_type(self, weapon_type: str) -> list[Weapon]:
         """Get weapons by type"""
         weapons = []
 
@@ -424,14 +422,14 @@ class DatabaseManager:
 
         return weapons
 
-    async def get_blueprint_by_name(self, name: str) -> Optional[CraftingBlueprint]:
+    async def get_blueprint_by_name(self, name: str) -> CraftingBlueprint | None:
         """Get crafting blueprint by name or ID"""
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute(
                 """
-                SELECT id, name, materials, result_item, result_quantity, 
+                SELECT id, name, materials, result_item, result_quantity,
                        skill_required, condition_limit
-                FROM crafting_blueprints 
+                FROM crafting_blueprints
                 WHERE name = ? OR id = ?
             """,
                 (name, name),
@@ -493,7 +491,7 @@ class DatabaseManager:
             logger.error(f"Error creating session (sync): {e}")
             return False
 
-    async def add_event(self, event_data: Dict[str, Any]) -> bool:
+    async def add_event(self, event_data: dict[str, Any]) -> bool:
         """Add an event to the database"""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -520,7 +518,7 @@ class DatabaseManager:
             logger.error(f"Error adding event: {e}")
             return False
 
-    def add_event_sync(self, event_data: Dict[str, Any]) -> bool:
+    def add_event_sync(self, event_data: dict[str, Any]) -> bool:
         """Add an event to the database (synchronous version)"""
         try:
             import sqlite3
@@ -549,7 +547,7 @@ class DatabaseManager:
             logger.error(f"Error adding event (sync): {e}")
             return False
 
-    async def get_session_stats(self, session_id: str) -> Dict[str, Any]:
+    async def get_session_stats(self, session_id: str) -> dict[str, Any]:
         """Get statistics for a session"""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -585,7 +583,7 @@ class DatabaseManager:
             logger.error(f"Error getting session stats: {e}")
             return {}
 
-    async def get_session_events(self, session_id: str) -> List[Dict[str, Any]]:
+    async def get_session_events(self, session_id: str) -> list[dict[str, Any]]:
         """Get all events for a session"""
         events = []
 
@@ -618,7 +616,7 @@ class DatabaseManager:
 
         return events
 
-    async def get_all_sessions(self) -> List[Dict[str, Any]]:
+    async def get_all_sessions(self) -> list[dict[str, Any]]:
         """Get all sessions"""
         sessions = []
 
@@ -742,7 +740,7 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error saving session loot item: {e}")
 
-    async def get_session_loot_items(self, session_id: str) -> List[Dict[str, Any]]:
+    async def get_session_loot_items(self, session_id: str) -> list[dict[str, Any]]:
         """Get all loot items for a session"""
         items = []
         try:
@@ -810,7 +808,7 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error updating session totals: {e}")
 
-    async def get_session_counts(self, session_id: str) -> Dict[str, int]:
+    async def get_session_counts(self, session_id: str) -> dict[str, int]:
         """Get counts of creatures, globals, and HOFs for a session"""
         try:
             async with aiosqlite.connect(self.db_path) as db:
@@ -841,7 +839,7 @@ class DatabaseManager:
             logger.error(f"Error getting session counts: {e}")
             return {"creatures": 0, "globals": 0, "hofs": 0}
 
-    async def get_session_skills(self, session_id: str) -> List[Dict[str, Any]]:
+    async def get_session_skills(self, session_id: str) -> list[dict[str, Any]]:
         """Get skill gains for a session"""
         skills = []
         try:
@@ -874,7 +872,7 @@ class DatabaseManager:
 
         return skills
 
-    async def get_session_combat_events(self, session_id: str) -> List[Dict[str, Any]]:
+    async def get_session_combat_events(self, session_id: str) -> list[dict[str, Any]]:
         """Get combat events for a session"""
         combat_events = []
         try:

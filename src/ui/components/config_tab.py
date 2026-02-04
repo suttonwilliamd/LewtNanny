@@ -1,48 +1,40 @@
-"""
-Configuration tab for LewtNanny - Weapon Loadout System
+"""Configuration tab for LewtNanny - Weapon Loadout System
 Adapted from LootNanny's ConfigTab with similar functionality
 """
 
 import asyncio
-import os
-import json
 import logging
 from pathlib import Path
-from decimal import Decimal
-from typing import Dict, Any, Optional, List
+from typing import Any
 
+from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
     QFormLayout,
     QGridLayout,
     QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
-    QComboBox,
+    QMessageBox,
     QPushButton,
+    QSpinBox,
     QTableWidget,
     QTableWidgetItem,
-    QHeaderView,
-    QSpinBox,
-    QFrame,
-    QInputDialog,
-    QMessageBox,
-    QDialog,
-    QDialogButtonBox,
     QTabWidget,
-    QCheckBox,
-    QTextEdit,
-    QFileDialog,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
-from PyQt6.QtGui import QFont
 
-from src.services.loadout_service import LoadoutService, WeaponLoadout, CustomWeapon
-from src.services.game_data_service import GameDataService
 from src.services.config_manager import ConfigManager
 from src.services.cost_calculation_service import CostCalculationService
+from src.services.game_data_service import GameDataService
+from src.services.loadout_service import LoadoutService, WeaponLoadout
 
 
 def get_default_chat_log_path() -> str:
@@ -78,8 +70,8 @@ class ConfigTab(QWidget):
         from src.core.multi_database_manager import MultiDatabaseManager
 
         self.db_manager = MultiDatabaseManager()
-        self._loadouts: List[WeaponLoadout] = []
-        self._selected_loadout_index: Optional[int] = None
+        self._loadouts: list[WeaponLoadout] = []
+        self._selected_loadout_index: int | None = None
 
         # Use provided config_manager or create a new one
         if config_manager is not None:
@@ -792,7 +784,7 @@ class ConfigTab(QWidget):
     async def _async_calculate_stats(self, loadout: WeaponLoadout):
         """Async calculation of loadout stats using centralized cost calculation service"""
         logger = logging.getLogger(__name__)
-        logger.info(f"===== CONFIG TAB STATS CALCULATION START =====")
+        logger.info("===== CONFIG TAB STATS CALCULATION START =====")
         logger.info(f"Loadout: {loadout.name} - Weapon: {loadout.weapon}")
         logger.info(
             f"Loadout components: amp={loadout.amplifier}, scope={loadout.scope}, sight1={loadout.sight_1}, sight2={loadout.sight_2}"
@@ -808,7 +800,7 @@ class ConfigTab(QWidget):
             )
 
             logger.info(f"TOTAL COST PER ATTACK: {total_cost_ped:.6f} PED")
-            logger.info(f"===== CONFIG TAB STATS CALCULATION END =====")
+            logger.info("===== CONFIG TAB STATS CALCULATION END =====")
 
             # For UI display, we need to calculate the individual components
             data_service = GameDataService()
@@ -916,13 +908,13 @@ class ConfigTab(QWidget):
 class LoadoutDialog(QDialog):
     """Dialog for adding/editing weapon loadouts"""
 
-    def __init__(self, parent=None, loadout: Optional[WeaponLoadout] = None):
+    def __init__(self, parent=None, loadout: WeaponLoadout | None = None):
         super().__init__(parent)
         self._loadout = loadout
-        self._weapons: List[str] = []
-        self._amplifiers: List[str] = []
-        self._scopes: List[str] = []
-        self._sights: List[str] = []
+        self._weapons: list[str] = []
+        self._amplifiers: list[str] = []
+        self._scopes: list[str] = []
+        self._sights: list[str] = []
 
         self.setWindowTitle("Edit Loadout" if loadout else "Add Loadout")
         self.setMinimumWidth(400)
@@ -1142,7 +1134,7 @@ class LoadoutDialog(QDialog):
         self.accuracy_spin.setValue(loadout.accuracy_enh)
         self.economy_spin.setValue(loadout.economy_enh)
 
-    def get_loadout(self) -> Optional[WeaponLoadout]:
+    def get_loadout(self) -> WeaponLoadout | None:
         """Get the loadout from dialog"""
         name = self.name_edit.text()
         if not name:
@@ -1247,7 +1239,7 @@ class CreateWeaponDialog(QDialog):
         """Handle OK button click"""
         self.accept()
 
-    def get_weapon_data(self) -> Optional[Dict[str, Any]]:
+    def get_weapon_data(self) -> dict[str, Any] | None:
         """Get the weapon data from dialog"""
         name = self.name_edit.text()
         if not name:

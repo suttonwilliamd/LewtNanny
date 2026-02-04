@@ -1,16 +1,14 @@
-"""
-Session management logic for the main window
+"""Session management logic for the main window
 """
 
 import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QTableWidgetItem, QMessageBox
+from PyQt6.QtWidgets import QTableWidgetItem
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +102,7 @@ class SessionManager:
                         )
                     else:
                         self.parent.status_bar.showMessage(
-                            f"Session started - Failed to start monitoring"
+                            "Session started - Failed to start monitoring"
                         )
                 else:
                     self.parent.status_bar.showMessage(
@@ -223,7 +221,7 @@ class SessionManager:
                 if hasattr(self.parent, "combat_widget") and self.parent.combat_widget:
                     self.parent.combat_widget.update_session_info(None, None)
 
-                self.parent.status_bar.showMessage(f"Session stopped")
+                self.parent.status_bar.showMessage("Session stopped")
                 logger.info(f"Session stopped: {session_id}")
 
         except Exception as e:
@@ -251,7 +249,7 @@ class SessionManager:
                 )
                 self.parent.run_log_table.item(row, 0).setForeground(QColor("#E6EDF3"))
 
-                start_time_str = self.parent.run_log_table.item(row, 1).text()
+                self.parent.run_log_table.item(row, 1).text()
                 self.parent.run_log_table.setItem(row, 2, QTableWidgetItem(duration))
                 self.parent.run_log_table.setItem(
                     row, 3, QTableWidgetItem(f"{total_cost:.2f}")

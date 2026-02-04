@@ -1,16 +1,15 @@
-"""
-Data migration service
+"""Data migration service
 Loads all JSON data from data/ directory into separate SQLite database files
 """
 
-import json
 import asyncio
-import aiosqlite
-from pathlib import Path
-from datetime import datetime
-from decimal import Decimal
+import json
 import logging
-from typing import Dict, List, Any, Optional
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import aiosqlite
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class DataMigrationService:
             self.db_dir = Path(db_dir)
         else:
             self.db_dir = ensure_user_data_dir()
-        
+
         self.data_path = Path(__file__).parent.parent.parent / "data"
         self.json_files = {
             'weapons': self.data_path / 'weapons.json',
@@ -35,9 +34,8 @@ class DataMigrationService:
             'crafting': self.data_path / 'crafting.json'
         }
 
-    async def migrate_all(self, force: bool = False) -> Dict[str, int]:
-        """
-        Migrate all JSON data to separate SQLite databases
+    async def migrate_all(self, force: bool = False) -> dict[str, int]:
+        """Migrate all JSON data to separate SQLite databases
 
         Args:
             force: If True, clear existing data and re-migrate
@@ -46,10 +44,10 @@ class DataMigrationService:
             Dict with counts of migrated items per category
         """
         from src.core.database_manager import DatabaseManager
-        
+
         manager = DatabaseManager(self.db_dir)
         await manager.initialize_all()
-        
+
         counts = {
             'weapons': await self._migrate_weapons_to_db(manager.weapons_db, force),
             'attachments': await self._migrate_attachments_to_db(manager.attachments_db, force),
@@ -59,14 +57,14 @@ class DataMigrationService:
             'blueprints': await self._migrate_blueprints_to_db(manager.crafting_db, force),
             'blueprint_materials': await self._migrate_blueprint_materials_to_db(manager.crafting_db, force)
         }
-        
+
         await manager.close_all()
         return counts
 
-    async def verify_data(self) -> Dict[str, Any]:
+    async def verify_data(self) -> dict[str, Any]:
         """Verify migration results and return counts"""
         from src.core.database_manager import DatabaseManager
-        
+
         manager = DatabaseManager(self.db_dir)
         counts = await manager.get_counts()
         await manager.close_all()
@@ -79,7 +77,7 @@ class DataMigrationService:
             logger.warning("weapons.json not found")
             return 0
 
-        with open(weapons_path, 'r', encoding='utf-8') as f:
+        with open(weapons_path, encoding='utf-8') as f:
             data = json.load(f)
 
         updated = data.get('updated', '')
@@ -130,7 +128,7 @@ class DataMigrationService:
             logger.warning("attachments.json not found")
             return 0
 
-        with open(attachments_path, 'r', encoding='utf-8') as f:
+        with open(attachments_path, encoding='utf-8') as f:
             data = json.load(f)
 
         updated = data.get('updated', '')
@@ -171,7 +169,7 @@ class DataMigrationService:
             logger.warning("scopes.json not found")
             return 0
 
-        with open(scopes_path, 'r', encoding='utf-8') as f:
+        with open(scopes_path, encoding='utf-8') as f:
             data = json.load(f)
 
         updated = data.get('updated', '')
@@ -210,7 +208,7 @@ class DataMigrationService:
             logger.warning("sights.json not found")
             return 0
 
-        with open(sights_path, 'r', encoding='utf-8') as f:
+        with open(sights_path, encoding='utf-8') as f:
             data = json.load(f)
 
         updated = data.get('updated', '')
@@ -249,7 +247,7 @@ class DataMigrationService:
             logger.warning("resources.json not found")
             return 0
 
-        with open(resources_path, 'r', encoding='utf-8') as f:
+        with open(resources_path, encoding='utf-8') as f:
             data = json.load(f)
 
         updated = data.get('updated', '')
@@ -262,10 +260,7 @@ class DataMigrationService:
             count = 0
             for resource_name, resource_info in data.get('data', {}).items():
                 try:
-                    if isinstance(resource_info, (int, float)):
-                        tt_value = float(resource_info)
-                        decay = 0.0
-                    elif isinstance(resource_info, str):
+                    if isinstance(resource_info, (int, float, str)):
                         tt_value = float(resource_info)
                         decay = 0.0
                     else:
@@ -298,7 +293,7 @@ class DataMigrationService:
             logger.warning("crafting.json not found")
             return 0
 
-        with open(crafting_path, 'r', encoding='utf-8') as f:
+        with open(crafting_path, encoding='utf-8') as f:
             data = json.load(f)
 
         updated = data.get('updated', '')
@@ -309,7 +304,7 @@ class DataMigrationService:
                 await db.execute("DELETE FROM blueprints")
 
             count = 0
-            for blueprint_id, materials in data.get('data', {}).items():
+            for blueprint_id, _materials in data.get('data', {}).items():
                 try:
                     name = blueprint_id
                     result_item = name.replace(' Blueprint (L)', '').replace(' Blueprint', '')
@@ -339,7 +334,7 @@ class DataMigrationService:
         if not crafting_path.exists():
             return 0
 
-        with open(crafting_path, 'r', encoding='utf-8') as f:
+        with open(crafting_path, encoding='utf-8') as f:
             data = json.load(f)
 
         async with aiosqlite.connect(db_path) as db:
@@ -403,7 +398,7 @@ class DataMigrationService:
         return damage_estimates.get(weapon_type, 15)
 
 
-async def run_migration(force: bool = False) -> Dict[str, int]:
+async def run_migration(force: bool = False) -> dict[str, int]:
     """Standalone migration runner using separate databases"""
     service = DataMigrationService()
     return await service.migrate_all(force=force)

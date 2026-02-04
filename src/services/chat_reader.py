@@ -1,16 +1,15 @@
-"""
-Chat log reader for real-time game event parsing
+"""Chat log reader for real-time game event parsing
 Uses QTimer for Qt event loop integration
 """
 
-import re
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 
-from src.models.models import EventType, ActivityType
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+
+from src.models.models import ActivityType, EventType
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,6 @@ class ChatReader(QObject):
         self._file_change_queue = []
 
         # Regex patterns for parsing - updated for Entropia Universe format
-        import re
         self.patterns = {
             'loot': re.compile(r'You\s+received\s+(.+?)\s+x\s*\((\d+)\)\s+Value:\s*([\d.]+)\s+PED'),
             'damage': re.compile(r'You\s+inflicted\s+([\d.]+)\s+points\s+of\s+damage'),
@@ -89,11 +87,11 @@ class ChatReader(QObject):
 
     def process_file_changes(self, file_path: str):
         """Process new lines in chat log file (synchronous)"""
-        logger.info(f"[CHAT_READER] >>> process_file_changes START <<<")
+        logger.info("[CHAT_READER] >>> process_file_changes START <<<")
         logger.info(f"[CHAT_READER] File: {file_path}")
         logger.info(f"[CHAT_READER] Last position: {self.last_position}")
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, encoding='utf-8', errors='ignore') as f:
                 f.seek(0, 2)
                 current_pos = f.tell()
                 logger.info(f"[CHAT_READER] File size: {current_pos}")
@@ -109,7 +107,7 @@ class ChatReader(QObject):
                     if line:
                         self.parse_line(line)
                     else:
-                        logger.debug(f"[CHAT_READER] Skipping empty line")
+                        logger.debug("[CHAT_READER] Skipping empty line")
 
         except Exception as e:
             logger.error(f"[CHAT_READER] Error processing file changes: {e}", exc_info=True)
@@ -118,7 +116,7 @@ class ChatReader(QObject):
         """Parse a single chat line for game events (synchronous)"""
         logger.debug(f"[CHAT_READER] parse_line: {line[:80]}...")
         event_data = None
-        
+
         # Check if logging is paused
         if self.is_paused:
             # Check if this is a trade message - trade messages should still be processed
@@ -134,23 +132,23 @@ class ChatReader(QObject):
             loot_info = loot_match.groups()
             logger.debug(f"[CHAT_READER] Loot match found: {loot_info}")
             logger.debug(f"[CHAT_READER] Full line: {line}")
-            
+
             # Exclude Universal Ammo (not actual loot, appears when converting shrapnel at 101%)
             if loot_info[0] == 'Universal Ammo':
-                logger.info(f"[CHAT_READER] Skipping Universal Ammo (shrapnel conversion)")
+                logger.info("[CHAT_READER] Skipping Universal Ammo (shrapnel conversion)")
                 return None
-            
+
             # Only process loot messages that are actually from you, not from chat channels
             # Personal loot messages either have no character name bracket or have your character name in the last bracket before "You received"
             before_received = line.split('You received')[0]
             logger.debug(f"[CHAT_READER] Text before 'You received': '{before_received}'")
-            
+
             # Find the LAST bracket content before "You received" - this should be the character name
             import re
             last_bracket_match = None
             for match in re.finditer(r'\[(.*?)\]', before_received):
                 last_bracket_match = match
-            
+
             if last_bracket_match:
                 bracket_content = last_bracket_match.group(1).strip()
                 logger.debug(f"[CHAT_READER] Last bracket content before 'You received': '{bracket_content}'")
@@ -161,8 +159,8 @@ class ChatReader(QObject):
                     logger.info(f"[CHAT_READER] Skipping other player's loot message: {line[:80]}...")
                     return None
                 # "[You]" or empty bracket indicates this is personal loot
-                logger.debug(f"[CHAT_READER] Processing personal loot")
-                
+                logger.debug("[CHAT_READER] Processing personal loot")
+
             logger.info(f"[CHAT_READER] Detected LOOT event: {loot_info}")
             event_data = {
                 'event_type': EventType.LOOT.value,
@@ -196,7 +194,7 @@ class ChatReader(QObject):
         # Check for miss events
         miss_match = self.patterns['miss'].search(line)
         if miss_match and not event_data:
-            logger.info(f"[CHAT_READER] Detected MISS event")
+            logger.info("[CHAT_READER] Detected MISS event")
             event_data = {
                 'event_type': EventType.COMBAT.value,
                 'activity_type': self.current_activity.value,
@@ -212,7 +210,7 @@ class ChatReader(QObject):
         # Check for dodge events
         dodge_match = self.patterns['dodge'].search(line)
         if dodge_match and not event_data:
-            logger.info(f"[CHAT_READER] Detected DODGE event")
+            logger.info("[CHAT_READER] Detected DODGE event")
             event_data = {
                 'event_type': EventType.COMBAT.value,
                 'activity_type': self.current_activity.value,
@@ -228,7 +226,7 @@ class ChatReader(QObject):
         # Check for evade events
         evade_match = self.patterns['evade'].search(line)
         if evade_match and not event_data:
-            logger.info(f"[CHAT_READER] Detected EVADE event")
+            logger.info("[CHAT_READER] Detected EVADE event")
             event_data = {
                 'event_type': EventType.COMBAT.value,
                 'activity_type': self.current_activity.value,
@@ -398,7 +396,7 @@ class ChatReader(QObject):
         if picked_up_match and not event_data:
             item_name = picked_up_match.group(1).strip()
             quantity = int(picked_up_match.group(2)) if picked_up_match.group(2) else 1
-            
+
             # Only calculate value for crude oil, skip other items since they should have
             # been processed by the loot message with actual values
             if item_name == 'Crude Oil':
@@ -426,7 +424,7 @@ class ChatReader(QObject):
         # Check for trade channel messages
         trade_match = self.patterns['trade'].search(line)
         if trade_match and not event_data:
-            logger.info(f"[CHAT_READER] Detected TRADE event")
+            logger.info("[CHAT_READER] Detected TRADE event")
             event_data = {
                 'event_type': EventType.TRADE.value,
                 'activity_type': ActivityType.TRADING.value,
@@ -445,14 +443,14 @@ class ChatReader(QObject):
 
             # Save to database (synchronous)
             try:
-                logger.info(f"[CHAT_READER] About to save to DB...")
+                logger.info("[CHAT_READER] About to save to DB...")
                 self.db_manager.add_event_sync(event_data)
-                logger.info(f"[CHAT_READER] Event saved to DB")
+                logger.info("[CHAT_READER] Event saved to DB")
             except Exception as e:
                 logger.error(f"[CHAT_READER] Error saving event to DB: {e}", exc_info=True)
 
             # Emit signal
-            logger.info(f"[CHAT_READER] About to emit new_event signal...")
+            logger.info("[CHAT_READER] About to emit new_event signal...")
             self.new_event.emit(event_data)
             logger.info(f"[CHAT_READER] >>> SIGNAL EMITTED: {event_data['event_type']} <<<")
 
@@ -460,7 +458,7 @@ class ChatReader(QObject):
 
     def start_monitoring(self, log_file_path: str):
         """Start monitoring chat log file (synchronous, for use with Qt event loop)"""
-        logger.info(f"[CHAT_READER] ===========================================")
+        logger.info("[CHAT_READER] ===========================================")
         logger.info(f"[CHAT_READER] start_monitoring called with: {log_file_path}")
 
         try:
@@ -477,7 +475,7 @@ class ChatReader(QObject):
             self.monitoring_file_path = str(log_path)
 
             # Set last_position to end of file to read only NEW loot going forward
-            with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(log_path, encoding='utf-8', errors='ignore') as f:
                 f.seek(0, 2)  # Seek to end
                 self.last_position = f.tell()
             logger.info(f"[CHAT_READER] Set last_position to end of file: {self.last_position}")
@@ -497,7 +495,7 @@ class ChatReader(QObject):
             logger.info(f"[CHAT_READER] Monitoring started successfully: {log_file_path}")
             logger.info(f"[CHAT_READER] Session ID: {self.current_session_id}")
             logger.info(f"[CHAT_READER] Current activity: {self.current_activity.value}")
-            logger.info(f"[CHAT_READER] ===========================================")
+            logger.info("[CHAT_READER] ===========================================")
             return True
 
         except Exception as e:
@@ -506,11 +504,11 @@ class ChatReader(QObject):
 
     def stop_monitoring(self):
         """Stop monitoring chat log file"""
-        logger.info(f"[CHAT_READER] Stopping monitoring...")
+        logger.info("[CHAT_READER] Stopping monitoring...")
         self._polling = False
 
         if self._poll_timer:
             self._poll_timer.stop()
             self._poll_timer = None
 
-        logger.info(f"[CHAT_READER] Polling stopped")
+        logger.info("[CHAT_READER] Polling stopped")

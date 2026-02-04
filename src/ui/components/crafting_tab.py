@@ -1,23 +1,31 @@
-"""
-Crafting tab implementation for LewtNanny
+"""Crafting tab implementation for LewtNanny
 Tracks crafting statistics and provides blueprint cost calculator
 """
 
+import asyncio
 import json
 import logging
-import asyncio
 from decimal import Decimal
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any
 
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QGroupBox, QLabel, QTableWidget, QTableWidgetItem,
-    QHeaderView, QProgressBar, QComboBox, QLineEdit,
-    QScrollArea, QFrame, QCheckBox, QPushButton
+    QCheckBox,
+    QComboBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QFont, QColor
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +81,7 @@ class CraftingTabWidget(QWidget):
             # Load resources from JSON (these are reference data)
             resources_path = Path(__file__).parent.parent.parent.parent / "data" / "resources.json"
             if resources_path.exists():
-                with open(resources_path, 'r') as f:
+                with open(resources_path) as f:
                     data = json.load(f)
                     self.resources_data = data.get('data', {})
 
@@ -164,7 +172,7 @@ class CraftingTabWidget(QWidget):
         try:
             blueprints_path = Path(__file__).parent.parent.parent.parent / "data" / "crafting.json"
             if blueprints_path.exists():
-                with open(blueprints_path, 'r') as f:
+                with open(blueprints_path) as f:
                     data = json.load(f)
                     self.blueprints_data = data.get('data', {})
         except Exception as e:
@@ -179,7 +187,7 @@ class CraftingTabWidget(QWidget):
                 logger.warning("crafting.json not found, cannot populate database")
                 return
 
-            with open(blueprints_path, 'r', encoding='utf-8') as f:
+            with open(blueprints_path, encoding='utf-8') as f:
                 crafting_data = json.load(f)
 
             blueprints_migrated = 0
@@ -790,7 +798,7 @@ class CraftingTabWidget(QWidget):
         """Filter blueprint list based on search text"""
         if not self.blueprint_combo:
             return
-            
+
         self.blueprint_combo.blockSignals(True)
         current_data = self.blueprint_combo.currentData()
 
@@ -955,7 +963,7 @@ class CraftingTabWidget(QWidget):
 
         logger.debug("Crafting display updated")
 
-    def add_crafting_event(self, event_data: Dict[str, Any]):
+    def add_crafting_event(self, event_data: dict[str, Any]):
         """Add a crafting event"""
         event_type = event_data.get('event_type', '')
 

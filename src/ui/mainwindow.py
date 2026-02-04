@@ -1,78 +1,42 @@
-"""
-Tabbed MainWindow for LewtNanny
+"""Tabbed MainWindow for LewtNanny
 Implements the detailed UI specification with custom tab bar and persistent bottom control bar
 """
 
-import sys
 import asyncio
+import contextlib
 import logging
 import threading
 from datetime import datetime
-from typing import Dict, Any, Optional, List
 from pathlib import Path
-from decimal import Decimal
+from typing import Any
 
-from PyQt6.QtWidgets import (
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QGridLayout,
-    QTabWidget,
-    QTextEdit,
-    QLabel,
-    QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
-    QSplitter,
-    QGroupBox,
-    QFrame,
-    QComboBox,
-    QSpinBox,
-    QCheckBox,
-    QFileDialog,
-    QStatusBar,
-    QFrame,
-    QProgressBar,
-    QMessageBox,
-    QToolBar,
-    QToolButton,
-    QDockWidget,
-    QStackedWidget,
-    QLineEdit,
-    QGraphicsDropShadowEffect,
-    QApplication,
-    QMenu,
-)
-from PyQt6.QtCore import Qt, QTimer, pyqtSlot, QThread, pyqtSignal, QUrl
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import (
-    QFont,
     QAction,
-    QIcon,
-    QColor,
-    QPixmap,
-    QPainter,
-    QRadialGradient,
+)
+from PyQt6.QtWidgets import (
+    QLabel,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QStatusBar,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
-from src.models.models import ActivityType, EventType
-from src.ui.overlay import SessionOverlay
-from src.ui.components.config_tab import ConfigTab
 from src.ui.components.combat_tab import CombatTabWidget
-from src.services.game_data_service import GameDataService
+from src.ui.components.config_tab import ConfigTab
 from src.ui.components.crafting_tab import CraftingTabWidget
-from src.ui.components.weapon_selector import WeaponSelector
-from src.services.cost_calculation_service import CostCalculationService
 
 # Import extracted components
-from src.ui.components.status_indicator import StatusIndicator
 from src.ui.layout.main_layout_creator import MainLayoutCreator
+from src.ui.managers.cost_manager import CostManager
+from src.ui.managers.session_manager import SessionManager
+from src.ui.overlay import SessionOverlay
 from src.ui.tabs.loot_tab_creator import LootTabCreator
 from src.ui.tabs.skills_tab_creator import SkillsTabCreator
-from src.ui.managers.session_manager import SessionManager
-from src.ui.managers.cost_manager import CostManager
 
 logger = logging.getLogger(__name__)
 
@@ -88,9 +52,9 @@ class TabbedMainWindow(QMainWindow):
         self.db_manager = db_manager
         self.config_manager = config_manager
         self.chat_reader = None
-        self.overlay: Optional[SessionOverlay] = None
-        self.current_session_id: Optional[str] = None
-        self.current_session_start: Optional[datetime] = None
+        self.overlay: SessionOverlay | None = None
+        self.current_session_id: str | None = None
+        self.current_session_start: datetime | None = None
         self.current_theme = "dark"
         self.is_logging_paused = False
 
@@ -311,7 +275,7 @@ class TabbedMainWindow(QMainWindow):
         """Handle stats calculation completion"""
         self.cost_manager.on_stats_calculated(total_cost)
 
-    def add_skill_event(self, event_data: Dict[str, Any]):
+    def add_skill_event(self, event_data: dict[str, Any]):
         """Add a skill event to the skills tab"""
         self.skills_tab_creator.add_skill_event(event_data)
 
@@ -433,10 +397,8 @@ class TabbedMainWindow(QMainWindow):
             chat_path = self.chat_log_path.text().strip()
 
         if not chat_path:
-            try:
+            with contextlib.suppress(Exception):
                 chat_path = self.config_manager.get("chat_monitoring.log_file_path", "")
-            except Exception:
-                pass
 
         if not chat_path:
             for i in range(self.content_stack.count()):
@@ -456,10 +418,8 @@ class TabbedMainWindow(QMainWindow):
                 break
 
         if not char_name:
-            try:
+            with contextlib.suppress(Exception):
                 char_name = self.config_manager.get("character.name", "")
-            except Exception:
-                pass
 
         if char_name:
             character_name_ok = True
@@ -488,7 +448,7 @@ class TabbedMainWindow(QMainWindow):
         """Update status periodically"""
         try:
             if self.current_session_id:
-                current_time = datetime.now().strftime("%H:%M:%S")
+                datetime.now().strftime("%H:%M:%S")
                 elapsed = ""
                 if self.current_session_start:
                     delta = datetime.now() - self.current_session_start
@@ -590,7 +550,7 @@ class TabbedMainWindow(QMainWindow):
 
         QTimer.singleShot(1000, load)  # Delay 1 second to ensure UI is ready
 
-    def _add_run_to_run_log(self, session: Dict[str, Any]):
+    def _add_run_to_run_log(self, session: dict[str, Any]):
         """Add a run entry to run log table"""
         from PyQt6.QtCore import QTimer
 
@@ -729,7 +689,6 @@ class TabbedMainWindow(QMainWindow):
 
         # Delete from database in background thread
         def delete_in_background():
-            import asyncio
 
             try:
                 loop = asyncio.new_event_loop()
@@ -777,7 +736,6 @@ class TabbedMainWindow(QMainWindow):
 
         # Refresh analysis tab in background
         def refresh_analysis():
-            import asyncio
 
             try:
                 loop = asyncio.new_event_loop()
@@ -864,7 +822,6 @@ class TabbedMainWindow(QMainWindow):
         """Load all session data: item breakdown and summary"""
 
         def load_in_background():
-            import asyncio
 
             try:
                 # Create new event loop for background thread
@@ -954,10 +911,8 @@ class TabbedMainWindow(QMainWindow):
             except Exception as e:
                 logger.error(f"Error loading session data: {e}")
             finally:
-                try:
+                with contextlib.suppress(Exception):
                     loop.close()
-                except Exception:
-                    pass
 
         # Run in background thread to avoid blocking UI
         import threading
@@ -974,7 +929,7 @@ class TabbedMainWindow(QMainWindow):
                 else Qt.SortOrder.AscendingOrder
             )
 
-    def _process_loot_event(self, parsed_data: Dict[str, Any]):
+    def _process_loot_event(self, parsed_data: dict[str, Any]):
         """Process loot event and add to item breakdown"""
         item_name = parsed_data.get("item_name", "")
         quantity = parsed_data.get("quantity", 1)
@@ -1048,7 +1003,7 @@ class TabbedMainWindow(QMainWindow):
         if hasattr(self, "analysis_widget") and self.analysis_widget:
             self.analysis_widget.update_realtime()
 
-    def handle_new_event(self, event_data: Dict[str, Any]):
+    def handle_new_event(self, event_data: dict[str, Any]):
         """Handle new events from chat reader - update all UI components"""
         if not event_data:
             logger.warning("[UI] ERROR: Received empty event data!")
@@ -1057,7 +1012,7 @@ class TabbedMainWindow(QMainWindow):
         event_type = event_data.get("event_type", "unknown")
         raw_message = event_data.get("raw_message", "")
         parsed_data = event_data.get("parsed_data", {})
-        session_id = event_data.get("session_id", "None")
+        event_data.get("session_id", "None")
 
         # Save event to database if we have an active session
         if self.current_session_id and hasattr(self, "db_manager"):
@@ -1116,7 +1071,7 @@ class TabbedMainWindow(QMainWindow):
         self._update_analysis_realtime()
 
     def _process_event_for_summary(
-        self, event_type: str, parsed_data: Dict[str, Any], raw_message: str = ""
+        self, event_type: str, parsed_data: dict[str, Any], raw_message: str = ""
     ):
         """Process events for the summary section"""
         if event_type == "loot":

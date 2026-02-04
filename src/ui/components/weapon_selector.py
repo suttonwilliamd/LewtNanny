@@ -1,37 +1,33 @@
-"""
-Weapon Loadout Component - PyQt6 Version
+"""Weapon Loadout Component - PyQt6 Version
 Complete weapon selection, attachment configuration, and cost analysis
 """
 
-import logging
-from typing import Dict, Any, Optional, List
-from decimal import Decimal
-from pathlib import Path
 import asyncio
+import logging
+from decimal import Decimal
+from typing import Any
 
+from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
+    QComboBox,
+    QFrame,
     QGridLayout,
     QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QInputDialog,
     QLabel,
     QLineEdit,
-    QComboBox,
+    QMessageBox,
+    QProgressBar,
     QPushButton,
+    QSlider,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
-    QHeaderView,
-    QSpinBox,
-    QSlider,
-    QProgressBar,
-    QFrame,
-    QSplitter,
-    QInputDialog,
-    QMessageBox,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
-from PyQt6.QtGui import QFont
 
 from src.models.models import Weapon
 
@@ -147,10 +143,7 @@ class EnhancementSlider(QWidget):
 
     def setTheme(self, theme: str):
         """Update slider colors based on theme"""
-        if theme == "dark":
-            groove_color = "#2D3D4F"
-        else:
-            groove_color = "#D1D5DB"
+        groove_color = "#2D3D4F" if theme == "dark" else "#D1D5DB"
 
         self.slider.setStyleSheet(f"""
             QSlider {{
@@ -200,11 +193,11 @@ class AttachmentComboBox(QComboBox):
             }
         """)
 
-    def setStatsData(self, data: Dict[str, Dict]):
+    def setStatsData(self, data: dict[str, dict]):
         """Set attachment statistics data"""
         self._stats_data = data
 
-    def currentStats(self) -> Optional[Dict]:
+    def currentStats(self) -> dict | None:
         """Get stats for currently selected item"""
         name = self.currentText()
         if name and name != "None":
@@ -229,17 +222,17 @@ class WeaponSelector(QWidget):
         self.signals = WeaponSelectorSignals()
         self._theme = "dark"  # Default theme
 
-        self.weapons: Dict[str, Weapon] = {}
-        self.attachments: Dict[str, Any] = {}
-        self.scopes: Dict[str, Any] = {}
-        self.sights: Dict[str, Any] = {}
-        self.current_weapon: Optional[Weapon] = None
+        self.weapons: dict[str, Weapon] = {}
+        self.attachments: dict[str, Any] = {}
+        self.scopes: dict[str, Any] = {}
+        self.sights: dict[str, Any] = {}
+        self.current_weapon: Weapon | None = None
 
         # Loadout state
-        self._amplifier: Optional[str] = None
-        self._scope: Optional[str] = None
-        self._sight_1: Optional[str] = None
-        self._sight_2: Optional[str] = None
+        self._amplifier: str | None = None
+        self._scope: str | None = None
+        self._sight_1: str | None = None
+        self._sight_2: str | None = None
         self._damage_enh: int = 0
         self._accuracy_enh: int = 0
         self._economy_enh: int = 0
@@ -1139,7 +1132,7 @@ class WeaponSelector(QWidget):
         # Enhancement multipliers (0-20 scale)
         damage_mult = 1.0 + (self._damage_enh * 0.1)  # +10% per level
         economy_mult = 1.0 - (self._economy_enh * 0.05)  # -5% per level
-        accuracy_mult = 1.0 + (self._accuracy_enh * 0.02)  # +2% per level
+        1.0 + (self._accuracy_enh * 0.02)  # +2% per level
 
         # Apply enhancements to base
         enhanced_decay = base_decay * damage_mult * economy_mult

@@ -1,28 +1,21 @@
-"""
-Multi-database manager for LewtNanny
+"""Multi-database manager for LewtNanny
 Separates static game data from dynamic user data for better performance
 """
 
-import sqlite3
-import asyncio
-import aiosqlite
-import logging
-from datetime import datetime
-from pathlib import Path
-from typing import List, Dict, Optional, Any
 import json
+import logging
+import sqlite3
+from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
+from typing import Any
+
+import aiosqlite
 
 from src.models.models import (
     Weapon,
-    CraftingBlueprint,
-    GameEvent,
-    Session,
-    LootItem,
-    CombatStats,
-    CraftingResult,
 )
-from src.utils.paths import get_user_data_dir, ensure_user_data_dir
+from src.utils.paths import ensure_user_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -306,7 +299,7 @@ class MultiDatabaseManager:
                 "Data migration service not available, using legacy migration"
             )
 
-    async def get_all_counts(self) -> Dict[str, int]:
+    async def get_all_counts(self) -> dict[str, int]:
         """Get counts from all databases"""
         counts = {}
 
@@ -367,7 +360,7 @@ class MultiDatabaseManager:
             logger.error(f"Error getting weapon count: {e}")
             return 0
 
-    async def get_all_sessions(self) -> List[Dict[str, Any]]:
+    async def get_all_sessions(self) -> list[dict[str, Any]]:
         """Get all sessions"""
         sessions = []
 
@@ -397,7 +390,7 @@ class MultiDatabaseManager:
 
         return sessions
 
-    async def get_session_loot_items(self, session_id: str) -> List[Dict[str, Any]]:
+    async def get_session_loot_items(self, session_id: str) -> list[dict[str, Any]]:
         """Get all loot items for a session"""
         items = []
         try:
@@ -426,7 +419,7 @@ class MultiDatabaseManager:
             logger.error(f"Error getting session loot items: {e}")
         return items
 
-    async def get_session_counts(self, session_id: str) -> Dict[str, int]:
+    async def get_session_counts(self, session_id: str) -> dict[str, int]:
         """Get counts of creatures, globals, and HOFs for a session"""
         try:
             async with aiosqlite.connect(self.databases["user_data"]) as db:
@@ -500,7 +493,7 @@ class MultiDatabaseManager:
         except Exception as e:
             logger.error(f"Error updating session end: {e}")
 
-    async def get_session_stats(self, session_id: str) -> Dict[str, Any]:
+    async def get_session_stats(self, session_id: str) -> dict[str, Any]:
         """Get statistics for a session"""
         try:
             async with aiosqlite.connect(self.databases["user_data"]) as db:
@@ -536,7 +529,7 @@ class MultiDatabaseManager:
             logger.error(f"Error getting session stats: {e}")
             return {}
 
-    async def get_session_events(self, session_id: str) -> List[Dict[str, Any]]:
+    async def get_session_events(self, session_id: str) -> list[dict[str, Any]]:
         """Get all events for a session"""
         events = []
 
@@ -630,7 +623,7 @@ class MultiDatabaseManager:
             logger.error(f"Error creating session: {e}")
             return False
 
-    async def add_event(self, event_data: Dict[str, Any]) -> bool:
+    async def add_event(self, event_data: dict[str, Any]) -> bool:
         """Add an event to database"""
         try:
             async with aiosqlite.connect(self.databases["user_data"]) as db:
@@ -658,7 +651,7 @@ class MultiDatabaseManager:
             return False
 
     # Game data query methods
-    async def get_all_weapons(self) -> List[Weapon]:
+    async def get_all_weapons(self) -> list[Weapon]:
         """Get all weapons from weapons database"""
         weapons = []
 
@@ -684,7 +677,7 @@ class MultiDatabaseManager:
 
         return weapons
 
-    async def search_weapons(self, query: str, limit: int = 50) -> List[Weapon]:
+    async def search_weapons(self, query: str, limit: int = 50) -> list[Weapon]:
         """Search weapons by name"""
         weapons = []
 
@@ -692,7 +685,7 @@ class MultiDatabaseManager:
             cursor = await db.execute(
                 """
                 SELECT id, name, ammo, decay, weapon_type, dps, eco, range_value, damage, reload_time
-                FROM weapons 
+                FROM weapons
                 WHERE name LIKE ? OR id LIKE ?
                 ORDER BY name
                 LIMIT ?
@@ -736,7 +729,7 @@ class MultiDatabaseManager:
             logger.error(f"Error creating session (sync): {e}")
             return False
 
-    def add_event_sync(self, event_data: Dict[str, Any]) -> bool:
+    def add_event_sync(self, event_data: dict[str, Any]) -> bool:
         """Add an event to database (synchronous version)"""
         try:
             with sqlite3.connect(self.databases["user_data"]) as db:
@@ -790,7 +783,7 @@ class MultiDatabaseManager:
             logger.error(f"Error saving session loot item (sync): {e}")
             return False
 
-    async def get_session_skills(self, session_id: str) -> List[Dict[str, Any]]:
+    async def get_session_skills(self, session_id: str) -> list[dict[str, Any]]:
         """Get skill gains for a session"""
         skills = []
         try:
@@ -823,7 +816,7 @@ class MultiDatabaseManager:
 
         return skills
 
-    async def get_session_combat_events(self, session_id: str) -> List[Dict[str, Any]]:
+    async def get_session_combat_events(self, session_id: str) -> list[dict[str, Any]]:
         """Get combat events for a session"""
         combat_events = []
         try:

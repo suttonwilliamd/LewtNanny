@@ -1,9 +1,7 @@
-"""
-Path utilities for LewtNanny
+"""Path utilities for LewtNanny
 Provides cross-platform user data directory handling
 """
 
-import sys
 from pathlib import Path
 from platform import system
 

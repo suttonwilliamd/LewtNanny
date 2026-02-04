@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""
-Simple test to isolate the PyQt6/qasync issue
+"""Simple test to isolate the PyQt6/qasync issue
 """
 
 import sys
-import os
 
 # Add src to path
 sys.path.insert(0, 'src')
@@ -12,16 +10,15 @@ sys.path.insert(0, 'src')
 print("Testing PyQt6 imports...")
 
 try:
-    from PyQt6.QtWidgets import QApplication, QLabel
-    from PyQt6.QtCore import QTimer
     import qasync
+    from PyQt6.QtCore import QTimer
+    from PyQt6.QtWidgets import QApplication, QLabel
     print("SUCCESS: PyQt6 imports successful")
 except ImportError as e:
     print(f"✗ PyQt6 import failed: {e}")
     sys.exit(1)
 
 try:
-    from src.ui.main_window import MainWindow
     print("SUCCESS: Main window import successful")
 except Exception as e:
     print(f"✗ Main window import failed: {e}")

@@ -1,28 +1,22 @@
-"""
-Combat tab implementation for LewtNanny
+"""Combat tab implementation for LewtNanny
 Tracks combat statistics including kills, damage, and efficiency
 """
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional
-from decimal import Decimal
+from typing import Any
 
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
     QGridLayout,
     QGroupBox,
+    QHeaderView,
     QLabel,
     QTableWidget,
     QTableWidgetItem,
-    QHeaderView,
-    QProgressBar,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import QAbstractItemModel
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 
 logger = logging.getLogger(__name__)
 
@@ -221,9 +215,9 @@ class CombatTabWidget(QWidget):
         self.update_kills_table()
         logger.debug("Combat display updated")
 
-    def add_combat_event(self, event_data: Dict[str, Any]):
+    def add_combat_event(self, event_data: dict[str, Any]):
         """Add a combat event"""
-        logger.info(f"[COMBAT_TAB] >>> add_combat_event RECEIVED <<<")
+        logger.info("[COMBAT_TAB] >>> add_combat_event RECEIVED <<<")
         logger.info(f"[COMBAT_TAB] Event data: {event_data}")
 
         event_type = event_data.get("event_type", "")
@@ -270,7 +264,7 @@ class CombatTabWidget(QWidget):
         else:
             logger.debug(f"Ignoring non-combat event: {event_type}")
 
-    def process_combat_event(self, event_data: Dict[str, Any]):
+    def process_combat_event(self, event_data: dict[str, Any]):
         """Process a combat event and update session stats"""
         if not self.session_stats["session_start"]:
             from datetime import datetime
@@ -383,7 +377,7 @@ class CombatTabWidget(QWidget):
         logger.info("New combat session started")
 
     def update_session_info(
-        self, session_id: Optional[str] = None, session_start: Optional[datetime] = None
+        self, session_id: str | None = None, session_start: datetime | None = None
     ):
         """Update session information display"""
         if session_id and session_start:
@@ -394,7 +388,7 @@ class CombatTabWidget(QWidget):
         else:
             self.session_info_label.setText("No active session")
 
-    def get_session_summary(self) -> Dict[str, Any]:
+    def get_session_summary(self) -> dict[str, Any]:
         """Get session summary data"""
         duration = None
         if self.session_stats["session_start"]:
@@ -420,7 +414,7 @@ class CombatTabWidget(QWidget):
             "session_start": self.session_stats["session_start"],
         }
 
-    def load_session_combat_data(self, combat_events: List[Dict[str, Any]]):
+    def load_session_combat_data(self, combat_events: list[dict[str, Any]]):
         """Load combat events for a specific session"""
         # Reset session stats
         self.session_stats = {
@@ -447,7 +441,7 @@ class CombatTabWidget(QWidget):
         if hasattr(self, "kills_table"):
             self.update_kills_table()
 
-    def _process_combat_event(self, event_data: Dict[str, Any]):
+    def _process_combat_event(self, event_data: dict[str, Any]):
         """Process a single combat event (from historical data)"""
         event_type = event_data.get("event_type", "")
 

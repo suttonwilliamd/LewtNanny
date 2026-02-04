@@ -1,19 +1,24 @@
-"""
-Streamer UI tab implementation for LewtNanny
+"""Streamer UI tab implementation for LewtNanny
 A simplified, high-contrast display suitable for live streaming
 """
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
 from decimal import Decimal
+from typing import Any
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QGroupBox, QLabel, QFrame, QComboBox
-)
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QColor, QPixmap
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +29,8 @@ class StreamerTabWidget(QWidget):
     def __init__(self, db_manager=None):
         super().__init__()
         self.db_manager = db_manager
-        self.current_session_id: Optional[str] = None
-        self.current_session_start: Optional[datetime] = None
+        self.current_session_id: str | None = None
+        self.current_session_start: datetime | None = None
         self._stats = {
             'globals': 0,
             'hofs': 0,
@@ -37,13 +42,13 @@ class StreamerTabWidget(QWidget):
         self.setup_ui()
         self.setup_timer()
         logger.info("StreamerTabWidget initialized")
-    
+
     def setup_ui(self):
         """Setup the UI"""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(8)
-        
+
         self.setStyleSheet("""
             QWidget {
                 background-color: #0D1117;
@@ -53,7 +58,7 @@ class StreamerTabWidget(QWidget):
                 color: #E6EDF3;
             }
         """)
-        
+
         header_section = self.create_header_section()
         layout.addWidget(header_section)
 
@@ -67,7 +72,7 @@ class StreamerTabWidget(QWidget):
         layout.addWidget(recent_section)
 
         layout.addStretch()
-    
+
     def create_header_section(self):
         """Create header with session timer"""
         section = QFrame()
@@ -78,17 +83,17 @@ class StreamerTabWidget(QWidget):
                 border-radius: 6px;
             }
         """)
-        
+
         layout = QHBoxLayout(section)
         layout.setContentsMargins(10, 5, 10, 5)
-        
+
         self.session_timer_label = QLabel("SESSION TIMER: 00:00:00")
         self.session_timer_label.setFont(QFont("Consolas", 16, QFont.Weight.Bold))
         self.session_timer_label.setStyleSheet("color: #238636;")
         layout.addWidget(self.session_timer_label)
-        
+
         layout.addStretch()
-        
+
         self.status_label = QLabel("NO ACTIVE SESSION")
         self.status_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         self.status_label.setStyleSheet("color: #8B949E;")
@@ -98,8 +103,6 @@ class StreamerTabWidget(QWidget):
 
     def create_weapon_section(self):
         """Create weapon loadout section"""
-        from PyQt6.QtWidgets import QComboBox
-
         section = QGroupBox("Active Loadout")
         section.setStyleSheet("""
             QGroupBox {
@@ -226,13 +229,13 @@ class StreamerTabWidget(QWidget):
                 font-size: 11px;
             }
         """)
-        
+
         layout = QGridLayout()
         layout.setContentsMargins(4, 28, 4, 4)  # Top margin accounts for title bar
         layout.setSpacing(8)
-        
+
         self.streamer_metrics = {}
-        
+
         metrics_items = [
             ("Return %", "100.0%", "#E6EDF3"),
             ("Profit/Loss", "0.00 PED", "#4CAF50"),
@@ -241,42 +244,42 @@ class StreamerTabWidget(QWidget):
             ("Items Looted", "0", "#4FC3F7"),
             ("Active Weapon", "None", "#B388FF")
         ]
-        
+
         for i, (label, default, color) in enumerate(metrics_items):
             row = i // 3
             col = i % 3
-            
+
             container = QWidget()
-            container.setStyleSheet(f"""
-                QWidget {{
+            container.setStyleSheet("""
+                QWidget {
                     background-color: #0D1117;
                     border: 1px solid #30363D;
                     border-radius: 8px;
                     padding: 8px;
-                }}
+                }
             """)
             container_layout = QVBoxLayout(container)
             container_layout.setContentsMargins(4, 4, 4, 4)
             container_layout.setSpacing(2)
-            
+
             lbl = QLabel(label)
             lbl.setFont(QFont("Arial", 9))
             lbl.setStyleSheet("color: #8B949E;")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             container_layout.addWidget(lbl)
-            
+
             value_lbl = QLabel(default)
             value_lbl.setFont(QFont("Consolas", 14, QFont.Weight.Bold))
             value_lbl.setStyleSheet(f"color: {color};")
             value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             container_layout.addWidget(value_lbl)
-            
+
             self.streamer_metrics[label] = value_lbl
             layout.addWidget(container, row, col)
-        
+
         section.setLayout(layout)
         return section
-    
+
     def create_recent_activity_section(self):
         """Create recent activity ticker"""
         section = QGroupBox("Recent Activity")
@@ -304,17 +307,17 @@ class StreamerTabWidget(QWidget):
         self.activity_ticker.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.activity_ticker.setWordWrap(True)
         layout.addWidget(self.activity_ticker)
-        
+
         section.setLayout(layout)
         return section
-    
+
     def setup_timer(self):
         """Setup update timer"""
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update_timer_display)
         self.update_timer.start(1000)
         logger.debug("Streamer timer started")
-    
+
     def update_timer_display(self):
         """Update session timer display"""
         if self.current_session_start:
@@ -324,7 +327,7 @@ class StreamerTabWidget(QWidget):
             self.session_timer_label.setText(
                 f"SESSION TIMER: {hours:02d}:{minutes:02d}:{seconds:02d}"
             )
-    
+
     def set_db_manager(self, db_manager):
         """Set database manager"""
         self.db_manager = db_manager
@@ -350,7 +353,7 @@ class StreamerTabWidget(QWidget):
                 self.set_available_weapons(weapon_names)
         except Exception as e:
             logger.error(f"Error loading weapons async: {e}")
-    
+
     def start_session(self, session_id: str, activity_type: str):
         """Start a new session"""
         self.current_session_id = session_id
@@ -366,7 +369,7 @@ class StreamerTabWidget(QWidget):
         self.status_label.setStyleSheet("color: #238636;")
         self._update_stats_display()
         logger.info(f"Streamer UI session started: {session_id}")
-    
+
     def stop_session(self):
         """Stop current session"""
         self.current_session_id = None
@@ -375,8 +378,8 @@ class StreamerTabWidget(QWidget):
         self.status_label.setText("NO ACTIVE SESSION")
         self.status_label.setStyleSheet("color: #8B949E;")
         logger.info("Streamer UI session stopped")
-    
-    def update_metrics(self, metrics: Dict[str, Any]):
+
+    def update_metrics(self, metrics: dict[str, Any]):
         """Update metrics display"""
         for label, value in metrics.items():
             if label in self.streamer_metrics:
@@ -413,27 +416,27 @@ class StreamerTabWidget(QWidget):
             self.streamer_metrics["HOFs"].setText(str(self._stats.get('hofs', 0)))
         if "Items Looted" in self.streamer_metrics:
             self.streamer_metrics["Items Looted"].setText(str(self._stats.get('items', 0)))
-    
+
     def add_activity(self, activity: str):
         """Add activity to ticker"""
         current = self.activity_ticker.text()
         if current == "No recent activity":
             current = ""
-        
+
         timestamp = datetime.now().strftime("%H:%M:%S")
         new_activity = f"[{timestamp}] {activity}"
-        
+
         lines = current.split("\n") if current else []
         lines.insert(0, new_activity)
         lines = lines[:10]
-        
+
         self.activity_ticker.setText("\n".join(lines))
         logger.debug(f"Activity added: {activity}")
-    
-    def add_event(self, event_data: Dict[str, Any]):
+
+    def add_event(self, event_data: dict[str, Any]):
         """Add event to streamer UI with formatted output"""
-        logger.info(f"[STREAMER_UI] ===========================================")
-        logger.info(f"[STREAMER_UI] >>> add_event RECEIVED <<<")
+        logger.info("[STREAMER_UI] ===========================================")
+        logger.info("[STREAMER_UI] >>> add_event RECEIVED <<<")
         logger.info(f"[STREAMER_UI] Event type: {event_data.get('event_type', 'unknown')}")
         logger.info(f"[STREAMER_UI] Event data: {event_data}")
 

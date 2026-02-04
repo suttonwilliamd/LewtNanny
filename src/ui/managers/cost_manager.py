@@ -1,11 +1,9 @@
-"""
-Cost calculation and management logic for the main window
+"""Cost calculation and management logic for the main window
 """
 
 import asyncio
 import logging
 from decimal import Decimal
-from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 

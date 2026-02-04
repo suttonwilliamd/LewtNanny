@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Test and demo script for the new GameDataService
+"""Test and demo script for the new GameDataService
 """
 
 import asyncio
@@ -95,7 +94,7 @@ async def main():
     if bp:
         cost = await service.calculate_blueprint_cost(bp.name)
         print(f"  Blueprint: {bp.name}")
-        print(f"  Materials:")
+        print("  Materials:")
         for mat in bp.materials[:5]:
             print(f"    - {mat.material_name}: {mat.quantity}")
         if len(bp.materials) > 5:

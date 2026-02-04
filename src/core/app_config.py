@@ -1,41 +1,40 @@
-"""
-Configuration and feature flags for LewtNanny
+"""Configuration and feature flags for LewtNanny
 """
 
 import os
 from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Any
 
 
 @dataclass
 class AppConfig:
     """Application configuration with feature flags"""
-    
+
     # UI Configuration
     ui_framework: str = "pyqt6"  # Options: "pyqt6", "tkinter"
     enable_dark_theme: bool = False
     window_size: tuple = (1200, 800)
-    
+
     # Feature Flags
     enable_ocr: bool = True
     enable_chat_monitoring: bool = True
     enable_weapon_selector: bool = True
     enable_overlay: bool = True
-    
+
     # Development Flags
     debug_mode: bool = False
     verbose_logging: bool = False
     enable_profiling: bool = False
-    
+
     # Performance Flags
     enable_caching: bool = True
     max_events_memory: int = 10000
-    
+
     @classmethod
     def from_env(cls) -> 'AppConfig':
         """Create configuration from environment variables"""
         config = cls()
-        
+
         # Override from environment variables
         if os.getenv('LEWTNANNY_UI_FRAMEWORK'):
             config.ui_framework = os.getenv('LEWTNANNY_UI_FRAMEWORK')
@@ -51,10 +50,10 @@ class AppConfig:
                 config.window_size = (width, height)
             except ValueError:
                 pass  # Use default if parsing fails
-        
+
         return config
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary"""
         return {
             'ui_framework': self.ui_framework,

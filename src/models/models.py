@@ -1,12 +1,11 @@
-"""
-Core data models for LewtNanny
+"""Core data models for LewtNanny
 """
 
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Optional, List, Dict, Any
+from typing import Any
 
 
 class EventType(Enum):
@@ -36,10 +35,10 @@ class Weapon:
     ammo: int
     decay: Decimal
     weapon_type: str
-    dps: Optional[Decimal] = None
-    eco: Optional[Decimal] = None
-    range_: Optional[int] = None
-    
+    dps: Decimal | None = None
+    eco: Decimal | None = None
+    range_: int | None = None
+
     def __post_init__(self):
         # Convert string values to Decimal
         if isinstance(self.decay, str):
@@ -54,21 +53,21 @@ class Weapon:
 class CraftingBlueprint:
     id: str
     name: str
-    materials: List[tuple]  # List of (name, quantity)
-    result_item: Optional[str] = None
-    result_quantity: Optional[int] = None
-    skill_required: Optional[str] = None
-    condition_limit: Optional[int] = None
+    materials: list[tuple]  # List of (name, quantity)
+    result_item: str | None = None
+    result_quantity: int | None = None
+    skill_required: str | None = None
+    condition_limit: int | None = None
 
 
 @dataclass
 class GameEvent:
-    id: Optional[int]
+    id: int | None
     timestamp: datetime
     event_type: EventType
     activity_type: ActivityType
     raw_message: str
-    parsed_data: Dict[str, Any]
+    parsed_data: dict[str, Any]
     session_id: str
 
 
@@ -76,12 +75,12 @@ class GameEvent:
 class Session:
     id: str
     start_time: datetime
-    end_time: Optional[datetime]
+    end_time: datetime | None
     activity_type: ActivityType
     total_cost: Decimal
     total_return: Decimal
     total_markup: Decimal
-    events: List[GameEvent]
+    events: list[GameEvent]
 
 
 @dataclass
@@ -91,7 +90,7 @@ class LootItem:
     tt_value: Decimal
     markup_value: Decimal
     total_value: Decimal
-    
+
     def __post_init__(self):
         # Convert string values to Decimal
         if isinstance(self.tt_value, str):
@@ -112,7 +111,7 @@ class CombatStats:
     misses: int
     total_ammo_used: int
     total_decay: Decimal
-    
+
     def __post_init__(self):
         if isinstance(self.total_damage, str):
             self.total_damage = Decimal(self.total_damage)
@@ -129,8 +128,8 @@ class CraftingResult:
     failures: int
     total_cost: Decimal
     total_return: Decimal
-    result_items: List[LootItem]
-    
+    result_items: list[LootItem]
+
     def __post_init__(self):
         if isinstance(self.total_cost, str):
             self.total_cost = Decimal(self.total_cost)

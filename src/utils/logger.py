@@ -1,19 +1,16 @@
-"""
-Simple logging setup for LewtNanny
+"""Simple logging setup for LewtNanny
 """
 
 import logging
 import sys
 from pathlib import Path
-from src.utils.paths import get_default_log_path, ensure_user_data_dir
+
+from src.utils.paths import ensure_user_data_dir, get_default_log_path
 
 
 def setup_logger(log_file: str = None):
     """Setup logging configuration"""
-    if log_file:
-        log_path = Path(log_file)
-    else:
-        log_path = get_default_log_path()
+    log_path = Path(log_file) if log_file else get_default_log_path()
     ensure_user_data_dir()
 
     logging.basicConfig(

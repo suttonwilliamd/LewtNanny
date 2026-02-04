@@ -1,33 +1,27 @@
-"""
-Streamer Overlay for LewtNanny
+"""Streamer Overlay for LewtNanny
 Transparent, always-on-top overlay for live session stats streaming
 """
 
 import logging
 import os
 from datetime import datetime
-from typing import Dict, Any, Optional
 from decimal import Decimal
+from typing import Any
 
-from PyQt6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QFrame,
-    QPushButton,
-    QGridLayout,
-)
-from PyQt6.QtCore import Qt, QTimer, QPoint, QThread, QEvent
+from PyQt6.QtCore import QPoint, Qt, QThread, QTimer
 from PyQt6.QtGui import (
     QFont,
-    QPainter,
-    QColor,
-    QPen,
-    QScreen,
     QGuiApplication,
+    QPainter,
+    QPen,
     QPixmap,
-    QMouseEvent,
+)
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
 )
 
 logger = logging.getLogger(__name__)
@@ -310,7 +304,7 @@ class StreamerOverlayWidget(QWidget):
                 )
                 scaled_pixmap.setMask(scaled_pixmap.createHeuristicMask())
                 self.logo_label.setPixmap(scaled_pixmap)
-                logger.debug(f"[OVERLAY] Logo loaded successfully")
+                logger.debug("[OVERLAY] Logo loaded successfully")
             else:
                 logger.error(f"[OVERLAY] Failed to load pixmap from: {logo_path}")
         else:
@@ -388,7 +382,7 @@ class StreamerOverlayWidget(QWidget):
         self,
         session_id: str,
         activity_type: str,
-        session_start_time: Optional[datetime] = None,
+        session_start_time: datetime | None = None,
     ):
         """Start a new session"""
         logger.info(
@@ -504,7 +498,7 @@ class StreamerOverlayWidget(QWidget):
 
             screenshot_enabled = config.get("screenshot.enabled", True)
             if not screenshot_enabled:
-                logger.debug(f"[OVERLAY] Screenshots disabled, skipping")
+                logger.debug("[OVERLAY] Screenshots disabled, skipping")
                 return
 
             screenshot_dir = config.get(
@@ -526,7 +520,7 @@ class StreamerOverlayWidget(QWidget):
         except Exception as e:
             logger.error(f"[OVERLAY] Error scheduling screenshot: {e}")
 
-    def update_stats(self, stats: Dict[str, Any]):
+    def update_stats(self, stats: dict[str, Any]):
         """Update statistics from external source"""
         for key, value in stats.items():
             if key == "globals":
@@ -547,10 +541,10 @@ class StreamerOverlayWidget(QWidget):
     def update_weapon(self, weapon_name: str, amp: str = "", decay: str = ""):
         pass
 
-    def add_event(self, event_data: Dict[str, Any]):
+    def add_event(self, event_data: dict[str, Any]):
         """Add event to ticker and update stats"""
-        logger.debug(f"[OVERLAY] ===========================================")
-        logger.debug(f"[OVERLAY] >>> add_event RECEIVED <<<")
+        logger.debug("[OVERLAY] ===========================================")
+        logger.debug("[OVERLAY] >>> add_event RECEIVED <<<")
         logger.debug(f"[OVERLAY] Event type: {event_data.get('event_type', 'unknown')}")
         logger.debug(f"[OVERLAY] Event data: {event_data}")
 
@@ -627,7 +621,7 @@ class StreamerOverlayWidget(QWidget):
             elif not miss and damage and float(damage) > 0:
                 # Successful hit
                 should_count_shot = True
-                logger.debug(f"[OVERLAY] Successful hit")
+                logger.debug("[OVERLAY] Successful hit")
             else:
                 logger.debug(
                     f"[OVERLAY] Combat event skipped (miss or no damage): miss={miss}, damage={damage}"
@@ -703,7 +697,7 @@ class StreamerOverlayWidget(QWidget):
             )
 
         self._update_stats_display()
-        logger.debug(f"[OVERLAY] <<< add_event complete >>>")
+        logger.debug("[OVERLAY] <<< add_event complete >>>")
         logger.debug(
             f"[OVERLAY] Current stats: globals={self._stats.get('globals')}, hofs={self._stats.get('hofs')}, items={self._stats.get('items')}, total_cost={float(self._stats.get('total_cost', Decimal('0'))):.3f}, total_return={float(self._stats.get('total_return', Decimal('0'))):.3f}"
         )
@@ -813,7 +807,7 @@ class SessionOverlay:
     def __init__(self, db_manager, config_manager):
         self.db_manager = db_manager
         self.config_manager = config_manager
-        self.overlay_widget: Optional[StreamerOverlayWidget] = None
+        self.overlay_widget: StreamerOverlayWidget | None = None
         self.current_weapon = None
         self._stats = {"total_cost": Decimal("0"), "total_return": Decimal("0")}
         logger.info("SessionOverlay initialized")
@@ -856,7 +850,7 @@ class SessionOverlay:
         self,
         session_id: str,
         activity_type: str,
-        session_start_time: Optional[datetime] = None,
+        session_start_time: datetime | None = None,
     ):
         """Start a new session"""
         logger.info(
@@ -874,14 +868,14 @@ class SessionOverlay:
             self.overlay_widget.stop_session()
         logger.info("SessionOverlay stopped session")
 
-    def add_event(self, event_data: Dict[str, Any]):
+    def add_event(self, event_data: dict[str, Any]):
         """Add event to overlay"""
         logger.info(
             f"[OVERLAY_CONTROLLER] add_event called with type: {event_data.get('event_type', 'unknown')}"
         )
         if self.overlay_widget:
             self.overlay_widget.add_event(event_data)
-        logger.info(f"[OVERLAY_CONTROLLER] Event forwarded to overlay widget")
+        logger.info("[OVERLAY_CONTROLLER] Event forwarded to overlay widget")
 
     def update_weapon(self, weapon_name: str, amp: str = "", decay: str = ""):
         """Update weapon display"""

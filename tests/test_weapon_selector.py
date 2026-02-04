@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
-"""
-Test script for the new WeaponSelector component
+"""Test script for the new WeaponSelector component
 """
 
-import sys
 import asyncio
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
-from src.ui.components.weapon_selector import WeaponSelector
 from src.core.multi_database_manager import MultiDatabaseManager
+from src.ui.components.weapon_selector import WeaponSelector
 
 
 class TestWindow(QMainWindow):
