@@ -6,12 +6,12 @@ import asyncio
 import logging
 import sys
 
-logging.basicConfig(level=logging.INFO)
-
 from PyQt6.QtWidgets import QApplication
 
 from src.services.loadout_service import CustomWeapon, LoadoutService, WeaponLoadout
 from src.ui.components.config_tab import ConfigTab
+
+logging.basicConfig(level=logging.INFO)
 
 
 async def test_services():
@@ -29,7 +29,7 @@ async def test_services():
         sight_2="None",
         damage_enh=10,
         accuracy_enh=5,
-        economy_enh=5
+        economy_enh=5,
     )
 
     loadout_id = await service.create_loadout(test_loadout)
@@ -37,15 +37,10 @@ async def test_services():
 
     loadouts = await service.get_all_loadouts()
     print(f"Total loadouts: {len(loadouts)}")
-    for l in loadouts:
-        print(f"  - {l.name}: {l.weapon}")
+    for loadout in loadouts:
+        print(f"  - {loadout.name}: {loadout.weapon}")
 
-    custom_weapon = CustomWeapon(
-        name="Test Custom Weapon",
-        decay="0.15",
-        ammo_burn=12,
-        dps="20.0"
-    )
+    custom_weapon = CustomWeapon(name="Test Custom Weapon", decay="0.15", ammo_burn=12, dps="20.0")
 
     cw_id = await service.create_custom_weapon(custom_weapon)
     print(f"\nCreated custom weapon with ID: {cw_id}")

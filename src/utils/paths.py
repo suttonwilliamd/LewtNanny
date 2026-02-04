@@ -2,6 +2,7 @@
 Provides cross-platform user data directory handling
 """
 
+import logging
 from pathlib import Path
 from platform import system
 

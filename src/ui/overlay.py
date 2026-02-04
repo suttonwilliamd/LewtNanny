@@ -92,9 +92,7 @@ class ScreenshotWorker(QThread):
             os.makedirs(self.screenshot_dir, exist_ok=True)
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = (
-                f"{self.event_type}_{self.player}_{self.value:.2f}ped_{timestamp}.png"
-            )
+            filename = f"{self.event_type}_{self.player}_{self.value:.2f}ped_{timestamp}.png"
             filepath = os.path.join(self.screenshot_dir, filename)
 
             pixmap = screen.grabWindow(0)
@@ -117,9 +115,7 @@ class DraggableLogoLabel(QLabel):
         """Logo mouse press - acts as drag handle"""
         if ev.button() == Qt.MouseButton.LeftButton:
             self.dragging = True
-            self.drag_position = (
-                ev.globalPosition().toPoint() - self.overlay_widget.pos()
-            )
+            self.drag_position = ev.globalPosition().toPoint() - self.overlay_widget.pos()
             ev.accept()
 
     def mouseMoveEvent(self, ev):
@@ -390,9 +386,7 @@ class StreamerOverlayWidget(QWidget):
         )
         logger.info(f"[OVERLAY] Previous stats before reset: {dict(self._stats)}")
 
-        self.session_start_time = (
-            session_start_time if session_start_time else datetime.now()
-        )
+        self.session_start_time = session_start_time if session_start_time else datetime.now()
 
         # Only reset stats if this is a new session (not already active)
         if not self.session_active:
@@ -501,9 +495,7 @@ class StreamerOverlayWidget(QWidget):
                 logger.debug("[OVERLAY] Screenshots disabled, skipping")
                 return
 
-            screenshot_dir = config.get(
-                "screenshot.directory", "~/Documents/LewtNanny/"
-            )
+            screenshot_dir = config.get("screenshot.directory", "~/Documents/LewtNanny/")
             screenshot_dir = os.path.expanduser(screenshot_dir)
 
             delay_ms = int(config.get("screenshot.delay_ms", 500))
@@ -512,9 +504,7 @@ class StreamerOverlayWidget(QWidget):
                 f"[OVERLAY] Scheduling screenshot in {delay_ms}ms for {event_type}: {player} got {value} PED"
             )
 
-            worker = ScreenshotWorker(
-                delay_ms, screenshot_dir, event_type, value, player
-            )
+            worker = ScreenshotWorker(delay_ms, screenshot_dir, event_type, value, player)
             worker.start()
 
         except Exception as e:
@@ -565,23 +555,17 @@ class StreamerOverlayWidget(QWidget):
             item_name = parsed_data.get("item_name", "")
             timestamp_str = parsed_data.get("timestamp", datetime.now().isoformat())
             loot_time = datetime.fromisoformat(timestamp_str)
-            logger.debug(
-                f"[OVERLAY] Loot event: value={value}, item={item_name}, time={loot_time}"
-            )
+            logger.debug(f"[OVERLAY] Loot event: value={value}, item={item_name}, time={loot_time}")
 
             # Check if this loot event is part of a new kill (not within 2 seconds of last loot)
             is_new_kill = True
             current_time = datetime.now()
             # Clean up old loot times (older than 10 seconds)
             self._recent_loot_times = [
-                t
-                for t in self._recent_loot_times
-                if (current_time - t).total_seconds() < 10
+                t for t in self._recent_loot_times if (current_time - t).total_seconds() < 10
             ]
             if self._recent_loot_times:
-                time_since_last_loot = (
-                    loot_time - self._recent_loot_times[-1]
-                ).total_seconds()
+                time_since_last_loot = (loot_time - self._recent_loot_times[-1]).total_seconds()
                 if time_since_last_loot < 0.6:  # Within 0.6 seconds, consider same kill
                     is_new_kill = False
             if is_new_kill:
@@ -592,9 +576,9 @@ class StreamerOverlayWidget(QWidget):
             self._recent_loot_times.append(loot_time)
 
             self._stats["items"] = self._stats.get("items", 0) + 1
-            self._stats["total_return"] = self._stats.get(
-                "total_return", Decimal("0")
-            ) + Decimal(str(value))
+            self._stats["total_return"] = self._stats.get("total_return", Decimal("0")) + Decimal(
+                str(value)
+            )
             new_return = float(self._stats["total_return"])
             logger.debug(
                 f"[OVERLAY] Loot event processed: items={self._stats['items']}, adding {value} PED to return, new total_return: {new_return:.3f}"
@@ -604,9 +588,7 @@ class StreamerOverlayWidget(QWidget):
             damage = parsed_data.get("damage", 0)
             miss = parsed_data.get("miss", False)
             dodge = parsed_data.get("dodged", False)  # When creature dodges your attack
-            logger.debug(
-                f"[OVERLAY] Combat event: damage={damage}, miss={miss}, dodge={dodge}"
-            )
+            logger.debug(f"[OVERLAY] Combat event: damage={damage}, miss={miss}, dodge={dodge}")
 
             # Count shots that consume ammo/decay (successful hits + dodged shots)
             should_count_shot = False
@@ -657,11 +639,7 @@ class StreamerOverlayWidget(QWidget):
             logger.debug(
                 f"[OVERLAY] GLOBAL event: value={value}, player={player}, my_character_name={self.character_name}"
             )
-            if (
-                self.character_name
-                and player
-                and player.lower() == self.character_name.lower()
-            ):
+            if self.character_name and player and player.lower() == self.character_name.lower():
                 logger.info(
                     f"[OVERLAY] GLOBAL DETECTED! {player} got {value} PED - scheduling screenshot"
                 )
@@ -677,11 +655,7 @@ class StreamerOverlayWidget(QWidget):
             logger.debug(
                 f"[OVERLAY] HOF event: value={value}, player={player}, my_character_name={self.character_name}"
             )
-            if (
-                self.character_name
-                and player
-                and player.lower() == self.character_name.lower()
-            ):
+            if self.character_name and player and player.lower() == self.character_name.lower():
                 logger.info(
                     f"[OVERLAY] HOF DETECTED! {player} got {value} PED - scheduling screenshot"
                 )
@@ -708,9 +682,7 @@ class StreamerOverlayWidget(QWidget):
             pos = a0.position().toPoint()
 
             # Check if click is on resize handle
-            if hasattr(
-                self, "resize_handle"
-            ) and self.resize_handle.geometry().contains(pos):
+            if hasattr(self, "resize_handle") and self.resize_handle.geometry().contains(pos):
                 self.resizing = True
                 self.resize_start_pos = a0.globalPosition().toPoint()
                 self.resize_start_size = self.size()
@@ -718,9 +690,7 @@ class StreamerOverlayWidget(QWidget):
             else:
                 # Start dragging from anywhere on overlay
                 self.dragging = True
-                self.drag_position = (
-                    a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
-                )
+                self.drag_position = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
                 a0.accept()
 
     def mouseMoveEvent(self, a0):
@@ -757,29 +727,13 @@ class StreamerOverlayWidget(QWidget):
             a0.accept()
 
     def update_logo_position(self):
-        """Update logo position relative to main window"""
-        if hasattr(self, "logo_label") and hasattr(self, "logo_width"):
-            window_width = self.size().width()
-            logo_x = (window_width - self.logo_width) // 2
-            self.logo_label.move(self.pos().x() + logo_x, self.pos().y() + 20)
-
-    def mouseReleaseEvent(self, a0):
-        """Mouse release to stop dragging or resizing"""
-        if a0.button() == Qt.MouseButton.LeftButton:
-            self.dragging = False
-            self.resizing = False
-            a0.accept()
-
-    def resizeEvent(self, a0):
         """Handle resize event to update container and handle positions"""
         super().resizeEvent(a0)
 
         # Update container geometry
         if hasattr(self, "container"):
             window_size = self.size()
-            self.container.setGeometry(
-                0, 110, window_size.width(), window_size.height() - 110
-            )
+            self.container.setGeometry(0, 110, window_size.width(), window_size.height() - 110)
 
         # Update resize handle position
         self.update_resize_handle_position()
@@ -857,9 +811,7 @@ class SessionOverlay:
             f"[OVERLAY_CONTROLLER] start_session called: session_id={session_id}, activity_type={activity_type}"
         )
         if self.overlay_widget:
-            self.overlay_widget.start_session(
-                session_id, activity_type, session_start_time
-            )
+            self.overlay_widget.start_session(session_id, activity_type, session_start_time)
         logger.info(f"SessionOverlay started session: {session_id}")
 
     def stop_session(self):

@@ -51,9 +51,7 @@ class ChatLogAnalyzer:
 
         # Create session
         self.session_id = f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        await self.db_manager.create_session(
-            self.session_id, ActivityType.HUNTING.value
-        )
+        await self.db_manager.create_session(self.session_id, ActivityType.HUNTING.value)
         self.chat_reader.current_session_id = self.session_id
         self.chat_reader.current_activity = ActivityType.HUNTING
 
@@ -76,9 +74,7 @@ class ChatLogAnalyzer:
             f.seek(0, 2)  # Go to end
             initial_position = f.tell()
 
-        logger.info(
-            f"Starting 5-minute analysis at {datetime.now().strftime('%H:%M:%S')}"
-        )
+        logger.info(f"Starting 5-minute analysis at {datetime.now().strftime('%H:%M:%S')}")
         logger.info(f"Monitoring: {log_path}")
         logger.info(f"Initial file size: {initial_position} bytes")
 
@@ -103,9 +99,7 @@ class ChatLogAnalyzer:
                     for line in new_lines:
                         line = line.strip()
                         if line:
-                            self.lines_captured.append(
-                                {"timestamp": datetime.now(), "line": line}
-                            )
+                            self.lines_captured.append({"timestamp": datetime.now(), "line": line})
 
                 await asyncio.sleep(0.5)  # Poll every 500ms
 
@@ -221,7 +215,7 @@ class ChatLogAnalyzer:
                 missed_lines[key] = []
             missed_lines[key].append(line)
 
-        for i, (key, examples) in enumerate(list(missed_lines.items())[:50]):
+        for _, (key, examples) in enumerate(list(missed_lines.items())[:50]):
             count = len(examples)
             prefix = f"[{count}x]" if count > 1 else "      "
             print(f"  {prefix} {key}")
@@ -286,9 +280,7 @@ class ChatLogAnalyzer:
             )
 
         if missed_categories["Rookie chat"] > 0:
-            print(
-                f"\n  • Add patterns for rookie chat ({missed_categories['Rookie chat']} missed)"
-            )
+            print(f"\n  • Add patterns for rookie chat ({missed_categories['Rookie chat']} missed)")
 
         if missed_categories["Damage dealt (no match)"] > 0:
             print(

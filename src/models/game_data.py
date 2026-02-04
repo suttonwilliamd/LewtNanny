@@ -11,6 +11,7 @@ from typing import Any
 @dataclass
 class Weapon:
     """Weapon statistics data model"""
+
     id: str
     name: str
     ammo: int
@@ -19,12 +20,13 @@ class Weapon:
     dps: Decimal | None = None
     eco: Decimal | None = None
     range_value: int = 0
-    damage: Decimal = Decimal('0')
-    reload_time: Decimal = Decimal('0')
+    damage: Decimal = Decimal("0")
+    reload_time: Decimal = Decimal("0")
     hits: int = 0
     data_updated: datetime | None = None
 
     def __post_init__(self):
+        """Post-initialization hook to convert string values to Decimal."""
         if isinstance(self.decay, str):
             self.decay = Decimal(self.decay)
         if self.dps and isinstance(self.dps, str):
@@ -40,19 +42,21 @@ class Weapon:
 @dataclass
 class Attachment:
     """Weapon attachment (amps, scopes, sights) data model"""
+
     id: str
     name: str
-    attachment_type: str  # 'BLP Amp', 'Energy Amp', 'Melee Amp', 'MF Amp', 'Scope', 'Sight'
+    attachment_type: str
     ammo: int
     decay: Decimal
-    damage_bonus: Decimal = Decimal('0')
-    ammo_bonus: Decimal = Decimal('0')
-    decay_modifier: Decimal = Decimal('0')
-    economy_bonus: Decimal = Decimal('0')
+    damage_bonus: Decimal = Decimal("0")
+    ammo_bonus: Decimal = Decimal("0")
+    decay_modifier: Decimal = Decimal("0")
+    economy_bonus: Decimal = Decimal("0")
     range_bonus: int = 0
     data_updated: datetime | None = None
 
     def __post_init__(self):
+        """Post-initialization hook to convert string values to Decimal."""
         if isinstance(self.decay, str):
             self.decay = Decimal(self.decay)
         if self.damage_bonus and isinstance(self.damage_bonus, str):
@@ -68,12 +72,14 @@ class Attachment:
 @dataclass
 class Resource:
     """Resource item with TT value"""
+
     name: str
     tt_value: Decimal
-    decay: Decimal = Decimal('0')
+    decay: Decimal = Decimal("0")
     data_updated: datetime | None = None
 
     def __post_init__(self):
+        """Post-initialization hook to convert string values to Decimal."""
         if isinstance(self.tt_value, str):
             self.tt_value = Decimal(self.tt_value)
         if isinstance(self.decay, str):
@@ -83,6 +89,7 @@ class Resource:
 @dataclass
 class BlueprintMaterial:
     """Single material requirement for a blueprint"""
+
     blueprint_id: str
     material_name: str
     quantity: int
@@ -91,6 +98,7 @@ class BlueprintMaterial:
 @dataclass
 class Blueprint:
     """Crafting blueprint with materials"""
+
     id: str
     name: str
     materials: list[BlueprintMaterial] = field(default_factory=list)
@@ -104,6 +112,7 @@ class Blueprint:
 @dataclass
 class WeaponStats:
     """Detailed weapon statistics for calculations"""
+
     id: str
     name: str
     damage: Decimal
@@ -116,31 +125,33 @@ class WeaponStats:
 
     def calculate_base_cost_per_shot(self) -> Decimal:
         """Calculate base cost per shot without attachments"""
-        return self.decay + (self.ammo_burn / Decimal('10000'))
+        return self.decay + (self.ammo_burn / Decimal("10000"))
 
     def calculate_base_dps(self) -> Decimal:
         """Calculate base damage per second"""
         if self.reload_time > 0:
             return self.damage / self.reload_time
-        return Decimal('0')
+        return Decimal("0")
 
 
 @dataclass
 class AttachmentStats:
     """Attachment statistics for weapon enhancement calculations"""
+
     id: str
     name: str
     attachment_type: str
-    damage_bonus: Decimal = Decimal('0')
-    ammo_bonus: Decimal = Decimal('0')
-    decay_modifier: Decimal = Decimal('0')
-    economy_bonus: Decimal = Decimal('0')
+    damage_bonus: Decimal = Decimal("0")
+    ammo_bonus: Decimal = Decimal("0")
+    decay_modifier: Decimal = Decimal("0")
+    economy_bonus: Decimal = Decimal("0")
     range_bonus: int = 0
 
 
 @dataclass
 class EnhancedWeaponStats:
     """Enhanced weapon statistics after applying attachments and enhancements"""
+
     base_weapon: WeaponStats
     damage: Decimal
     ammo_burn: Decimal
@@ -153,18 +164,18 @@ class EnhancedWeaponStats:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
-            'damage': float(self.damage),
-            'ammo_burn': float(self.ammo_burn),
-            'decay': float(self.decay),
-            'total_cost_per_shot': float(self.total_cost_per_shot),
-            'dps': float(self.dps),
-            'damage_per_ped': float(self.damage_per_ped),
-            'effective_range': self.effective_range,
-            'base_weapon': {
-                'name': self.base_weapon.name,
-                'damage': float(self.base_weapon.damage),
-                'ammo_burn': float(self.base_weapon.ammo_burn),
-                'decay': float(self.base_weapon.decay),
-                'weapon_type': self.base_weapon.weapon_type
-            }
+            "damage": float(self.damage),
+            "ammo_burn": float(self.ammo_burn),
+            "decay": float(self.decay),
+            "total_cost_per_shot": float(self.total_cost_per_shot),
+            "dps": float(self.dps),
+            "damage_per_ped": float(self.damage_per_ped),
+            "effective_range": self.effective_range,
+            "base_weapon": {
+                "name": self.base_weapon.name,
+                "damage": float(self.base_weapon.damage),
+                "ammo_burn": float(self.base_weapon.ammo_burn),
+                "decay": float(self.base_weapon.decay),
+                "weapon_type": self.base_weapon.weapon_type,
+            },
         }

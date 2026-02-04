@@ -1,5 +1,4 @@
-"""Core data models for LewtNanny
-"""
+"""Core data models for LewtNanny"""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -40,6 +39,7 @@ class Weapon:
     range_: int | None = None
 
     def __post_init__(self):
+        """Post-initialization hook to convert string values to Decimal."""
         # Convert string values to Decimal
         if isinstance(self.decay, str):
             self.decay = Decimal(self.decay)
@@ -92,6 +92,7 @@ class LootItem:
     total_value: Decimal
 
     def __post_init__(self):
+        """Post-initialization hook to convert string values to Decimal."""
         # Convert string values to Decimal
         if isinstance(self.tt_value, str):
             self.tt_value = Decimal(self.tt_value)
@@ -113,6 +114,7 @@ class CombatStats:
     total_decay: Decimal
 
     def __post_init__(self):
+        """Post-initialization hook to convert string values to Decimal."""
         if isinstance(self.total_damage, str):
             self.total_damage = Decimal(self.total_damage)
         if isinstance(self.total_decay, str):
@@ -131,6 +133,7 @@ class CraftingResult:
     result_items: list[LootItem]
 
     def __post_init__(self):
+        """Post-initialization hook to convert string values to Decimal."""
         if isinstance(self.total_cost, str):
             self.total_cost = Decimal(self.total_cost)
         if isinstance(self.total_return, str):

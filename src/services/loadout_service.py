@@ -197,9 +197,7 @@ class LoadoutService:
 
         async with aiosqlite.connect(self.db_manager.databases["user_data"]) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM loadouts WHERE id = ?", (loadout_id,)
-            )
+            cursor = await db.execute("SELECT * FROM loadouts WHERE id = ?", (loadout_id,))
             row = await cursor.fetchone()
             return WeaponLoadout.from_dict(dict(row)) if row else None
 
@@ -274,9 +272,7 @@ class LoadoutService:
         await self.initialize()
 
         async with aiosqlite.connect(self.db_manager.databases["user_data"]) as db:
-            cursor = await db.execute(
-                "DELETE FROM loadouts WHERE id = ?", (loadout_id,)
-            )
+            cursor = await db.execute("DELETE FROM loadouts WHERE id = ?", (loadout_id,))
             await db.commit()
             deleted = cursor.rowcount > 0
             if deleted:
@@ -307,7 +303,7 @@ class LoadoutService:
     async def export_loadouts(self) -> str:
         """Export all loadouts as JSON"""
         loadouts = await self.get_all_loadouts()
-        return json.dumps([l.to_dict() for l in loadouts], indent=2)
+        return json.dumps([loadout.to_dict() for loadout in loadouts], indent=2)
 
     async def import_loadouts(self, json_data: str, replace: bool = False) -> int:
         """Import loadouts from JSON"""
@@ -398,9 +394,7 @@ class LoadoutService:
 
         async with aiosqlite.connect(self.db_manager.databases["user_data"]) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM custom_weapons WHERE id = ?", (weapon_id,)
-            )
+            cursor = await db.execute("SELECT * FROM custom_weapons WHERE id = ?", (weapon_id,))
             row = await cursor.fetchone()
             return CustomWeapon.from_dict(dict(row)) if row else None
 
@@ -410,9 +404,7 @@ class LoadoutService:
 
         async with aiosqlite.connect(self.db_manager.databases["user_data"]) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM custom_weapons WHERE name = ?", (name,)
-            )
+            cursor = await db.execute("SELECT * FROM custom_weapons WHERE name = ?", (name,))
             row = await cursor.fetchone()
             return CustomWeapon.from_dict(dict(row)) if row else None
 
@@ -455,9 +447,7 @@ class LoadoutService:
         await self.initialize()
 
         async with aiosqlite.connect(self.db_manager.databases["user_data"]) as db:
-            cursor = await db.execute(
-                "DELETE FROM custom_weapons WHERE id = ?", (weapon_id,)
-            )
+            cursor = await db.execute("DELETE FROM custom_weapons WHERE id = ?", (weapon_id,))
             await db.commit()
             deleted = cursor.rowcount > 0
             if deleted:
@@ -506,7 +496,6 @@ async def delete_loadout(name: str) -> bool:
 
 
 if __name__ == "__main__":
-
     logging.basicConfig(level=logging.INFO)
 
     async def test():
@@ -530,8 +519,8 @@ if __name__ == "__main__":
         # Get all loadouts
         loadouts = await service.get_all_loadouts()
         print(f"Total loadouts: {len(loadouts)}")
-        for l in loadouts:
-            print(f"  - {l.name}: {l.weapon}")
+        for loadout in loadouts:
+            print(f"  - {loadout.name}: {loadout.weapon}")
 
         # Export
         await service.export_loadouts()

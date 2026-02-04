@@ -58,7 +58,7 @@ class SimpleValueLabel(QLabel):
 class EnhancementSlider(QWidget):
     """Enhancement level slider with visual feedback"""
 
-    valueChanged = pyqtSignal(int)
+    value_changed = pyqtSignal(int)
 
     def __init__(self, name: str, icon: str, color: str, parent=None):
         super().__init__(parent)
@@ -77,9 +77,7 @@ class EnhancementSlider(QWidget):
         self.icon_label.setFixedWidth(24)
         self.name_label = QLabel(name)
         self.name_label.setFixedWidth(80)
-        self.name_label.setStyleSheet(
-            f"color: {color}; font-weight: bold; font-size: 12px;"
-        )
+        self.name_label.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 12px;")
         label_layout.addWidget(self.icon_label)
         label_layout.addWidget(self.name_label)
         layout.addLayout(label_layout)
@@ -133,7 +131,7 @@ class EnhancementSlider(QWidget):
     def _on_value_changed(self, value: int):
         self._value = value
         self.value_label.setText(str(value))
-        self.valueChanged.emit(value)
+        self.value_changed.emit(value)
 
     def value(self) -> int:
         return self._value
@@ -398,12 +396,8 @@ class WeaponSelector(QWidget):
         # Weapon table
         self.weapon_table = QTableWidget()
         self.weapon_table.setColumnCount(5)
-        self.weapon_table.setHorizontalHeaderLabels(
-            ["Name", "Type", "Ammo", "Decay", "DPS"]
-        )
-        self.weapon_table.setSelectionBehavior(
-            QTableWidget.SelectionBehavior.SelectRows
-        )
+        self.weapon_table.setHorizontalHeaderLabels(["Name", "Type", "Ammo", "Decay", "DPS"])
+        self.weapon_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.weapon_table.setSortingEnabled(True)
         self.weapon_table.itemSelectionChanged.connect(self._on_weapon_selected)
         self.weapon_table.setAlternatingRowColors(True)
@@ -431,9 +425,7 @@ class WeaponSelector(QWidget):
             if hasattr(QHeaderView, "ResizeMode"):
                 header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
                 for i in range(1, 5):
-                    header.setSectionResizeMode(
-                        i, QHeaderView.ResizeMode.ResizeToContents
-                    )
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
             else:
                 # PyQt6 with older style enums
                 header.setSectionResizeMode(0, 3)  # Stretch
@@ -845,9 +837,7 @@ class WeaponSelector(QWidget):
 
         # Title
         session_title = QLabel("SESSION STATS")
-        session_title.setStyleSheet(
-            "color: #4A90D9; font-weight: bold; font-size: 12px;"
-        )
+        session_title.setStyleSheet("color: #4A90D9; font-weight: bold; font-size: 12px;")
         layout.addWidget(session_title)
 
         # Stats
@@ -864,9 +854,7 @@ class WeaponSelector(QWidget):
         layout.addWidget(self.session_shots_label)
 
         self.session_cost_label = QLabel("Cost: 0.00 PED")
-        self.session_cost_label.setStyleSheet(
-            "color: #4A90D9; font-weight: bold; font-size: 13px;"
-        )
+        self.session_cost_label.setStyleSheet("color: #4A90D9; font-weight: bold; font-size: 13px;")
         layout.addWidget(self.session_cost_label)
 
         layout.addStretch()
@@ -1111,9 +1099,7 @@ class WeaponSelector(QWidget):
             return
 
         self.weapon_name_label.setText(self.current_weapon.name)
-        self.weapon_type_label.setText(
-            f"Type: {self.current_weapon.weapon_type or 'Unknown'}"
-        )
+        self.weapon_type_label.setText(f"Type: {self.current_weapon.weapon_type or 'Unknown'}")
         # Use range_ instead of range_value (dataclass uses trailing underscore)
         range_val = getattr(self.current_weapon, "range_", None) or 50
         self.weapon_range_label.setText(f"Range: {range_val}m")
@@ -1124,9 +1110,7 @@ class WeaponSelector(QWidget):
             return
 
         # Base values - convert Decimal to float
-        base_decay = (
-            float(self.current_weapon.decay) if self.current_weapon.decay else 0.0
-        )
+        base_decay = float(self.current_weapon.decay) if self.current_weapon.decay else 0.0
         base_ammo = self.current_weapon.ammo if self.current_weapon.ammo else 0
 
         # Enhancement multipliers (0-20 scale)
@@ -1168,9 +1152,7 @@ class WeaponSelector(QWidget):
             sight2_ammo += sight.get("ammo", 0)
 
         # Calculate totals
-        total_decay = (
-            enhanced_decay + amp_decay + scope_decay + sight1_decay + sight2_decay
-        )
+        total_decay = enhanced_decay + amp_decay + scope_decay + sight1_decay + sight2_decay
         total_ammo = enhanced_ammo + amp_ammo + scope_ammo + sight1_ammo + sight2_ammo
         ammo_cost = total_ammo / 10000.0  # Convert to PED
         total_cost = total_decay + ammo_cost
@@ -1183,9 +1165,7 @@ class WeaponSelector(QWidget):
         # DPP = Total Damage / Total Cost in PEC
         # Total Cost in PEC = (decay * 100) + (ammo / 100)  [since 1 PED = 100 PEC]
         total_cost_pec = (total_cost * 100.0) if total_cost > 0 else 0.0
-        damage_per_pec = (
-            (enhanced_dps * 3.0) / total_cost_pec if total_cost_pec > 0 else 0.0
-        )
+        damage_per_pec = (enhanced_dps * 3.0) / total_cost_pec if total_cost_pec > 0 else 0.0
 
         # Calculate efficiency percentage (vs base)
         base_cost = base_decay + (base_ammo / 10000.0)
@@ -1194,9 +1174,7 @@ class WeaponSelector(QWidget):
         # Update displays
         self.base_cost_label.setValue(base_cost)
         self.attachment_cost_label.setValue(total_cost - base_cost)
-        self.enhancement_cost_label.setValue(
-            total_cost * 0.1 if total_cost > 0 else 0.0
-        )
+        self.enhancement_cost_label.setValue(total_cost * 0.1 if total_cost > 0 else 0.0)
         self.total_cost_label.setValue(total_cost)
 
         self.dps_label.setValue(enhanced_dps)
@@ -1285,9 +1263,7 @@ class WeaponSelector(QWidget):
 
         try:
             asyncio.run(save())
-            QMessageBox.information(
-                self, "Saved", f"Loadout '{name}' saved successfully!"
-            )
+            QMessageBox.information(self, "Saved", f"Loadout '{name}' saved successfully!")
             logger.info(f"Loadout saved: {name}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save loadout: {e}")
@@ -1309,7 +1285,7 @@ class WeaponSelector(QWidget):
 
             service = LoadoutService()
             loadouts = await service.get_all_loadouts()
-            return [l.name for l in loadouts]
+            return [loadout.name for loadout in loadouts]
 
         try:
             loadout_names = asyncio.run(load())

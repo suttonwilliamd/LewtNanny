@@ -5,7 +5,7 @@ Displays stylized SVG icons for different weapon types
 import logging
 
 from PyQt6.QtCore import QRect, Qt
-from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPixmap, QRadialGradient
+from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap, QRadialGradient
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class WeaponIconPainter:
         size: int = 64,
         rarity: str = "common",
         selected: bool = False,
-        theme: str = "dark"
+        theme: str = "dark",
     ) -> QPixmap:
         """Create a weapon icon pixmap"""
         pixmap = QPixmap(size, size)
@@ -47,26 +47,26 @@ class WeaponIconPainter:
             "uncommon": QColor("#22C55E"),
             "rare": QColor("#3B82F6"),
             "epic": QColor("#A855F7"),
-            "legendary": QColor("#F59E0B")
+            "legendary": QColor("#F59E0B"),
         }
         rarity_color = rarity_colors.get(rarity.lower(), rarity_colors["common"])
 
         # Selection glow
         if selected:
-            glow = QRadialGradient(size/2, size/2, size/2)
+            glow = QRadialGradient(size / 2, size / 2, size / 2)
             glow.setColorAt(0, QColor(glow_color).lighter(150))
             glow.setColorAt(0.5, QColor(glow_color).lighter(50))
             glow.setColorAt(1, Qt.GlobalColor.transparent)
             painter.fillRect(0, 0, size, size, glow)
 
         # Background circle
-        bg_rect = QRect(size//8, size//8, size*3//4, size*3//4)
+        bg_rect = QRect(size // 8, size // 8, size * 3 // 4, size * 3 // 4)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(secondary_color))
         painter.drawEllipse(bg_rect)
 
         # Inner ring
-        ring_rect = QRect(size//6, size//6, size*2//3, size*2//3)
+        ring_rect = QRect(size // 6, size // 6, size * 2 // 3, size * 2 // 3)
         painter.setPen(QColor(rarity_color))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawEllipse(ring_rect)
@@ -86,7 +86,7 @@ class WeaponIconPainter:
         size: int,
         primary_color: QColor,
         accent_color: QColor,
-        rarity_color: QColor
+        rarity_color: QColor,
     ):
         """Draw weapon-specific icon"""
         center = size // 2
@@ -99,14 +99,24 @@ class WeaponIconPainter:
 
         if "pistol" in weapon_type_lower or "laser pistol" in weapon_type_lower:
             WeaponIconPainter._draw_pistol(painter, center, scale, primary_color, accent_color)
-        elif "rifle" in weapon_type_lower or "carbine" in weapon_type_lower or "assault" in weapon_type_lower:
+        elif (
+            "rifle" in weapon_type_lower
+            or "carbine" in weapon_type_lower
+            or "assault" in weapon_type_lower
+        ):
             WeaponIconPainter._draw_rifle(painter, center, scale, primary_color, accent_color)
         elif "shotgun" in weapon_type_lower:
             WeaponIconPainter._draw_shotgun(painter, center, scale, primary_color, accent_color)
-        elif "melee" in weapon_type_lower or "shortblade" in weapon_type_lower or "longblade" in weapon_type_lower:
+        elif (
+            "melee" in weapon_type_lower
+            or "shortblade" in weapon_type_lower
+            or "longblade" in weapon_type_lower
+        ):
             WeaponIconPainter._draw_melee(painter, center, scale, primary_color, accent_color)
         elif "flamethrower" in weapon_type_lower:
-            WeaponIconPainter._draw_flamethrower(painter, center, scale, primary_color, accent_color)
+            WeaponIconPainter._draw_flamethrower(
+                painter, center, scale, primary_color, accent_color
+            )
         elif "bow" in weapon_type_lower or "crossbow" in weapon_type_lower:
             WeaponIconPainter._draw_bow(painter, center, scale, primary_color, accent_color)
         elif "mindforce" in weapon_type_lower:
@@ -122,11 +132,11 @@ class WeaponIconPainter:
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Barrel
-        painter.drawRect(center - 3*scale, center - 12*scale, 6*scale, 18*scale)
+        painter.drawRect(center - 3 * scale, center - 12 * scale, 6 * scale, 18 * scale)
         # Grip
-        painter.drawRect(center - 2*scale, center + 4*scale, 4*scale, 10*scale)
+        painter.drawRect(center - 2 * scale, center + 4 * scale, 4 * scale, 10 * scale)
         # Trigger guard
-        painter.drawArc(center - 5*scale, center + 2*scale, 10*scale, 10*scale, 0, 180*16)
+        painter.drawArc(center - 5 * scale, center + 2 * scale, 10 * scale, 10 * scale, 0, 180 * 16)
 
     @staticmethod
     def _draw_rifle(painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor):
@@ -135,28 +145,30 @@ class WeaponIconPainter:
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Stock
-        painter.drawRect(center - 18*scale, center - 4*scale, 12*scale, 8*scale)
+        painter.drawRect(center - 18 * scale, center - 4 * scale, 12 * scale, 8 * scale)
         # Body
-        painter.drawRect(center - 6*scale, center - 8*scale, 20*scale, 12*scale)
+        painter.drawRect(center - 6 * scale, center - 8 * scale, 20 * scale, 12 * scale)
         # Barrel
-        painter.drawRect(center + 14*scale, center - 4*scale, 12*scale, 4*scale)
+        painter.drawRect(center + 14 * scale, center - 4 * scale, 12 * scale, 4 * scale)
         # Scope
-        painter.drawRect(center - 2*scale, center - 14*scale, 8*scale, 6*scale)
+        painter.drawRect(center - 2 * scale, center - 14 * scale, 8 * scale, 6 * scale)
 
     @staticmethod
-    def _draw_shotgun(painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor):
+    def _draw_shotgun(
+        painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor
+    ):
         """Draw shotgun icon"""
         painter.setPen(QPen(accent, 2 * scale))
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Stock
-        painter.drawRect(center - 20*scale, center - 3*scale, 16*scale, 6*scale)
+        painter.drawRect(center - 20 * scale, center - 3 * scale, 16 * scale, 6 * scale)
         # Body
-        painter.drawRect(center - 4*scale, center - 6*scale, 12*scale, 8*scale)
+        painter.drawRect(center - 4 * scale, center - 6 * scale, 12 * scale, 8 * scale)
         # Barrels (double barrel)
-        painter.drawRect(center + 8*scale, center - 8*scale, 16*scale, 10*scale)
+        painter.drawRect(center + 8 * scale, center - 8 * scale, 16 * scale, 10 * scale)
         # Pump
-        painter.drawRect(center - 8*scale, center - 10*scale, 4*scale, 12*scale)
+        painter.drawRect(center - 8 * scale, center - 10 * scale, 4 * scale, 12 * scale)
 
     @staticmethod
     def _draw_melee(painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor):
@@ -166,27 +178,31 @@ class WeaponIconPainter:
 
         # Blade
         path = QPainterPath()
-        path.moveTo(center, center - 18*scale)
-        path.lineTo(center + 6*scale, center)
-        path.lineTo(center, center + 20*scale)
-        path.lineTo(center - 6*scale, center)
+        path.moveTo(center, center - 18 * scale)
+        path.lineTo(center + 6 * scale, center)
+        path.lineTo(center, center + 20 * scale)
+        path.lineTo(center - 6 * scale, center)
         path.closeSubpath()
         painter.drawPath(path)
         # Handle
-        painter.drawRect(center - 2*scale, center + 18*scale, 4*scale, 8*scale)
+        painter.drawRect(center - 2 * scale, center + 18 * scale, 4 * scale, 8 * scale)
 
     @staticmethod
-    def _draw_flamethrower(painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor):
+    def _draw_flamethrower(
+        painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor
+    ):
         """Draw flamethrower icon"""
         painter.setPen(QPen(accent, 2 * scale))
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Tank
-        painter.drawRoundedRect(center - 6*scale, center, 12*scale, 14*scale, 2*scale, 2*scale)
+        painter.drawRoundedRect(
+            center - 6 * scale, center, 12 * scale, 14 * scale, 2 * scale, 2 * scale
+        )
         # Barrel
-        painter.drawRect(center - 4*scale, center - 16*scale, 8*scale, 18*scale)
+        painter.drawRect(center - 4 * scale, center - 16 * scale, 8 * scale, 18 * scale)
         # Nozzle
-        painter.drawEllipse(center, center - 18*scale, 6*scale, 4*scale)
+        painter.drawEllipse(center, center - 18 * scale, 6 * scale, 4 * scale)
 
     @staticmethod
     def _draw_bow(painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor):
@@ -195,40 +211,48 @@ class WeaponIconPainter:
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Bow curve
-        painter.drawArc(center - 8*scale, center - 16*scale, 16*scale, 32*scale, 0, 180*16)
+        painter.drawArc(
+            center - 8 * scale, center - 16 * scale, 16 * scale, 32 * scale, 0, 180 * 16
+        )
         # String
-        painter.drawLine(center - 8*scale, center - 16*scale, center - 8*scale, center + 16*scale)
+        painter.drawLine(
+            center - 8 * scale, center - 16 * scale, center - 8 * scale, center + 16 * scale
+        )
         # Arrow
-        painter.drawLine(center, center - 14*scale, center, center + 14*scale)
+        painter.drawLine(center, center - 14 * scale, center, center + 14 * scale)
         # Grip
-        painter.drawRect(center - 2*scale, center - 2*scale, 4*scale, 4*scale)
+        painter.drawRect(center - 2 * scale, center - 2 * scale, 4 * scale, 4 * scale)
 
     @staticmethod
-    def _draw_mindforce(painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor):
+    def _draw_mindforce(
+        painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor
+    ):
         """Draw mindforce icon"""
         painter.setPen(QPen(accent, 2 * scale))
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Orb
-        gradient = QRadialGradient(center, center, 12*scale)
+        gradient = QRadialGradient(center, center, 12 * scale)
         gradient.setColorAt(0, accent.lighter(150))
         gradient.setColorAt(0.7, accent)
         gradient.setColorAt(1, Qt.GlobalColor.transparent)
         painter.setBrush(gradient)
-        painter.drawEllipse(center, center, 16*scale, 16*scale)
+        painter.drawEllipse(center, center, 16 * scale, 16 * scale)
         # Ring
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawEllipse(center, center, 20*scale, 8*scale)
+        painter.drawEllipse(center, center, 20 * scale, 8 * scale)
 
     @staticmethod
-    def _draw_default(painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor):
+    def _draw_default(
+        painter: QPainter, center: int, scale: float, primary: QColor, accent: QColor
+    ):
         """Draw default generic weapon icon"""
         painter.setPen(QPen(accent, 2 * scale))
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
         # Generic weapon shape
-        painter.drawRect(center - 4*scale, center - 14*scale, 8*scale, 24*scale)
-        painter.drawRect(center - 6*scale, center + 8*scale, 12*scale, 4*scale)
+        painter.drawRect(center - 4 * scale, center - 14 * scale, 8 * scale, 24 * scale)
+        painter.drawRect(center - 6 * scale, center + 8 * scale, 12 * scale, 4 * scale)
 
 
 class WeaponIconLabel(QLabel):
@@ -239,7 +263,7 @@ class WeaponIconLabel(QLabel):
         weapon_type: str = "Unknown",
         size: int = 64,
         rarity: str = "common",
-        parent: QWidget | None = None
+        parent: QWidget | None = None,
     ):
         super().__init__(parent)
         self._weapon_type = weapon_type
@@ -280,11 +304,7 @@ class WeaponIconLabel(QLabel):
     def _update_icon(self):
         """Update the displayed icon"""
         pixmap = WeaponIconPainter.create_weapon_pixmap(
-            self._weapon_type,
-            self._size,
-            self._rarity,
-            self._selected,
-            self._theme
+            self._weapon_type, self._size, self._rarity, self._selected, self._theme
         )
         self.setPixmap(pixmap)
 

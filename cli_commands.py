@@ -20,9 +20,7 @@ from src.services.game_data_service import GameDataService, WeaponCalculator
 from src.services.loadout_service import LoadoutService, WeaponLoadout
 from src.utils.paths import get_user_data_dir, ensure_user_data_dir
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -42,9 +40,7 @@ class CLIOutput:
 
     def print_table(self, headers: List[str], rows: List[List[str]], title: str = ""):
         if self.json_output:
-            self.data.append(
-                {"type": "table", "headers": headers, "rows": rows, "title": title}
-            )
+            self.data.append({"type": "table", "headers": headers, "rows": rows, "title": title})
         else:
             if title:
                 print(f"\n{title}")
@@ -57,9 +53,7 @@ class CLIOutput:
 
             separator = "+" + "+".join("-" * (w + 2) for w in col_widths) + "+"
             header_row = (
-                "|"
-                + "|".join(f" {h:<{col_widths[i]}} " for i, h in enumerate(headers))
-                + "|"
+                "|" + "|".join(f" {h:<{col_widths[i]}} " for i, h in enumerate(headers)) + "|"
             )
 
             print(separator)
@@ -69,9 +63,7 @@ class CLIOutput:
             for row in rows:
                 row_str = (
                     "|"
-                    + "|".join(
-                        f" {str(cell):<{col_widths[i]}} " for i, cell in enumerate(row)
-                    )
+                    + "|".join(f" {str(cell):<{col_widths[i]}} " for i, cell in enumerate(row))
                     + "|"
                 )
                 print(row_str)
@@ -175,8 +167,7 @@ async def cmd_search(args: argparse.Namespace, output: CLIOutput) -> int:
         if item_type in ["all", "weapon"]:
             weapons = await game_service.search_weapons(query, limit)
             results["weapons"] = [
-                {"name": w.name, "type": w.weapon_type, "dps": str(w.dps)}
-                for w in weapons[:limit]
+                {"name": w.name, "type": w.weapon_type, "dps": str(w.dps)} for w in weapons[:limit]
             ]
 
         if item_type in ["all", "attachment"]:
@@ -198,9 +189,7 @@ async def cmd_search(args: argparse.Namespace, output: CLIOutput) -> int:
             ]
 
         if output.json_output:
-            output.data.append(
-                {"type": "search_results", "query": query, "results": results}
-            )
+            output.data.append({"type": "search_results", "query": query, "results": results})
         else:
             print(f"\nSearch Results for: '{query}'")
             print("=" * 50)
@@ -210,9 +199,7 @@ async def cmd_search(args: argparse.Namespace, output: CLIOutput) -> int:
                     print(f"\n{category.title()}:")
                     for item in items[:10]:
                         if category == "weapons":
-                            print(
-                                f"  {item['name']} ({item['type']}) - DPS: {item['dps']}"
-                            )
+                            print(f"  {item['name']} ({item['type']}) - DPS: {item['dps']}")
                         elif category == "attachments":
                             print(f"  {item['name']} ({item['type']})")
                         elif category == "resources":
@@ -250,9 +237,7 @@ async def cmd_show(args: argparse.Namespace, output: CLIOutput) -> int:
                                 "dps": str(weapon.dps),
                                 "eco": str(weapon.eco),
                                 "range": weapon.range_value,
-                                "reload_time": str(stats.reload_time)
-                                if stats
-                                else "N/A",
+                                "reload_time": str(stats.reload_time) if stats else "N/A",
                             },
                         }
                     )
@@ -371,16 +356,12 @@ async def cmd_weapons(args: argparse.Namespace, output: CLIOutput) -> int:
             weapons = await game_service.get_weapons_by_type(weapon_type)
 
             rows = [[w.name, str(w.dps), str(w.eco)] for w in weapons]
-            output.print_table(
-                ["Name", "DPS", "Economy"], rows, f"Weapons of Type: {weapon_type}"
-            )
+            output.print_table(["Name", "DPS", "Economy"], rows, f"Weapons of Type: {weapon_type}")
 
         else:
             weapons = await game_service.get_all_weapons()
 
-            rows = [
-                [w.name, w.weapon_type, str(w.dps), str(w.eco)] for w in weapons[:100]
-            ]
+            rows = [[w.name, w.weapon_type, str(w.dps), str(w.eco)] for w in weapons[:100]]
             output.print_table(
                 ["Name", "Type", "DPS", "Economy"],
                 rows,
@@ -405,10 +386,7 @@ async def cmd_attachments(args: argparse.Namespace, output: CLIOutput) -> int:
                 return 1
             attachments = await game_service.get_attachments_by_type(attachment_type)
 
-            rows = [
-                [a.name, str(a.damage_bonus), str(a.decay_modifier)]
-                for a in attachments
-            ]
+            rows = [[a.name, str(a.damage_bonus), str(a.decay_modifier)] for a in attachments]
             output.print_table(
                 ["Name", "Dmg Bonus", "Decay Mod"],
                 rows,
@@ -417,10 +395,7 @@ async def cmd_attachments(args: argparse.Namespace, output: CLIOutput) -> int:
         else:
             attachments = await game_service.get_all_attachments()
 
-            rows = [
-                [a.name, a.attachment_type, str(a.damage_bonus)]
-                for a in attachments[:100]
-            ]
+            rows = [[a.name, a.attachment_type, str(a.damage_bonus)] for a in attachments[:100]]
             output.print_table(
                 ["Name", "Type", "Damage Bonus"],
                 rows,
@@ -443,9 +418,7 @@ async def cmd_resources(args: argparse.Namespace, output: CLIOutput) -> int:
             resources = await game_service.search_resources(query)
 
             rows = [[r.name, str(r.tt_value)] for r in resources[:50]]
-            output.print_table(
-                ["Name", "TT Value"], rows, f"Resources matching: '{query}'"
-            )
+            output.print_table(["Name", "TT Value"], rows, f"Resources matching: '{query}'")
 
         elif args.subcommand == "tt":
             min_tt = args.min_tt or 0
@@ -453,9 +426,7 @@ async def cmd_resources(args: argparse.Namespace, output: CLIOutput) -> int:
             resources = await game_service.get_resources_by_tt_value(min_tt, max_tt)
 
             rows = [[r.name, str(r.tt_value)] for r in resources[:50]]
-            output.print_table(
-                ["Name", "TT Value"], rows, f"Resources (TT {min_tt}-{max_tt})"
-            )
+            output.print_table(["Name", "TT Value"], rows, f"Resources (TT {min_tt}-{max_tt})")
 
         else:
             resources = await game_service.get_all_resources()
@@ -481,9 +452,7 @@ async def cmd_blueprints(args: argparse.Namespace, output: CLIOutput) -> int:
             blueprints = await game_service.search_blueprints(query)
 
             rows = [[bp.name, bp.result_item] for bp in blueprints[:50]]
-            output.print_table(
-                ["Name", "Result"], rows, f"Blueprints matching: '{query}'"
-            )
+            output.print_table(["Name", "Result"], rows, f"Blueprints matching: '{query}'")
 
         elif args.subcommand in ["materials", "uses"]:
             material_name = args.material
@@ -493,9 +462,7 @@ async def cmd_blueprints(args: argparse.Namespace, output: CLIOutput) -> int:
             blueprints = await game_service.get_blueprints_by_material(material_name)
 
             rows = [[bp.name, bp.result_item] for bp in blueprints]
-            output.print_table(
-                ["Name", "Result"], rows, f"Blueprints using: '{material_name}'"
-            )
+            output.print_table(["Name", "Result"], rows, f"Blueprints using: '{material_name}'")
 
         elif args.subcommand in ["cost", "costcalc"]:
             blueprint_name = args.blueprint
@@ -651,9 +618,7 @@ async def cmd_db(args: argparse.Namespace, output: CLIOutput) -> int:
                 stats = {
                     "Database Path": str(db_path),
                     "Size": f"{size_kb:.2f} KB",
-                    "Modified": datetime.fromtimestamp(
-                        db_path.stat().st_mtime
-                    ).isoformat(),
+                    "Modified": datetime.fromtimestamp(db_path.stat().st_mtime).isoformat(),
                 }
                 output.print_stats(stats, "Database Information")
             else:
@@ -678,8 +643,7 @@ async def cmd_db(args: argparse.Namespace, output: CLIOutput) -> int:
 
             data_dir = ensure_user_data_dir()
             backup_path = (
-                data_dir
-                / f"lewtnanny_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+                data_dir / f"lewtnanny_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
             )
             shutil.copy(db_path, backup_path)
             output.print(f"Backup created: {backup_path}")
@@ -754,9 +718,7 @@ async def cmd_calc(args: argparse.Namespace, output: CLIOutput) -> int:
             stats = await calculator.calculate_enhanced_stats(weapon_name)
             if stats:
                 total_cost = stats.total_cost_per_shot * shots
-                output.print(
-                    f"{weapon_name} cost for {shots} shots: {total_cost:.4f} PED"
-                )
+                output.print(f"{weapon_name} cost for {shots} shots: {total_cost:.4f} PED")
             else:
                 output.print_error(f"Weapon not found: {weapon_name}")
                 return 1
@@ -783,8 +745,8 @@ async def cmd_loadout(args: argparse.Namespace, output: CLIOutput) -> int:
                 return 0
 
             rows = [
-                [l.name, l.weapon, l.amplifier or "-", str(l.damage_enh)]
-                for l in loadouts
+                [loadout.name, loadout.weapon, loadout.amplifier or "-", str(loadout.damage_enh)]
+                for loadout in loadouts
             ]
             output.print_table(
                 ["Name", "Weapon", "Amplifier", "Dmg+"],
@@ -899,9 +861,7 @@ async def cmd_monitor(args: argparse.Namespace, output: CLIOutput) -> int:
     return 1
 
 
-async def cmd_monitor_run(
-    args: argparse.Namespace, output: CLIOutput, chat_path: str
-) -> int:
+async def cmd_monitor_run(args: argparse.Namespace, output: CLIOutput, chat_path: str) -> int:
     """Run continuous chat log monitoring with event parsing"""
     from datetime import datetime
     from src.core.database import DatabaseManager
@@ -1084,9 +1044,7 @@ async def cmd_monitor_run(
                         # Print and save event
                         if event_type:
                             timestamp = line.split(" ")[0] + " " + line.split(" ")[1]
-                            print(
-                                f"[{timestamp}] {event_type}: {json.dumps(event_data)}"
-                            )
+                            print(f"[{timestamp}] {event_type}: {json.dumps(event_data)}")
 
                             # Save to database
                             await db_manager.add_event(
@@ -1147,9 +1105,7 @@ Examples:
         """,
     )
 
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose output"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--json", action="store_true", help="Output in JSON format")
 
@@ -1174,9 +1130,7 @@ Examples:
     )
 
     weapons_parser = subparsers.add_parser("weapons", help="Weapon commands")
-    weapons_sub = weapons_parser.add_subparsers(
-        dest="subcommand", help="Weapon subcommands"
-    )
+    weapons_sub = weapons_parser.add_subparsers(dest="subcommand", help="Weapon subcommands")
     weapons_sub.add_parser("list", help="List all weapons")
     weapons_sub.add_parser("best", help="Show top weapons by DPS").add_argument(
         "--limit", "-l", type=int, default=10
@@ -1188,9 +1142,7 @@ Examples:
         "weapon_type", help="Weapon type (e.g., Rifle, Pistol)"
     )
 
-    attachments_parser = subparsers.add_parser(
-        "attachments", help="Attachment commands"
-    )
+    attachments_parser = subparsers.add_parser("attachments", help="Attachment commands")
     attachments_sub = attachments_parser.add_subparsers(
         dest="subcommand", help="Attachment subcommands"
     )
@@ -1200,23 +1152,17 @@ Examples:
     )
 
     resources_parser = subparsers.add_parser("resources", help="Resource commands")
-    resources_sub = resources_parser.add_subparsers(
-        dest="subcommand", help="Resource subcommands"
-    )
+    resources_sub = resources_parser.add_subparsers(dest="subcommand", help="Resource subcommands")
     resources_sub.add_parser("list", help="List all resources")
     resources_sub.add_parser("search", help="Search resources").add_argument(
         "query", help="Search query"
     )
-    resources_tt_parser = resources_sub.add_parser(
-        "tt", help="List resources by TT value"
-    )
+    resources_tt_parser = resources_sub.add_parser("tt", help="List resources by TT value")
     resources_tt_parser.add_argument("--min", dest="min_tt", type=float)
     resources_tt_parser.add_argument("--max", dest="max_tt", type=float)
 
     blueprints_parser = subparsers.add_parser("blueprints", help="Blueprint commands")
-    blueprints_parser.add_argument(
-        "--bp-alias", dest="bp_alias", help=argparse.SUPPRESS
-    )
+    blueprints_parser.add_argument("--bp-alias", dest="bp_alias", help=argparse.SUPPRESS)
 
     def make_bp_alias(name):
         subparsers._name_parser_map[name] = blueprints_parser
@@ -1228,26 +1174,22 @@ Examples:
     blueprints_sub.add_parser("search", help="Search blueprints").add_argument(
         "query", help="Search query"
     )
-    blueprints_sub.add_parser(
-        "materials", help="Find blueprints using a material"
-    ).add_argument("material", help="Material name")
-    blueprints_sub.add_parser(
-        "uses", help="Find blueprints using a material"
-    ).add_argument("material", help="Material name")
+    blueprints_sub.add_parser("materials", help="Find blueprints using a material").add_argument(
+        "material", help="Material name"
+    )
+    blueprints_sub.add_parser("uses", help="Find blueprints using a material").add_argument(
+        "material", help="Material name"
+    )
     blueprints_sub.add_parser("cost", help="Calculate blueprint cost").add_argument(
         "blueprint", help="Blueprint name"
     )
-    blueprints_cost_parser = blueprints_sub.add_parser(
-        "costcalc", help="Calculate blueprint cost"
-    )
+    blueprints_cost_parser = blueprints_sub.add_parser("costcalc", help="Calculate blueprint cost")
     blueprints_cost_parser.add_argument("blueprint", help="Blueprint name")
 
     sessions_parser = subparsers.add_parser("sessions", help="List all sessions")
 
     session_parser = subparsers.add_parser("session", help="Session management")
-    session_sub = session_parser.add_subparsers(
-        dest="subcommand", help="Session subcommands"
-    )
+    session_sub = session_parser.add_subparsers(dest="subcommand", help="Session subcommands")
     session_sub.add_parser("start", help="Start a new session").add_argument(
         "activity_type", nargs="?", default="hunting", help="Activity type"
     )
@@ -1268,19 +1210,13 @@ Examples:
     db_sub.add_parser("backup", help="Backup database")
 
     calc_parser = subparsers.add_parser("calc", help="Calculations")
-    calc_sub = calc_parser.add_subparsers(
-        dest="subcommand", help="Calculation subcommands"
-    )
+    calc_sub = calc_parser.add_subparsers(dest="subcommand", help="Calculation subcommands")
     calc_sub_w = calc_sub.add_parser("weapon", help="Calculate weapon statistics")
     calc_sub_w.add_argument("weapon", help="Weapon name")
     calc_sub_w.add_argument("--amp", dest="amplifier", help="Amplifier name")
     calc_sub_w.add_argument("--scope", help="Scope name")
-    calc_sub_w.add_argument(
-        "--damage", type=int, default=0, help="Damage enhancement level"
-    )
-    calc_sub_w.add_argument(
-        "--economy", type=int, default=0, help="Economy enhancement level"
-    )
+    calc_sub_w.add_argument("--damage", type=int, default=0, help="Damage enhancement level")
+    calc_sub_w.add_argument("--economy", type=int, default=0, help="Economy enhancement level")
     calc_sub_dps = calc_sub.add_parser("dps", help="Calculate weapon DPS")
     calc_sub_dps.add_argument("weapon", help="Weapon name")
 
@@ -1289,13 +1225,11 @@ Examples:
     calc_sub_cost.add_argument("--shots", type=int, default=1)
 
     loadout_parser = subparsers.add_parser("loadout", help="Loadout management")
-    loadout_sub = loadout_parser.add_subparsers(
-        dest="subcommand", help="Loadout subcommands"
-    )
+    loadout_sub = loadout_parser.add_subparsers(dest="subcommand", help="Loadout subcommands")
     loadout_sub.add_parser("list", help="List all loadouts")
-    loadout_show = loadout_sub.add_parser(
-        "show", help="Show loadout details"
-    ).add_argument("name", help="Loadout name")
+    loadout_show = loadout_sub.add_parser("show", help="Show loadout details").add_argument(
+        "name", help="Loadout name"
+    )
     loadout_sub.add_parser("get", help="Get a loadout by name").add_argument(
         "name", help="Loadout name"
     )
@@ -1304,25 +1238,15 @@ Examples:
     loadout_add.add_argument("--weapon", required=True, help="Weapon name")
     loadout_add.add_argument("--amp", dest="amplifier", help="Amplifier name")
     loadout_add.add_argument("--scope", help="Scope name")
-    loadout_add.add_argument(
-        "--damage", type=int, default=0, help="Damage enhancement level"
-    )
-    loadout_add.add_argument(
-        "--economy", type=int, default=0, help="Economy enhancement level"
-    )
+    loadout_add.add_argument("--damage", type=int, default=0, help="Damage enhancement level")
+    loadout_add.add_argument("--economy", type=int, default=0, help="Economy enhancement level")
 
     gui_parser = subparsers.add_parser("gui", help="Launch GUI application")
 
     monitor_parser = subparsers.add_parser("monitor", help="Chat log monitoring")
-    monitor_sub = monitor_parser.add_subparsers(
-        dest="subcommand", help="Monitor subcommands"
-    )
-    monitor_tail = monitor_sub.add_parser(
-        "tail", help="Show last N lines from chat log"
-    )
-    monitor_tail.add_argument(
-        "lines", nargs="?", type=int, default=10, help="Number of lines"
-    )
+    monitor_sub = monitor_parser.add_subparsers(dest="subcommand", help="Monitor subcommands")
+    monitor_tail = monitor_sub.add_parser("tail", help="Show last N lines from chat log")
+    monitor_tail.add_argument("lines", nargs="?", type=int, default=10, help="Number of lines")
     monitor_run = monitor_sub.add_parser("run", help="Run continuous monitoring")
     monitor_run.add_argument("--loadout", help="Loadout name to use")
 

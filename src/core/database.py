@@ -119,12 +119,8 @@ class DatabaseManager:
             )
         """)
 
-        await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp)"
-        )
-        await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id)"
-        )
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id)")
         await db.execute(
             "CREATE INDEX IF NOT EXISTS idx_sessions_activity ON sessions(activity_type)"
         )
@@ -186,7 +182,7 @@ class DatabaseManager:
                         """
                         INSERT OR IGNORE INTO weapons (id, name, ammo, decay, weapon_type, dps, eco)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
+                        """,
                         (
                             weapon_id,
                             weapon_id,
@@ -215,25 +211,25 @@ class DatabaseManager:
                         " Blueprint", ""
                     )
                     # Store materials as JSON in crafting_blueprints table
-                    materials_json = (
-                        json.dumps(materials) if isinstance(materials, list) else "[]"
-                    )
+                    materials_json = json.dumps(materials) if isinstance(materials, list) else "[]"
 
                     await db.execute(
                         """
-                        INSERT OR IGNORE INTO crafting_blueprints (id, name, materials, result_item, result_quantity)
+                        INSERT OR IGNORE INTO crafting_blueprints
+                        (id, name, materials, result_item, result_quantity)
                         VALUES (?, ?, ?, ?, ?)
-                    """,
+                        """,
                         (blueprint_id, blueprint_id, materials_json, result_item, 1),
                     )
 
                     # Also populate the old tables for backward compatibility
                     await db.execute(
                         """
-                        INSERT OR IGNORE INTO blueprints (id, name, result_item)
-                        VALUES (?, ?, ?)
-                    """,
-                        (blueprint_id, blueprint_id, result_item),
+                        INSERT OR IGNORE INTO crafting_blueprints
+                        (id, name, materials, result_item, result_quantity)
+                        VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (blueprint_id, blueprint_id, materials_json, result_item, 1),
                     )
 
                     if isinstance(materials, list):
@@ -241,9 +237,10 @@ class DatabaseManager:
                             if isinstance(material, list) and len(material) >= 2:
                                 await db.execute(
                                     """
-                                    INSERT OR IGNORE INTO blueprint_materials (blueprint_id, material_name, quantity)
-                                    VALUES (?, ?, ?)
-                                """,
+                                        INSERT OR IGNORE INTO blueprint_materials
+                                        (blueprint_id, material_name, quantity)
+                                        VALUES (?, ?, ?)
+                                        """,
                                     (blueprint_id, material[0], int(material[1])),
                                 )
 
@@ -267,9 +264,7 @@ class DatabaseManager:
             weapon_count = result[0] if result and result[0] else 0
 
             if weapon_count > 0:
-                logger.info(
-                    f"Weapons already exist ({weapon_count}), checking other tables..."
-                )
+                logger.info(f"Weapons already exist ({weapon_count}), checking other tables...")
 
                 cursor = await db.execute("SELECT COUNT(*) FROM attachments")
                 result = await cursor.fetchone()
@@ -297,9 +292,7 @@ class DatabaseManager:
                 logger.info(f"Migration complete: {counts}")
 
         except ImportError as e:
-            logger.warning(
-                f"Could not import migration service, using legacy migration: {e}"
-            )
+            logger.warning(f"Could not import migration service, using legacy migration: {e}")
             await self._legacy_migrate_json_data(db)
         except Exception as e:
             logger.error(f"Migration error: {e}")
@@ -311,8 +304,8 @@ class DatabaseManager:
 
         async with aiosqlite.connect(self.db_path) as db:
             cursor = await db.execute("""
-                SELECT id, name, ammo, decay, weapon_type, dps, eco, range_value, damage, reload_time
-                FROM weapons
+                SELECT id, name, ammo, decay, weapon_type, dps, eco,
+                range_value, damage, reload_time FROM weapons
             """)
 
             async for row in cursor:
@@ -455,9 +448,10 @@ class DatabaseManager:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
                     """
-                    INSERT INTO sessions (id, start_time, activity_type, total_cost, total_return, total_markup)
+                    INSERT INTO sessions (id, start_time, activity_type, total_cost,
+                    total_return, total_markup)
                     VALUES (?, ?, ?, 0, 0, 0)
-                """,
+                    """,
                     (session_id, datetime.now(), activity_type),
                 )
                 await db.commit()
@@ -477,9 +471,10 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as db:
                 db.execute(
                     """
-                    INSERT INTO sessions (id, start_time, activity_type, total_cost, total_return, total_markup)
+                    INSERT INTO sessions (id, start_time, activity_type,
+                    total_cost, total_return, total_markup)
                     VALUES (?, ?, ?, 0, 0, 0)
-                """,
+                    """,
                     (session_id, datetime.now(), activity_type),
                 )
                 db.commit()
@@ -497,9 +492,10 @@ class DatabaseManager:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
                     """
-                    INSERT INTO events (timestamp, event_type, activity_type, raw_message, parsed_data, session_id)
+                    INSERT INTO events (timestamp, event_type, activity_type,
+                    raw_message, parsed_data, session_id)
                     VALUES (?, ?, ?, ?, ?, ?)
-                """,
+                    """,
                     (
                         datetime.now(),
                         event_data.get("event_type"),
@@ -526,9 +522,10 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as db:
                 db.execute(
                     """
-                    INSERT INTO events (timestamp, event_type, activity_type, raw_message, parsed_data, session_id)
+                    INSERT INTO events (timestamp, event_type, activity_type,
+                    raw_message, parsed_data, session_id)
                     VALUES (?, ?, ?, ?, ?, ?)
-                """,
+                    """,
                     (
                         datetime.now(),
                         event_data.get("event_type"),
@@ -623,7 +620,8 @@ class DatabaseManager:
         try:
             async with aiosqlite.connect(self.db_path) as db:
                 cursor = await db.execute("""
-                    SELECT id, start_time, end_time, activity_type, total_cost, total_return, total_markup
+                    SELECT id, start_time, end_time, activity_type,
+                    total_cost, total_return, total_markup
                     FROM sessions
                     ORDER BY start_time DESC
                 """)
@@ -650,9 +648,7 @@ class DatabaseManager:
         """Delete a session and its events"""
         try:
             async with aiosqlite.connect(self.db_path) as db:
-                await db.execute(
-                    "DELETE FROM events WHERE session_id = ?", (session_id,)
-                )
+                await db.execute("DELETE FROM events WHERE session_id = ?", (session_id,))
                 await db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
                 await db.commit()
 
@@ -730,9 +726,10 @@ class DatabaseManager:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
                     """
-                    INSERT OR REPLACE INTO session_loot_items (session_id, item_name, quantity, total_value, markup_percent)
+                    INSERT OR REPLACE INTO session_loot_items
+                    (session_id, item_name, quantity, total_value, markup_percent)
                     VALUES (?, ?, ?, ?, ?)
-                """,
+                    """,
                     (session_id, item_name, quantity, total_value, markup_percent),
                 )
                 await db.commit()
@@ -792,9 +789,10 @@ class DatabaseManager:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
                     """
-                    UPDATE sessions SET total_cost = ?, total_return = ?, total_markup = ?, end_time = ?
+                    UPDATE sessions SET total_cost = ?, total_return = ?,
+                    total_markup = ?, end_time = ?
                     WHERE id = ?
-                """,
+                    """,
                     (
                         total_cost,
                         total_return,
@@ -898,9 +896,7 @@ class DatabaseManager:
                             )
                             combat_events.append(data)
                         except json.JSONDecodeError:
-                            logger.warning(
-                                f"Failed to parse combat data: {parsed_data}"
-                            )
+                            logger.warning(f"Failed to parse combat data: {parsed_data}")
 
         except Exception as e:
             logger.error(f"Error getting session combat events: {e}")

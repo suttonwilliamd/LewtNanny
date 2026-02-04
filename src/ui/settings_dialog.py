@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QSpinBox,
     QTabWidget,
     QVBoxLayout,
+    QWidget,
 )
 
 from src.utils.paths import get_user_data_dir
@@ -33,7 +34,7 @@ logger = logging.getLogger(__name__)
 class SettingsDialog(QDialog):
     """Settings and preferences dialog"""
 
-    settingsApplied = pyqtSignal(dict)
+    settings_applied = pyqtSignal(dict)
 
     def __init__(self, parent=None, current_settings: dict | None = None):
         super().__init__(parent)
@@ -323,15 +324,11 @@ class SettingsDialog(QDialog):
         confirm_layout.setContentsMargins(10, 15, 10, 10)
 
         self.confirm_delete_check = QCheckBox("Confirm before deleting sessions")
-        self.confirm_delete_check.setToolTip(
-            "Show confirmation dialog when deleting sessions"
-        )
+        self.confirm_delete_check.setToolTip("Show confirmation dialog when deleting sessions")
         confirm_layout.addWidget(self.confirm_delete_check)
 
         self.confirm_clear_check = QCheckBox("Confirm before clearing data")
-        self.confirm_clear_check.setToolTip(
-            "Show confirmation dialog when clearing session data"
-        )
+        self.confirm_clear_check.setToolTip("Show confirmation dialog when clearing session data")
         confirm_layout.addWidget(self.confirm_clear_check)
 
         layout.addWidget(confirm_group)
@@ -342,9 +339,7 @@ class SettingsDialog(QDialog):
         overlay_layout.setContentsMargins(10, 15, 10, 10)
 
         self.show_overlay_check = QCheckBox("Show overlay on session start")
-        self.show_overlay_check.setToolTip(
-            "Display floating overlay when hunting session begins"
-        )
+        self.show_overlay_check.setToolTip("Display floating overlay when hunting session begins")
         overlay_layout.addWidget(self.show_overlay_check)
 
         self.animations_check = QCheckBox("Enable animations")
@@ -359,9 +354,7 @@ class SettingsDialog(QDialog):
         notify_layout.setContentsMargins(10, 15, 10, 10)
 
         self.sound_notify_check = QCheckBox("Play sound on loot events")
-        self.sound_notify_check.setToolTip(
-            "Play a sound when valuable loot is received"
-        )
+        self.sound_notify_check.setToolTip("Play a sound when valuable loot is received")
         notify_layout.addWidget(self.sound_notify_check)
 
         layout.addWidget(notify_group)
@@ -397,9 +390,7 @@ class SettingsDialog(QDialog):
 
     def _browse_export(self):
         """Browse for export folder"""
-        path = QFileDialog.getExistingDirectory(
-            self, "Select Export Folder", str(Path.home())
-        )
+        path = QFileDialog.getExistingDirectory(self, "Select Export Folder", str(Path.home()))
         if path:
             self.export_path.setText(path)
 
@@ -409,9 +400,7 @@ class SettingsDialog(QDialog):
 
         # Appearance
         theme_map = {"dark": "Dark", "light": "Light", "system": "System"}
-        self.theme_combo.setCurrentText(
-            theme_map.get(settings.get("theme", "dark"), "Dark")
-        )
+        self.theme_combo.setCurrentText(theme_map.get(settings.get("theme", "dark"), "Dark"))
 
         font_family = settings.get("font_family", "Segoe UI")
         font = QFont(font_family)
@@ -421,17 +410,11 @@ class SettingsDialog(QDialog):
 
         # Defaults
         self.default_damage_enh.setValue(settings.get("default_enhancement_damage", 0))
-        self.default_accuracy_enh.setValue(
-            settings.get("default_enhancement_accuracy", 0)
-        )
-        self.default_economy_enh.setValue(
-            settings.get("default_enhancement_economy", 0)
-        )
+        self.default_accuracy_enh.setValue(settings.get("default_enhancement_accuracy", 0))
+        self.default_economy_enh.setValue(settings.get("default_enhancement_economy", 0))
 
         sort_map = {"dps": "DPS", "eco": "Economy", "name": "Name", "cost": "Cost"}
-        self.sort_combo.setCurrentText(
-            sort_map.get(settings.get("weapon_sort", "dps"), "DPS")
-        )
+        self.sort_combo.setCurrentText(sort_map.get(settings.get("weapon_sort", "dps"), "DPS"))
 
         self.decimal_places.setValue(settings.get("decimal_places", 4))
 
@@ -439,9 +422,7 @@ class SettingsDialog(QDialog):
         self.auto_save_check.setChecked(settings.get("auto_save", True))
         self.auto_save_interval.setValue(settings.get("auto_save_interval", 30))
 
-        db_path = settings.get(
-            "database_path", str(get_user_data_dir() / "user_data.db")
-        )
+        db_path = settings.get("database_path", str(get_user_data_dir() / "user_data.db"))
         self.database_path.setText(str(Path(db_path).absolute()))
 
         export_path = settings.get("export_path", str(Path.home()))
@@ -469,9 +450,7 @@ class SettingsDialog(QDialog):
             "default_enhancement_damage": self.default_damage_enh.value(),
             "default_enhancement_accuracy": self.default_accuracy_enh.value(),
             "default_enhancement_economy": self.default_economy_enh.value(),
-            "weapon_sort": ["dps", "eco", "name", "cost"][
-                self.sort_combo.currentIndex()
-            ],
+            "weapon_sort": ["dps", "eco", "name", "cost"][self.sort_combo.currentIndex()],
             "decimal_places": self.decimal_places.value(),
             "auto_save": self.auto_save_check.isChecked(),
             "auto_save_interval": self.auto_save_interval.value(),
@@ -489,7 +468,7 @@ class SettingsDialog(QDialog):
     def apply_settings(self):
         """Apply settings and emit signal"""
         settings = self.get_settings()
-        self.settingsApplied.emit(settings)
+        self.settings_applied.emit(settings)
         logger.info("Settings applied")
 
     def accept(self):

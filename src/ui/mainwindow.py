@@ -144,9 +144,7 @@ class TabbedMainWindow(QMainWindow):
         # Update blueprint dropdown when switching to crafting tab
         if tab_name == "Crafting" and hasattr(self, "crafting_tab"):
             # Use a timer to ensure the widget is fully visible
-            QTimer.singleShot(
-                100, lambda: self.crafting_tab.update_blueprint_dropdown()
-            )
+            QTimer.singleShot(100, lambda: self.crafting_tab.update_blueprint_dropdown())
 
         logger.debug(f"Switched to tab: {tab_name}")
 
@@ -291,9 +289,7 @@ class TabbedMainWindow(QMainWindow):
                                 self.overlay.update_weapon(
                                     loadout.weapon,
                                     loadout.amplifier or "",
-                                    f"{loadout.damage_enh * 0.1:.3f}"
-                                    if loadout.damage_enh
-                                    else "",
+                                    f"{loadout.damage_enh * 0.1:.3f}" if loadout.damage_enh else "",
                                 )
                             logger.info(
                                 f"Loadout changed to: {loadout.weapon} - waiting for stats calculation to sync cost"
@@ -534,9 +530,7 @@ class TabbedMainWindow(QMainWindow):
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
-                    sessions = loop.run_until_complete(
-                        self.db_manager.get_all_sessions()
-                    )
+                    sessions = loop.run_until_complete(self.db_manager.get_all_sessions())
                     for session in sessions:
                         self._add_run_to_run_log(session)
                     logger.info(f"Loaded {len(sessions)} past runs")
@@ -601,9 +595,7 @@ class TabbedMainWindow(QMainWindow):
             self.run_log_table.setItem(row, 5, QTableWidgetItem(f"{roi:.1f}%"))
             self.run_log_table.setItem(row, 6, QTableWidgetItem("-"))
 
-            self.run_log_table.item(row, 0).setData(
-                Qt.ItemDataRole.UserRole, session["id"]
-            )
+            self.run_log_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, session["id"])
 
             # Get item count for this session
             def load_item_count():
@@ -617,15 +609,11 @@ class TabbedMainWindow(QMainWindow):
                             self.db_manager.get_session_loot_items(session["id"])
                         )
                         item_count = len(items)
-                        self.run_log_table.setItem(
-                            row, 6, QTableWidgetItem(str(item_count))
-                        )
+                        self.run_log_table.setItem(row, 6, QTableWidgetItem(str(item_count)))
                     finally:
                         loop.close()
                 except Exception as e:
-                    logger.error(
-                        f"Error loading item count for session {session['id']}: {e}"
-                    )
+                    logger.error(f"Error loading item count for session {session['id']}: {e}")
 
             QTimer.singleShot(100, load_item_count)
 
@@ -689,13 +677,10 @@ class TabbedMainWindow(QMainWindow):
 
         # Delete from database in background thread
         def delete_in_background():
-
             try:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                success = loop.run_until_complete(
-                    self.db_manager.delete_session(session_id)
-                )
+                success = loop.run_until_complete(self.db_manager.delete_session(session_id))
                 loop.close()
 
                 logger.info(f"Database deletion result: {success}")
@@ -719,8 +704,8 @@ class TabbedMainWindow(QMainWindow):
                 logger.error(f"Error deleting session {session_id}: {e}")
                 QTimer.singleShot(
                     0,
-                    lambda: QMessageBox.warning(
-                        self, "Delete Failed", f"Error deleting session: {e}"
+                    lambda captured_e=e: QMessageBox.warning(
+                        self, "Delete Failed", f"Error deleting session: {captured_e}"
                     ),
                 )
 
@@ -736,7 +721,6 @@ class TabbedMainWindow(QMainWindow):
 
         # Refresh analysis tab in background
         def refresh_analysis():
-
             try:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
@@ -822,7 +806,6 @@ class TabbedMainWindow(QMainWindow):
         """Load all session data: item breakdown and summary"""
 
         def load_in_background():
-
             try:
                 # Create new event loop for background thread
                 loop = asyncio.new_event_loop()
@@ -843,9 +826,7 @@ class TabbedMainWindow(QMainWindow):
                             row, 1, QTableWidgetItem(str(item["quantity"]))
                         )
                         item_value = (
-                            item["total_value"] / item["quantity"]
-                            if item["quantity"] > 0
-                            else 0
+                            item["total_value"] / item["quantity"] if item["quantity"] > 0 else 0
                         )
                         self.item_breakdown_table.setItem(
                             row, 2, QTableWidgetItem(f"{item_value:.4f}")
@@ -859,35 +840,23 @@ class TabbedMainWindow(QMainWindow):
 
                     # Load session summary
                     sessions = await self.db_manager.get_all_sessions()
-                    session_data = next(
-                        (s for s in sessions if s["id"] == session_id), None
-                    )
+                    session_data = next((s for s in sessions if s["id"] == session_id), None)
                     if session_data:
                         total_cost = session_data.get("total_cost", 0) or 0
                         total_return = session_data.get("total_return", 0) or 0
-                        return_pct = (
-                            (total_return / total_cost * 100) if total_cost > 0 else 0
-                        )
+                        return_pct = (total_return / total_cost * 100) if total_cost > 0 else 0
 
                         # Update summary labels
-                        self.loot_summary_labels["Total Cost"].setText(
-                            f"{total_cost:.2f} PED"
-                        )
-                        self.loot_summary_labels["Total Return"].setText(
-                            f"{total_return:.2f} PED"
-                        )
-                        self.loot_summary_labels["% Return"].setText(
-                            f"{return_pct:.1f}%"
-                        )
+                        self.loot_summary_labels["Total Cost"].setText(f"{total_cost:.2f} PED")
+                        self.loot_summary_labels["Total Return"].setText(f"{total_return:.2f} PED")
+                        self.loot_summary_labels["% Return"].setText(f"{return_pct:.1f}%")
 
                         # Load and update creatures, globals, and HOFs counts
                         counts = await self.db_manager.get_session_counts(session_id)
                         self.loot_summary_labels["Creatures Looted"].setText(
                             str(counts["creatures"])
                         )
-                        self.loot_summary_labels["Globals"].setText(
-                            str(counts["globals"])
-                        )
+                        self.loot_summary_labels["Globals"].setText(str(counts["globals"]))
                         self.loot_summary_labels["HOFs"].setText(str(counts["hofs"]))
 
                     # Load skills data
@@ -895,9 +864,7 @@ class TabbedMainWindow(QMainWindow):
                     self.skills_tab_creator.load_session_skills(skill_events)
 
                     # Load combat data
-                    combat_events = await self.db_manager.get_session_combat_events(
-                        session_id
-                    )
+                    combat_events = await self.db_manager.get_session_combat_events(session_id)
                     if hasattr(self, "combat_tab") and self.combat_tab:
                         self.combat_tab.load_session_combat_data(combat_events)
 
@@ -957,15 +924,9 @@ class TabbedMainWindow(QMainWindow):
                 new_count = current_count + quantity
                 new_total = current_total + display_value
 
-                self.item_breakdown_table.setItem(
-                    row, 1, QTableWidgetItem(str(new_count))
-                )
-                self.item_breakdown_table.setItem(
-                    row, 2, QTableWidgetItem(f"{item_value:.4f}")
-                )
-                self.item_breakdown_table.setItem(
-                    row, 4, QTableWidgetItem(f"{new_total:.4f}")
-                )
+                self.item_breakdown_table.setItem(row, 1, QTableWidgetItem(str(new_count)))
+                self.item_breakdown_table.setItem(row, 2, QTableWidgetItem(f"{item_value:.4f}"))
+                self.item_breakdown_table.setItem(row, 4, QTableWidgetItem(f"{new_total:.4f}"))
                 found = True
                 break
 
@@ -974,15 +935,9 @@ class TabbedMainWindow(QMainWindow):
             self.item_breakdown_table.insertRow(row)
             self.item_breakdown_table.setItem(row, 0, QTableWidgetItem(item_name))
             self.item_breakdown_table.setItem(row, 1, QTableWidgetItem(str(quantity)))
-            self.item_breakdown_table.setItem(
-                row, 2, QTableWidgetItem(f"{item_value:.4f}")
-            )
-            self.item_breakdown_table.setItem(
-                row, 3, QTableWidgetItem(f"{markup_percent}%")
-            )
-            self.item_breakdown_table.setItem(
-                row, 4, QTableWidgetItem(f"{display_value:.4f}")
-            )
+            self.item_breakdown_table.setItem(row, 2, QTableWidgetItem(f"{item_value:.4f}"))
+            self.item_breakdown_table.setItem(row, 3, QTableWidgetItem(f"{markup_percent}%"))
+            self.item_breakdown_table.setItem(row, 4, QTableWidgetItem(f"{display_value:.4f}"))
 
         if self.current_session_id:
             self.db_manager.save_session_loot_item_sync(
@@ -1017,10 +972,7 @@ class TabbedMainWindow(QMainWindow):
         # Save event to database if we have an active session
         if self.current_session_id and hasattr(self, "db_manager"):
             # Add session_id to event data if not present
-            if (
-                not event_data.get("session_id")
-                or event_data.get("session_id") == "None"
-            ):
+            if not event_data.get("session_id") or event_data.get("session_id") == "None":
                 event_data["session_id"] = self.current_session_id
 
             # Save event asynchronously in background
@@ -1039,9 +991,7 @@ class TabbedMainWindow(QMainWindow):
                         new_loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(new_loop)
                         try:
-                            new_loop.run_until_complete(
-                                self.db_manager.add_event(event_data)
-                            )
+                            new_loop.run_until_complete(self.db_manager.add_event(event_data))
                         finally:
                             new_loop.close()
 
@@ -1082,20 +1032,14 @@ class TabbedMainWindow(QMainWindow):
             # Update total return
             value = parsed_data.get("value", 0)
             current_return = float(
-                self.loot_summary_labels["Total Return"]
-                .text()
-                .replace(",", "")
-                .split()[0]
+                self.loot_summary_labels["Total Return"].text().replace(",", "").split()[0]
             )
             new_return = current_return + value
             self.loot_summary_labels["Total Return"].setText(f"{new_return:.2f} PED")
 
             # Update % return
             current_cost = float(
-                self.loot_summary_labels["Total Cost"]
-                .text()
-                .replace(",", "")
-                .split()[0]
+                self.loot_summary_labels["Total Cost"].text().replace(",", "").split()[0]
             )
             if current_cost > 0:
                 return_pct = (new_return / current_cost) * 100

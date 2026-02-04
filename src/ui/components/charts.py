@@ -31,18 +31,20 @@ class SimpleChart(QWidget):
         self.y_label = ""
         self.max_value = 0
         self.colors = [
-            QColor(0, 150, 136),   # Teal
-            QColor(255, 152, 0),   # Orange
+            QColor(0, 150, 136),  # Teal
+            QColor(255, 152, 0),  # Orange
             QColor(103, 58, 183),  # Purple
-            QColor(76, 175, 80),   # Green
-            QColor(244, 67, 54),   # Red
+            QColor(76, 175, 80),  # Green
+            QColor(244, 67, 54),  # Red
             QColor(33, 150, 243),  # Blue
         ]
 
         self.setMinimumHeight(200)
         logger.debug("SimpleChart initialized")
 
-    def set_data(self, data: list[dict[str, Any]], label_key: str = "label", value_key: str = "value"):
+    def set_data(
+        self, data: list[dict[str, Any]], label_key: str = "label", value_key: str = "value"
+    ):
         """Set chart data"""
         self.data = data
         if data:
@@ -72,8 +74,8 @@ class SimpleChart(QWidget):
             bar_width = 10
 
         for i, item in enumerate(self.data):
-            label = str(item.get('label', f'Item {i+1}'))
-            value = float(item.get('value', 0))
+            label = str(item.get("label", f"Item {i + 1}"))
+            value = float(item.get("value", 0))
 
             bar_height = (value / self.max_value) * chart_rect.height() if self.max_value > 0 else 0
 
@@ -89,30 +91,21 @@ class SimpleChart(QWidget):
             painter.setFont(QFont("Arial", 7))
             text_rect = painter.fontMetrics().boundingRect(label)
             painter.drawText(
-                int(x + bar_width / 2 - text_rect.width() / 2),
-                chart_rect.bottom() + 5,
-                label
+                int(x + bar_width / 2 - text_rect.width() / 2), chart_rect.bottom() + 5, label
             )
 
         painter.setPen(QColor(150, 150, 150))
         painter.drawLine(
-            chart_rect.left(), chart_rect.bottom(),
-            chart_rect.right(), chart_rect.bottom()
+            chart_rect.left(), chart_rect.bottom(), chart_rect.right(), chart_rect.bottom()
         )
 
         if self.max_value > 0:
             step = self.max_value / 5
             for i in range(6):
                 y = chart_rect.bottom() - (i * chart_rect.height() / 5)
-                painter.drawLine(
-                    chart_rect.left() - 5, int(y),
-                    chart_rect.left(), int(y)
-                )
+                painter.drawLine(chart_rect.left() - 5, int(y), chart_rect.left(), int(y))
                 value = self.max_value - i * step
-                painter.drawText(
-                    chart_rect.left() - 35, int(y + 5),
-                    f"{value:.1f}"
-                )
+                painter.drawText(chart_rect.left() - 35, int(y + 5), f"{value:.1f}")
 
 
 class SessionChartWidget(QWidget):
@@ -136,12 +129,14 @@ class SessionChartWidget(QWidget):
 
         filter_layout.addWidget(QLabel("Chart Type:"))
         self.chart_type_combo = QComboBox()
-        self.chart_type_combo.addItems([
-            "ROI by Session",
-            "Profit/Loss by Session",
-            "Cost vs Loot by Session",
-            "Events per Session"
-        ])
+        self.chart_type_combo.addItems(
+            [
+                "ROI by Session",
+                "Profit/Loss by Session",
+                "Cost vs Loot by Session",
+                "Events per Session",
+            ]
+        )
         self.chart_type_combo.currentIndexChanged.connect(self.update_chart)
         filter_layout.addWidget(self.chart_type_combo)
 
@@ -212,47 +207,36 @@ class SessionChartWidget(QWidget):
 
             data = []
             for i, session in enumerate(self.session_data[:20]):
-                session_id = session.get('id', f'Session {i+1}')[:8]
-                cost = float(session.get('total_cost', 0))
-                return_val = float(session.get('total_return', 0))
+                session_id = session.get("id", f"Session {i + 1}")[:8]
+                cost = float(session.get("total_cost", 0))
+                return_val = float(session.get("total_return", 0))
 
                 if chart_type == "ROI by Session":
                     roi = ((return_val - cost) / cost * 100) if cost > 0 else 0
-                    data.append({'label': session_id, 'value': roi})
+                    data.append({"label": session_id, "value": roi})
 
                 elif chart_type == "Profit/Loss by Session":
                     profit = return_val - cost
-                    data.append({'label': session_id, 'value': profit})
+                    data.append({"label": session_id, "value": profit})
 
                 elif chart_type == "Cost vs Loot by Session":
-                    data.append({'label': f'{session_id}\nCost', 'value': cost})
-                    data.append({'label': f'{session_id}\nLoot', 'value': return_val})
+                    data.append({"label": f"{session_id}\nCost", "value": cost})
+                    data.append({"label": f"{session_id}\nLoot", "value": return_val})
 
                 elif chart_type == "Events per Session":
                     try:
                         loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(loop)
                         stats = loop.run_until_complete(
-                            self.db_manager.get_session_stats(session.get('id'))
+                            self.db_manager.get_session_stats(session.get("id"))
                         )
                         loop.close()
-                        data.append({'label': session_id, 'value': stats.get('event_count', 0)})
+                        data.append({"label": session_id, "value": stats.get("event_count", 0)})
                     except Exception:
-                        data.append({'label': session_id, 'value': 0})
+                        data.append({"label": session_id, "value": 0})
 
             self.chart.set_data(data)
             logger.debug(f"Chart updated: {chart_type}")
 
         except Exception as e:
             logger.error(f"Error updating chart: {e}")
-
-    def refresh(self):
-        """Refresh chart data"""
-        if self.db_manager:
-            try:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                loop.run_until_complete(self.load_data())
-                loop.close()
-            except Exception as e:
-                logger.debug(f"Chart refresh error: {e}")

@@ -3,6 +3,7 @@ Clean, focused interface with essential controls and metrics
 """
 
 import logging
+from datetime import datetime
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -258,7 +259,7 @@ class StreamlinedDashboard(QWidget):
             ("profit", "📊", "0.00", "#E53935"),
         ]
 
-        for i, (icon, key, default, color) in enumerate(key_configs):
+        for _, (icon, key, default, color) in enumerate(key_configs):
             # Create metric container
             metric_widget = QWidget()
             metric_layout = QVBoxLayout(metric_widget)
@@ -286,7 +287,9 @@ class StreamlinedDashboard(QWidget):
             value_label = QLabel(default)
             value_label.setProperty("class", "metric-value")
             value_label.setFont(QFont("Consolas", 10, QFont.Weight.Bold))
-            value_label.setStyleSheet(f"color: {color}; background-color: #161B22; border: 1px solid #21262D; border-radius: 3px; padding: 2px 4px;")
+            value_label.setStyleSheet(
+                f"color: {color}; background-color: #161B22; border: 1px solid #21262D; border-radius: 3px; padding: 2px 4px;"
+            )
             value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             metric_layout.addLayout(value_label)
@@ -297,7 +300,7 @@ class StreamlinedDashboard(QWidget):
             self.metrics[key] = value_label
 
         # Arrange metrics in grid
-        for i, (icon, key, default, color) in enumerate(key_configs[:4]):
+        for i, _ in enumerate(key_configs[:4]):
             row, col = divmod(i, 2)
             widget = panel_layout.itemAtPosition(i)
             widget.setStyleSheet("font-size: 10px;")
@@ -362,9 +365,11 @@ class StreamlinedDashboard(QWidget):
         self.monitor_toggled.emit(checked)
 
         # Update button text and style
-        if hasattr(self, 'monitor_btn'):
+        if hasattr(self, "monitor_btn"):
             self.monitor_btn.setText("Stop Monitoring" if checked else "Start Monitoring")
-            self.monitor_btn.setProperty("class", "monitor-btn-active" if checked else "monitor-btn")
+            self.monitor_btn.setProperty(
+                "class", "monitor-btn-active" if checked else "monitor-btn"
+            )
 
     def handle_new_event(self, event_data: dict):
         """Add new event to table"""
@@ -376,23 +381,21 @@ class StreamlinedDashboard(QWidget):
         self.event_table.insertRow(row)
 
         # Format event data
-        event_type = event_data.get('event_type', 'Unknown')
-        event_data.get('parsed_data', {})
+        event_type = event_data.get("event_type", "Unknown")
+        event_data.get("parsed_data", {})
 
         # Time
-        time_item = QTableWidgetItem(
-            datetime.now().strftime("%H:%M:%S")
-        )
+        time_item = QTableWidgetItem(datetime.now().strftime("%H:%M:%S"))
         time_item.setFont(QFont("Consolas", 9))
         time_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
 
         # Type with color coding
-        type_item = QTableWidgetItem(event_type.replace('_', ' ').title())
-        if 'loot' in event_type:
+        type_item = QTableWidgetItem(event_type.replace("_", " ").title())
+        if "loot" in event_type:
             type_item.setStyleSheet("color: #43A047;")
-        elif 'combat' in event_type:
+        elif "combat" in event_type:
             type_item.setStyleSheet("color: #E6EDF3;")
-        elif 'global' in event_type:
+        elif "global" in event_type:
             type_item.setStyleSheet("color: #FFB300;")
 
         type_item.setFont(QFont("Arial", 10, QFont.Weight.Bold))
@@ -415,57 +418,61 @@ class StreamlinedDashboard(QWidget):
 
     def _format_event_details(self, event_data: dict) -> str:
         """Format event details for display"""
-        event_type = event_data.get('event_type', '')
-        parsed_data = event_data.get('parsed_data', {})
+        event_type = event_data.get("event_type", "")
+        parsed_data = event_data.get("parsed_data", {})
 
-        if event_type == 'loot':
-            item_name = parsed_data.get('item_name', 'Unknown')
-            quantity = parsed_data.get('quantity', 1)
-            value = parsed_data.get('value', 0)
+        if event_type == "loot":
+            item_name = parsed_data.get("item_name", "Unknown")
+            quantity = parsed_data.get("quantity", 1)
+            value = parsed_data.get("value", 0)
             return f"{item_name} x ({quantity}) ({value} PED)"
-        elif event_type == 'combat':
-            damage = parsed_data.get('damage', 0)
-            if parsed_data.get('critical', False):
+        elif event_type == "combat":
+            damage = parsed_data.get("damage", 0)
+            if parsed_data.get("critical", False):
                 return f"Hit: {damage}"
-            elif parsed_data.get('miss', False):
+            elif parsed_data.get("miss", False):
                 return "Miss"
             else:
                 return f"Hit: {damage}"
-        elif event_type == 'skill':
-            skill = parsed_data.get('skill', '')
-            exp = parsed_data.get('experience', 0)
+        elif event_type == "skill":
+            skill = parsed_data.get("skill", "")
+            exp = parsed_data.get("experience", 0)
             return f"{skill} +{exp}"
-        elif event_type == 'global':
-            player = parsed_data.get('player', 'Unknown')
-            value = parsed_data.get('value', 0)
+        elif event_type == "global":
+            player = parsed_data.get("player", "Unknown")
+            value = parsed_data.get("value", 0)
             return f"{player} killed creature for {value:.0f} PED"
         else:
-            return str(event_data.get('raw_message', 'Unknown'))[:50]
+            return str(event_data.get("raw_message", "Unknown"))[:50]
 
     def update_metrics(self, metrics_data: dict):
         """Update key metrics display"""
         for key, _label in self.metrics.items():
             if key in metrics_data:
                 value = metrics_data.get(key, 0)
-                if key == 'total_cost':
+                if key == "total_cost":
                     self.metrics[key].setText(f"💰 {value:.2f}")
-                elif key == 'total_loot':
+                elif key == "total_loot":
                     self.metrics[key].setText(f"📦 {value:.2f}")
-                elif key == 'net_profit':
+                elif key == "net_profit":
                     profit = value
-                    self.metrics[key].setText(f"📊 {profit:+.2f}" if profit >= 0 else f"📊 {profit:.2f}")
+                    self.metrics[key].setText(
+                        f"📊 {profit:+.2f}" if profit >= 0 else f"📊 {profit:.2f}"
+                    )
                 else:
                     self.metrics[key].setText(f"{value:.2f}")
 
                 # Add glow effect for profit
-                if key == 'net_profit':
-                    self.metrics[key].setProperty("class", "profit-positive" if value >= 0 else "profit-negative")
+                if key == "net_profit":
+                    self.metrics[key].setProperty(
+                        "class", "profit-positive" if value >= 0 else "profit-negative"
+                    )
 
     def set_activity(self, activity_type: ActivityType):
         """Set current activity type"""
         self.current_activity = activity_type
 
-        if hasattr(self, 'activity_combo'):
+        if hasattr(self, "activity_combo"):
             # Find matching activity
             for i, t in enumerate(ActivityType):
                 if t.value == activity_type:
@@ -476,27 +483,15 @@ class StreamlinedDashboard(QWidget):
         """Add sample events for testing"""
         sample_events = [
             {
-                'event_type': 'loot',
-                'activity_type': 'hunting',
-                'parsed_data': {
-                    'items': 'Animal Oil x (5)',
-                    'value': 1.25
-                }
+                "event_type": "loot",
+                "activity_type": "hunting",
+                "parsed_data": {"items": "Animal Oil x (5)", "value": 1.25},
             },
+            {"event_type": "combat", "activity_type": "hunting", "parsed_data": {"damage": 25.5}},
             {
-                'event_type': 'combat',
-                'activity_type': 'hunting',
-                'parsed_data': {
-                    'damage': 25.5
-                }
-            },
-            {
-                'event_type': 'skill',
-                'activity_type': 'hunting',
-                'parsed_data': {
-                    'skill': 'Rifle',
-                    'experience': 0.5
-                }
+                "event_type": "skill",
+                "activity_type": "hunting",
+                "parsed_data": {"skill": "Rifle", "experience": 0.5},
             },
         ]
 
