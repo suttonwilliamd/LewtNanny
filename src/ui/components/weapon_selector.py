@@ -42,7 +42,7 @@ class SimpleValueLabel(QLabel):
         self._value = 0.0
         self.setStyleSheet("font-weight: bold; font-size: 14px; color: #4A90D9;")
 
-    def setValue(self, new_value: float):
+    def setValue(self, new_value: float):  # noqa: N802
         """Set value without animation"""
         self._value = new_value
         display = (
@@ -136,10 +136,10 @@ class EnhancementSlider(QWidget):
     def value(self) -> int:
         return self._value
 
-    def setValue(self, value: int):
+    def setValue(self, value: int):  # noqa: N802
         self.slider.setValue(max(0, min(self._max, value)))
 
-    def setTheme(self, theme: str):
+    def setTheme(self, theme: str):  # noqa: N802
         """Update slider colors based on theme"""
         groove_color = "#2D3D4F" if theme == "dark" else "#D1D5DB"
 
@@ -191,11 +191,10 @@ class AttachmentComboBox(QComboBox):
             }
         """)
 
-    def setStatsData(self, data: dict[str, dict]):
+    def setStatsData(self, data: dict[str, dict]):  # noqa: N802
         """Set attachment statistics data"""
-        self._stats_data = data
 
-    def currentStats(self) -> dict | None:
+    def currentStats(self) -> dict | None:  # noqa: N802
         """Get stats for currently selected item"""
         name = self.currentText()
         if name and name != "None":
@@ -1473,7 +1472,7 @@ class WeaponSelector(QWidget):
         self.accuracy_slider.setTheme(self._theme)
         self.economy_slider.setTheme(self._theme)
 
-    def setTheme(self, theme: str = "dark"):
+    def setTheme(self, theme: str = "dark"):  # noqa: N802
         """Set theme and update UI"""
         self._theme = theme
         self._apply_theme()

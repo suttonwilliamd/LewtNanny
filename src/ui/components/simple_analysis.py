@@ -1,5 +1,4 @@
-"""Simplified analysis tab with 2 core charts: Run TT Return % and Cost to Kill vs Return
-"""
+"""Simplified analysis tab with 2 core charts: Run TT Return % and Cost to Kill vs Return"""
 
 import asyncio
 import logging
@@ -52,7 +51,7 @@ class SimpleAnalysisChartWidget(QWidget):
         self.chart_type = chart_type
         self.update()
 
-    def paintEvent(self, a0):
+    def paintEvent(self, a0):  # noqa: N802
         """Paint the chart"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -79,9 +78,7 @@ class SimpleAnalysisChartWidget(QWidget):
         painter.fillRect(self.rect(), self.colors["background"])
         painter.setPen(self.colors["text"])
         painter.setFont(QFont("Arial", 12))
-        painter.drawText(
-            self.rect(), Qt.AlignmentFlag.AlignCenter, "No data to display"
-        )
+        painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "No data to display")
 
     def get_filtered_data(self):
         """Get filtered data based on settings"""
@@ -105,16 +102,12 @@ class SimpleAnalysisChartWidget(QWidget):
             y = chart_rect.bottom() - (i * chart_rect.height()) / num_y_lines
             painter.drawLine(chart_rect.left(), int(y), chart_rect.right(), int(y))
 
-    def draw_break_even_line(
-        self, painter: QPainter, chart_rect, min_y, max_y, value=0
-    ):
+    def draw_break_even_line(self, painter: QPainter, chart_rect, min_y, max_y, value=0):
         """Draw break-even reference line"""
         y_100 = self.value_to_y(value, min_y, max_y, chart_rect)
         if chart_rect.top() <= y_100 <= chart_rect.bottom():
             painter.setPen(QPen(self.colors["break_even"], 2, Qt.PenStyle.DashLine))
-            painter.drawLine(
-                chart_rect.left(), int(y_100), chart_rect.right(), int(y_100)
-            )
+            painter.drawLine(chart_rect.left(), int(y_100), chart_rect.right(), int(y_100))
 
             painter.setPen(self.colors["break_even"])
             painter.setFont(QFont("Arial", 8))
@@ -176,9 +169,7 @@ class SimpleAnalysisChartWidget(QWidget):
             painter.setBrush(QBrush(color))
             painter.setPen(QPen(color.darker(150), 1))
             radius = 4
-            painter.drawEllipse(
-                int(x) - radius, int(y) - radius, radius * 2, radius * 2
-            )
+            painter.drawEllipse(int(x) - radius, int(y) - radius, radius * 2, radius * 2)
 
     def draw_scatter_points(self, painter: QPainter, chart_rect, points, max_val):
         """Draw scatter plot points"""
@@ -232,9 +223,7 @@ class SimpleAnalysisChartWidget(QWidget):
         painter.setPen(self.colors["text"])
         painter.setFont(QFont("Arial", 8))
 
-        painter.drawText(
-            chart_rect.center().x() - 30, chart_rect.bottom() + 15, "Cost (PED)"
-        )
+        painter.drawText(chart_rect.center().x() - 30, chart_rect.bottom() + 15, "Cost (PED)")
 
         painter.save()
         painter.translate(chart_rect.left() - 10, chart_rect.center().y() + 30)
@@ -262,9 +251,7 @@ class SimpleAnalysisChartWidget(QWidget):
             return chart_rect.center().x()
         return chart_rect.left() + (index / (total - 1)) * chart_rect.width()
 
-    def value_to_y(
-        self, value: float, min_val: float, max_val: float, chart_rect
-    ) -> float:
+    def value_to_y(self, value: float, min_val: float, max_val: float, chart_rect) -> float:
         """Convert value to y coordinate"""
         if max_val == min_val:
             return chart_rect.center().y()
@@ -368,14 +355,10 @@ class SimpleAnalysisWidget(QWidget):
         stats_bar = self.create_stats_bar()
         layout.addWidget(stats_bar)
 
-        top_chart_frame = self.create_chart_frame(
-            "Run TT Return (%)", "return_percentage"
-        )
+        top_chart_frame = self.create_chart_frame("Run TT Return (%)", "return_percentage")
         layout.addWidget(top_chart_frame)
 
-        bottom_chart_frame = self.create_chart_frame(
-            "Cost to Kill vs Return", "cost_vs_return"
-        )
+        bottom_chart_frame = self.create_chart_frame("Cost to Kill vs Return", "cost_vs_return")
         layout.addWidget(bottom_chart_frame)
 
         layout.addStretch()
@@ -572,15 +555,9 @@ class SimpleAnalysisWidget(QWidget):
                     return_label = parent.loot_summary_labels.get("Total Return")
 
                     if cost_label and return_label:
-                        cost_text = (
-                            cost_label.text()
-                            if hasattr(cost_label, "text")
-                            else "0.00 PED"
-                        )
+                        cost_text = cost_label.text() if hasattr(cost_label, "text") else "0.00 PED"
                         return_text = (
-                            return_label.text()
-                            if hasattr(return_label, "text")
-                            else "0.00 PED"
+                            return_label.text() if hasattr(return_label, "text") else "0.00 PED"
                         )
 
                         logger.info(
@@ -588,14 +565,10 @@ class SimpleAnalysisWidget(QWidget):
                         )
 
                         total_cost = (
-                            float(cost_text.replace(",", "").split()[0])
-                            if cost_text
-                            else 0.0
+                            float(cost_text.replace(",", "").split()[0]) if cost_text else 0.0
                         )
                         total_return = (
-                            float(return_text.replace(",", "").split()[0])
-                            if return_text
-                            else 0.0
+                            float(return_text.replace(",", "").split()[0]) if return_text else 0.0
                         )
 
                         # Get or create session ID
@@ -607,25 +580,19 @@ class SimpleAnalysisWidget(QWidget):
                             timestamp = getattr(
                                 parent, "current_session_start", datetime.datetime.now()
                             )
-                            session_id = (
-                                f"session_{timestamp.strftime('%Y%m%d_%H%M%S')}"
-                            )
+                            session_id = f"session_{timestamp.strftime('%Y%m%d_%H%M%S')}"
 
                         # Create current session data
                         current_session_data = {
                             "id": session_id,
-                            "start_time": getattr(
-                                parent, "current_session_start", None
-                            ),
+                            "start_time": getattr(parent, "current_session_start", None),
                             "activity_type": "hunting",
                             "total_cost": total_cost,
                             "total_return": total_return,
                             "total_markup": total_return - total_cost,
                         }
 
-                        logger.info(
-                            f"Analysis: Created session data: {current_session_data}"
-                        )
+                        logger.info(f"Analysis: Created session data: {current_session_data}")
                         self.update_with_current_session(current_session_data)
                         return
 
@@ -657,9 +624,7 @@ class SimpleAnalysisWidget(QWidget):
                 try:
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
-                    sessions = loop.run_until_complete(
-                        parent.db_manager.get_all_sessions()
-                    )
+                    sessions = loop.run_until_complete(parent.db_manager.get_all_sessions())
                     loop.close()
 
                     if sessions:
@@ -671,16 +636,12 @@ class SimpleAnalysisWidget(QWidget):
                         self.update_stats()
                         self.top_chart.update()
                         self.bottom_chart.update()
-                        logger.info(
-                            f"Analysis: Loaded {len(recent_sessions)} historical sessions"
-                        )
+                        logger.info(f"Analysis: Loaded {len(recent_sessions)} historical sessions")
                     else:
                         logger.info("Analysis: No historical sessions found")
 
                 except Exception as async_error:
-                    logger.error(
-                        f"Analysis: Error in async session loading: {async_error}"
-                    )
+                    logger.error(f"Analysis: Error in async session loading: {async_error}")
 
             # Run the async operation
             load_sessions()

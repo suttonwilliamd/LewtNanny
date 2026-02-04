@@ -54,7 +54,7 @@ class SimpleChart(QWidget):
         self.update()
         logger.debug(f"Chart data updated: {len(data)} items")
 
-    def paintEvent(self, a0):
+    def paintEvent(self, a0):  # noqa: N802
         """Paint the chart"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)

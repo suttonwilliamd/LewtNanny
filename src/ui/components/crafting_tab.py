@@ -46,8 +46,8 @@ class CraftingTabWidget(QWidget):
         self.current_blueprint = None
         self.total_crafts = 0
         self.total_successes = 0
-        self.total_cost = Decimal('0')
-        self.total_return = Decimal('0')
+        self.total_cost = Decimal("0")
+        self.total_return = Decimal("0")
 
         # Initialize UI elements to prevent AttributeError
         self.blueprint_combo = None
@@ -83,9 +83,11 @@ class CraftingTabWidget(QWidget):
             if resources_path.exists():
                 with open(resources_path) as f:
                     data = json.load(f)
-                    self.resources_data = data.get('data', {})
+                    self.resources_data = data.get("data", {})
 
-            logger.debug(f"Loaded {len(self.blueprints_data)} blueprints and {len(self.resources_data)} resources")
+            logger.debug(
+                f"Loaded {len(self.blueprints_data)} blueprints and {len(self.resources_data)} resources"
+            )
         except Exception as e:
             logger.error(f"Error loading game data: {e}")
 
@@ -111,7 +113,9 @@ class CraftingTabWidget(QWidget):
                             if materials and isinstance(materials, list) and len(materials) > 0:
                                 blueprints[row[1]] = materials  # Use name as key
                             else:
-                                logger.debug(f"Blueprint {row[1]} has no valid materials: {materials}")
+                                logger.debug(
+                                    f"Blueprint {row[1]} has no valid materials: {materials}"
+                                )
                         except (json.JSONDecodeError, TypeError, IndexError) as e:
                             logger.warning(f"Failed to parse materials for blueprint {row[1]}: {e}")
                             continue
@@ -129,15 +133,21 @@ class CraftingTabWidget(QWidget):
                             WHERE materials IS NOT NULL AND materials != '[]' AND materials != ''
                         """)
                         rows = await cursor.fetchall()
-                        logger.info(f"After population, database query returned {len(rows)} blueprint rows")
+                        logger.info(
+                            f"After population, database query returned {len(rows)} blueprint rows"
+                        )
 
                         for row in rows:
                             try:
-                                materials = json.loads(row[2]) if isinstance(row[2], str) else row[2]
+                                materials = (
+                                    json.loads(row[2]) if isinstance(row[2], str) else row[2]
+                                )
                                 if materials and isinstance(materials, list) and len(materials) > 0:
                                     blueprints[row[1]] = materials
                             except (json.JSONDecodeError, TypeError, IndexError) as e:
-                                logger.warning(f"Failed to parse materials for blueprint {row[1]}: {e}")
+                                logger.warning(
+                                    f"Failed to parse materials for blueprint {row[1]}: {e}"
+                                )
                                 continue
 
                         logger.info(f"After population, parsed {len(blueprints)} valid blueprints")
@@ -151,17 +161,15 @@ class CraftingTabWidget(QWidget):
             finally:
                 loop.close()
 
-            logger.info(f"Database loading complete. Blueprints loaded: {len(self.blueprints_data) if self.blueprints_data else 0}")
+            logger.info(
+                f"Database loading complete. Blueprints loaded: {len(self.blueprints_data) if self.blueprints_data else 0}"
+            )
 
             if self.blueprints_data:
                 logger.info(f"Loaded {len(self.blueprints_data)} blueprints from database")
             else:
                 logger.warning("No blueprints loaded from database, falling back to JSON")
                 self.load_blueprints_from_json()
-
-        except Exception as e:
-            logger.error(f"Error loading blueprints from database: {e}")
-            self.load_blueprints_from_json()
 
         except Exception as e:
             logger.error(f"Error loading blueprints from database: {e}")
@@ -174,7 +182,7 @@ class CraftingTabWidget(QWidget):
             if blueprints_path.exists():
                 with open(blueprints_path) as f:
                     data = json.load(f)
-                    self.blueprints_data = data.get('data', {})
+                    self.blueprints_data = data.get("data", {})
         except Exception as e:
             logger.error(f"Error loading blueprints from JSON: {e}")
             self.blueprints_data = {}
@@ -187,20 +195,25 @@ class CraftingTabWidget(QWidget):
                 logger.warning("crafting.json not found, cannot populate database")
                 return
 
-            with open(blueprints_path, encoding='utf-8') as f:
+            with open(blueprints_path, encoding="utf-8") as f:
                 crafting_data = json.load(f)
 
             blueprints_migrated = 0
-            for blueprint_id, materials in crafting_data.get('data', {}).items():
+            for blueprint_id, materials in crafting_data.get("data", {}).items():
                 try:
-                    result_item = blueprint_id.replace(' Blueprint (L)', '').replace(' Blueprint', '')
+                    result_item = blueprint_id.replace(" Blueprint (L)", "").replace(
+                        " Blueprint", ""
+                    )
                     # Store materials as JSON in crafting_blueprints table
-                    materials_json = json.dumps(materials) if isinstance(materials, list) else '[]'
+                    materials_json = json.dumps(materials) if isinstance(materials, list) else "[]"
 
-                    await db.execute("""
+                    await db.execute(
+                        """
                         INSERT OR IGNORE INTO crafting_blueprints (id, name, materials, result_item, result_quantity)
                         VALUES (?, ?, ?, ?, ?)
-                    """, (blueprint_id, blueprint_id, materials_json, result_item, 1))
+                    """,
+                        (blueprint_id, blueprint_id, materials_json, result_item, 1),
+                    )
 
                     blueprints_migrated += 1
                 except Exception as e:
@@ -240,11 +253,11 @@ class CraftingTabWidget(QWidget):
 
         layout.addStretch()
 
-    def showEvent(self, event):
+    def showEvent(self, event):  # noqa: N802
         """Called when the widget becomes visible"""
         super().showEvent(event)
         # Update blueprint dropdown when widget becomes visible
-        if hasattr(self, 'blueprint_combo') and self.blueprint_combo:
+        if hasattr(self, "blueprint_combo") and self.blueprint_combo:
             self.update_blueprint_dropdown()
 
     def create_blueprint_dropdown(self):
@@ -309,9 +322,9 @@ class CraftingTabWidget(QWidget):
 
         self.materials_table = QTableWidget()
         self.materials_table.setColumnCount(6)
-        self.materials_table.setHorizontalHeaderLabels([
-            "Resource", "Per Click", "Total", "TT Cost", "Markup", "Total Cost"
-        ])
+        self.materials_table.setHorizontalHeaderLabels(
+            ["Resource", "Per Click", "Total", "TT Cost", "Markup", "Total Cost"]
+        )
         self.materials_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.materials_table.setAlternatingRowColors(True)
 
@@ -356,7 +369,7 @@ class CraftingTabWidget(QWidget):
             ("Blueprint Markup:", "0", "percentage"),
             ("Residue Required:", "0", "text"),
             ("TT Cost:", "0.00", "currency"),
-            ("Total Cost:", "0.00", "currency")
+            ("Total Cost:", "0.00", "currency"),
         ]
 
         for label_text, default, field_type in form_field_specs:
@@ -518,7 +531,7 @@ class CraftingTabWidget(QWidget):
             ("Success TT Value:", "0.00 PED"),
             ("Partials TT Value:", "0.00 PED"),
             ("Expected Returns:", "0.00 PED"),
-            ("Breakeven Markup:", "0.0%")
+            ("Breakeven Markup:", "0.0%"),
         ]
 
         self.calculated_labels = {}
@@ -573,9 +586,9 @@ class CraftingTabWidget(QWidget):
 
         self.materials_table = QTableWidget()
         self.materials_table.setColumnCount(4)
-        self.materials_table.setHorizontalHeaderLabels([
-            "Material", "Quantity", "TT Value", "Total Cost"
-        ])
+        self.materials_table.setHorizontalHeaderLabels(
+            ["Material", "Quantity", "TT Value", "Total Cost"]
+        )
         self.materials_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.materials_table.setAlternatingRowColors(True)
         self.materials_table.setSortingEnabled(True)
@@ -679,7 +692,7 @@ class CraftingTabWidget(QWidget):
             ("Success Rate", "0.0%"),
             ("Total Cost", "0.00 PED"),
             ("Total Return", "0.00 PED"),
-            ("Profit/Loss", "0.00 PED")
+            ("Profit/Loss", "0.00 PED"),
         ]
 
         self.crafting_stats_labels = {}
@@ -738,9 +751,9 @@ class CraftingTabWidget(QWidget):
 
         self.craft_history_table = QTableWidget()
         self.craft_history_table.setColumnCount(5)
-        self.craft_history_table.setHorizontalHeaderLabels([
-            "Time", "Blueprint", "Result", "Cost", "Return"
-        ])
+        self.craft_history_table.setHorizontalHeaderLabels(
+            ["Time", "Blueprint", "Result", "Cost", "Return"]
+        )
         self.craft_history_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.craft_history_table.setAlternatingRowColors(True)
         self.craft_history_table.setSortingEnabled(True)
@@ -775,7 +788,9 @@ class CraftingTabWidget(QWidget):
                 self.blueprint_combo.addItem(bp_name, bp_name)
                 count_added += 1
 
-        logger.info(f"Added {count_added} blueprints to dropdown. Total items: {self.blueprint_combo.count()}")
+        logger.info(
+            f"Added {count_added} blueprints to dropdown. Total items: {self.blueprint_combo.count()}"
+        )
 
         self.blueprint_combo.clear()
         self.blueprint_combo.addItem("Select Blueprint...", None)
@@ -790,9 +805,13 @@ class CraftingTabWidget(QWidget):
                 if count_added <= 5:  # Log first 5 for debugging
                     logger.debug(f"Added blueprint: {bp_name}")
 
-        logger.info(f"Added {count_added} blueprints to dropdown. Total items: {self.blueprint_combo.count()}")
+        logger.info(
+            f"Added {count_added} blueprints to dropdown. Total items: {self.blueprint_combo.count()}"
+        )
 
-        logger.info(f"Blueprint dropdown populated with {self.blueprint_combo.count()} items (including placeholder)")
+        logger.info(
+            f"Blueprint dropdown populated with {self.blueprint_combo.count()} items (including placeholder)"
+        )
 
     def filter_blueprints(self, text):
         """Filter blueprint list based on search text"""
@@ -857,7 +876,7 @@ class CraftingTabWidget(QWidget):
             except ValueError:
                 total_clicks = 1
 
-        total_cost = Decimal('0')
+        total_cost = Decimal("0")
         row = 0
 
         # Handle both formats: nested arrays and flat arrays
@@ -872,7 +891,7 @@ class CraftingTabWidget(QWidget):
             else:
                 continue
 
-            tt_value = Decimal('0')
+            tt_value = Decimal("0")
             if material_name in self.resources_data:
                 tt_value = Decimal(str(self.resources_data[material_name]))
 
@@ -884,11 +903,17 @@ class CraftingTabWidget(QWidget):
             if self.materials_table:
                 self.materials_table.insertRow(row)
                 self.materials_table.setItem(row, 0, QTableWidgetItem(material_name))
-                self.materials_table.setItem(row, 1, QTableWidgetItem(f"{tt_value:.4f}"))  # Per Click
-                self.materials_table.setItem(row, 2, QTableWidgetItem(str(total_quantity)))  # Total (multiplied)
+                self.materials_table.setItem(
+                    row, 1, QTableWidgetItem(f"{tt_value:.4f}")
+                )  # Per Click
+                self.materials_table.setItem(
+                    row, 2, QTableWidgetItem(str(total_quantity))
+                )  # Total (multiplied)
                 self.materials_table.setItem(row, 3, QTableWidgetItem(f"{tt_value:.4f}"))  # TT Cost
                 self.materials_table.setItem(row, 4, QTableWidgetItem("0%"))  # Markup (placeholder)
-                self.materials_table.setItem(row, 5, QTableWidgetItem(f"{material_total:.4f}"))  # Total Cost
+                self.materials_table.setItem(
+                    row, 5, QTableWidgetItem(f"{material_total:.4f}")
+                )  # Total Cost
             row += 1
 
         if self.materials_cost_label:
@@ -899,12 +924,12 @@ class CraftingTabWidget(QWidget):
     def calculate_craft_cost(self) -> Decimal:
         """Calculate total cost for current blueprint"""
         if not self.current_blueprint or self.current_blueprint not in self.blueprints_data:
-            return Decimal('0')
+            return Decimal("0")
 
         bp_data = self.blueprints_data[self.current_blueprint]
         materials = bp_data if bp_data else []
 
-        total_cost = Decimal('0')
+        total_cost = Decimal("0")
         for material_info in materials:
             if isinstance(material_info, list) and len(material_info) >= 2:
                 # Format: [material_name, quantity]
@@ -916,7 +941,7 @@ class CraftingTabWidget(QWidget):
             else:
                 continue
 
-            tt_value = Decimal('0')
+            tt_value = Decimal("0")
             if material_name in self.resources_data:
                 tt_value = Decimal(str(self.resources_data[material_name]))
 
@@ -936,7 +961,11 @@ class CraftingTabWidget(QWidget):
 
     def update_crafting_display(self):
         """Update crafting statistics display"""
-        success_rate = (self.total_successes / self.total_crafts * 100) if self.total_crafts > 0 else Decimal('0')
+        success_rate = (
+            (self.total_successes / self.total_crafts * 100)
+            if self.total_crafts > 0
+            else Decimal("0")
+        )
         profit_loss = self.total_return - self.total_cost
 
         if "Total Crafts" in self.crafting_stats_labels:
@@ -965,36 +994,37 @@ class CraftingTabWidget(QWidget):
 
     def add_crafting_event(self, event_data: dict[str, Any]):
         """Add a crafting event"""
-        event_type = event_data.get('event_type', '')
+        event_type = event_data.get("event_type", "")
 
-        if event_type == 'crafting':
-            parsed_data = event_data.get('parsed_data', {})
+        if event_type == "crafting":
+            parsed_data = event_data.get("parsed_data", {})
 
             self.total_crafts += 1
 
-            cost = parsed_data.get('cost', Decimal('0'))
-            return_val = parsed_data.get('return', Decimal('0'))
-            success = parsed_data.get('success', False)
+            cost = parsed_data.get("cost", Decimal("0"))
+            return_val = parsed_data.get("return", Decimal("0"))
+            success = parsed_data.get("success", False)
 
             if success:
                 self.total_successes += 1
 
-            self.total_cost += Decimal(str(cost)) if cost else Decimal('0')
-            self.total_return += Decimal(str(return_val)) if return_val else Decimal('0')
+            self.total_cost += Decimal(str(cost)) if cost else Decimal("0")
+            self.total_return += Decimal(str(return_val)) if return_val else Decimal("0")
 
             if self.craft_history_table:
                 row = self.craft_history_table.rowCount()
                 self.craft_history_table.insertRow(row)
 
-                timestamp = event_data.get('timestamp', '')
-                if hasattr(timestamp, 'strftime'):
-                    timestamp_str = timestamp.strftime('%H:%M:%S')
+                timestamp = event_data.get("timestamp", "")
+                if hasattr(timestamp, "strftime"):
+                    timestamp_str = timestamp.strftime("%H:%M:%S")
                 else:
                     timestamp_str = str(timestamp)
 
                 self.craft_history_table.setItem(row, 0, QTableWidgetItem(timestamp_str))
-                self.craft_history_table.setItem(row, 1, QTableWidgetItem(
-                    parsed_data.get('blueprint', 'Unknown')))
+                self.craft_history_table.setItem(
+                    row, 1, QTableWidgetItem(parsed_data.get("blueprint", "Unknown"))
+                )
                 result_text = "Success" if success else "Failure"
                 result_item = QTableWidgetItem(result_text)
                 result_item.setForeground(QColor("#3FB950") if success else QColor("#F85149"))
@@ -1014,21 +1044,25 @@ class CraftingTabWidget(QWidget):
                 self.add_crafting_cost.emit(-float(total_cost))
                 logger.info(f"Added crafting cost {total_cost:.2f} PED to active run")
             else:
-                logger.warning("No crafting cost to add - either no blueprint selected or cost is 0")
+                logger.warning(
+                    "No crafting cost to add - either no blueprint selected or cost is 0"
+                )
         except Exception as e:
             logger.error(f"Error adding crafting cost to session: {e}")
 
     def set_session_active(self, is_active: bool):
         """Enable or disable the 'Add to Session' button based on session status"""
-        if hasattr(self, 'add_to_session_btn') and self.add_to_session_btn:
+        if hasattr(self, "add_to_session_btn") and self.add_to_session_btn:
             self.add_to_session_btn.setEnabled(is_active)
             self.add_to_session_btn.setText("Add Run To Active Run")
-            logger.debug(f"Crafting 'Add to Session' button {'enabled' if is_active else 'disabled'}")
+            logger.debug(
+                f"Crafting 'Add to Session' button {'enabled' if is_active else 'disabled'}"
+            )
 
     def _get_current_total_material_cost(self) -> Decimal:
         """Get the current total material cost for the selected blueprint * total clicks"""
         if not self.current_blueprint or self.current_blueprint not in self.blueprints_data:
-            return Decimal('0')
+            return Decimal("0")
 
         bp_data = self.blueprints_data[self.current_blueprint]
         materials = bp_data if bp_data else []
@@ -1043,7 +1077,7 @@ class CraftingTabWidget(QWidget):
             except ValueError:
                 total_clicks = 1
 
-        total_cost = Decimal('0')
+        total_cost = Decimal("0")
         for material_info in materials:
             if isinstance(material_info, list) and len(material_info) >= 2:
                 material_name = material_info[0]
@@ -1051,7 +1085,7 @@ class CraftingTabWidget(QWidget):
             else:
                 continue
 
-            tt_value = Decimal('0')
+            tt_value = Decimal("0")
             if material_name in self.resources_data:
                 tt_value = Decimal(str(self.resources_data[material_name]))
 
@@ -1067,8 +1101,8 @@ class CraftingTabWidget(QWidget):
         self.crafting_data = []
         self.total_crafts = 0
         self.total_successes = 0
-        self.total_cost = Decimal('0')
-        self.total_return = Decimal('0')
+        self.total_cost = Decimal("0")
+        self.total_return = Decimal("0")
         if self.craft_history_table:
             self.craft_history_table.setRowCount(0)
         self.update_crafting_display()

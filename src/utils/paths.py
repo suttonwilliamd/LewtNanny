@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 from platform import system
 
+logger = logging.getLogger(__name__)
+
 
 def get_user_data_dir() -> Path:
     """Get the user data directory for LewtNanny"""
@@ -57,8 +59,3 @@ def migrate_from_legacy(legacy_path: Path, new_path: Path) -> bool:
     except Exception as e:
         logger.error(f"Migration failed: {e}")
         return False
-
-
-import logging
-
-logger = logging.getLogger(__name__)

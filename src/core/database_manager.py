@@ -142,8 +142,10 @@ class DatabaseManager:
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_blueprints_name ON blueprints(name);
-                CREATE INDEX IF NOT EXISTS idx_blueprint_materials_bp ON blueprint_materials(blueprint_id);
-                CREATE INDEX IF NOT EXISTS idx_blueprint_materials_mat ON blueprint_materials(material_name);
+                CREATE INDEX IF NOT EXISTS idx_blueprint_materials_bp ON blueprint_materials(
+                    blueprint_id);
+                CREATE INDEX IF NOT EXISTS idx_blueprint_materials_mat ON blueprint_materials(
+                    material_name);
             """)
             await db.commit()
         logger.debug("Crafting database initialized")
@@ -194,7 +196,8 @@ class DatabaseManager:
                 CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
                 CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
                 CREATE INDEX IF NOT EXISTS idx_sessions_activity ON sessions(activity_type);
-                CREATE INDEX IF NOT EXISTS idx_session_loot_session ON session_loot_items(session_id);
+                CREATE INDEX IF NOT EXISTS idx_session_loot_session ON session_loot_items(
+                    session_id);
             """)
             await db.commit()
         logger.debug("Main database initialized")
@@ -272,9 +275,7 @@ class WeaponsDatabase:
         """Get weapon by name"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM weapons WHERE name = ? LIMIT 1", (name,)
-            )
+            cursor = await db.execute("SELECT * FROM weapons WHERE name = ? LIMIT 1", (name,))
             row = await cursor.fetchone()
             return dict(row) if row else None
 
@@ -343,7 +344,8 @@ class WeaponsDatabase:
             await db.execute(
                 """
                 INSERT OR REPLACE INTO weapons
-                (id, name, ammo, decay, weapon_type, dps, eco, range_value, damage, reload_time, hits, data_updated)
+                (id, name, ammo, decay, weapon_type, dps, eco, range_value,
+                 damage, reload_time, hits, data_updated)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
@@ -423,9 +425,7 @@ class AttachmentsDatabase:
         """Get attachment by name"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM attachments WHERE name = ? LIMIT 1", (name,)
-            )
+            cursor = await db.execute("SELECT * FROM attachments WHERE name = ? LIMIT 1", (name,))
             row = await cursor.fetchone()
             return dict(row) if row else None
 
@@ -441,7 +441,8 @@ class AttachmentsDatabase:
             await db.execute(
                 """
                 INSERT OR REPLACE INTO attachments
-                (id, name, attachment_type, ammo, decay, damage_bonus, ammo_bonus, decay_modifier, economy_bonus, range_bonus, data_updated)
+                (id, name, attachment_type, ammo, decay, damage_bonus, ammo_bonus,
+                 decay_modifier, economy_bonus, range_bonus, data_updated)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
@@ -486,9 +487,7 @@ class ResourcesDatabase:
         """Get resource by name"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM resources WHERE name = ? LIMIT 1", (name,)
-            )
+            cursor = await db.execute("SELECT * FROM resources WHERE name = ? LIMIT 1", (name,))
             row = await cursor.fetchone()
             return dict(row) if row else None
 
@@ -510,9 +509,7 @@ class ResourcesDatabase:
                 resources.append(dict(row))
             return resources
 
-    async def get_resources_by_tt_value(
-        self, min_tt: float = 0, max_tt: float = 1000
-    ) -> list:
+    async def get_resources_by_tt_value(self, min_tt: float = 0, max_tt: float = 1000) -> list:
         """Get resources within TT value range"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
@@ -581,9 +578,7 @@ class CraftingDatabase:
         """Get blueprint by name with materials"""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM blueprints WHERE name = ? LIMIT 1", (name,)
-            )
+            cursor = await db.execute("SELECT * FROM blueprints WHERE name = ? LIMIT 1", (name,))
             row = await cursor.fetchone()
             if not row:
                 return None
@@ -630,9 +625,7 @@ class CraftingDatabase:
                 blueprints.append(bp)
             return blueprints
 
-    async def _get_blueprint_materials(
-        self, db: aiosqlite.Connection, blueprint_id: str
-    ) -> list:
+    async def _get_blueprint_materials(self, db: aiosqlite.Connection, blueprint_id: str) -> list:
         """Get materials for a blueprint"""
         cursor = await db.execute(
             """
@@ -658,7 +651,8 @@ class CraftingDatabase:
             await db.execute(
                 """
                 INSERT OR REPLACE INTO blueprints
-                (id, name, result_item, result_quantity, skill_required, condition_limit, data_updated)
+                (id, name, result_item, result_quantity, skill_required,
+                 condition_limit, data_updated)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
                 (
@@ -673,9 +667,7 @@ class CraftingDatabase:
             )
             await db.commit()
 
-    async def insert_blueprint_material(
-        self, blueprint_id: str, material_name: str, quantity: int
-    ):
+    async def insert_blueprint_material(self, blueprint_id: str, material_name: str, quantity: int):
         """Insert a blueprint material"""
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
@@ -697,7 +689,6 @@ async def initialize_separate_databases():
 
 
 if __name__ == "__main__":
-
     logging.basicConfig(level=logging.INFO)
 
     print("Initializing separate databases...")

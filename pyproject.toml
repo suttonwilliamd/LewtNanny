@@ -115,6 +115,7 @@ ignore = [
     "D102", # Missing docstring in public method
     "D103", # Missing docstring in public function
     "D107", # Missing docstring in __init__
+    "E501", # Line too long - too many false positives in regex/SQL
 ]
 
 [tool.ruff.lint.pydocstyle]

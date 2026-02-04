@@ -1,5 +1,4 @@
-"""Status indicator component with glow effect
-"""
+"""Status indicator component with glow effect"""
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
@@ -54,8 +53,8 @@ class StatusIndicator(QLabel):
         shadow.setOffset(0, 0)
         self.setGraphicsEffect(shadow)
 
-    def enterEvent(self, event):
+    def enterEvent(self, event):  # noqa: N802
         self.setToolTip(self._status_message)
 
-    def leaveEvent(self, a0):
+    def leaveEvent(self, a0):  # noqa: N802
         pass

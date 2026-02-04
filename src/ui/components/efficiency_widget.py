@@ -52,17 +52,13 @@ class EfficiencyGauge(QWidget):
         self._efficiency = 0.0
         self._label = "Efficiency"
 
-    def setEfficiency(self, value: float):
+    def setEfficiency(self, value: float):  # noqa: N802
         """Set efficiency value (0-100)"""
-        self._efficiency = max(0, min(100, value))
-        self.update()
 
-    def setLabel(self, label: str):
+    def setLabel(self, label: str):  # noqa: N802
         """Set gauge label"""
-        self._label = label
-        self.update()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event):  # noqa: N802
         """Paint the gauge"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -86,7 +82,9 @@ class EfficiencyGauge(QWidget):
             else:
                 color = QColor("#E74C3C")  # Red
 
-            gradient = QLinearGradient(center_x - radius, center_y - radius, center_x + radius, center_y + radius)
+            gradient = QLinearGradient(
+                center_x - radius, center_y - radius, center_x + radius, center_y + radius
+            )
             gradient.setColorAt(0, color.lighter(130))
             gradient.setColorAt(1, color)
 
@@ -95,8 +93,12 @@ class EfficiencyGauge(QWidget):
             # Draw arc
             span_angle = int(self._efficiency * 3.6 * 16)  # Convert to angle units
             painter.drawPie(
-                center_x - radius, center_y - radius, radius * 2, radius * 2,
-                90 * 16, -span_angle  # Start from top, draw clockwise
+                center_x - radius,
+                center_y - radius,
+                radius * 2,
+                radius * 2,
+                90 * 16,
+                -span_angle,  # Start from top, draw clockwise
             )
 
         # Center text
@@ -159,7 +161,7 @@ class EfficiencyCard(QFrame):
             ("dpp", "DPP", "0.00"),
             ("dps", "DPS", "0.00"),
             ("cost", "Cost/PED", "0"),
-            ("tt_return", "TT Return", "0%")
+            ("tt_return", "TT Return", "0%"),
         ]
 
         for idx, (key, label, default) in enumerate(metric_labels):
@@ -193,10 +195,10 @@ class EfficiencyCard(QFrame):
     def update_metrics(self, dps: float, dpp: float, cost_per_shot: float, tt_return: float = 0):
         """Update efficiency metrics"""
         # Update gauges
-        self.metrics['dps'].setText(f"{dps:.2f}")
-        self.metrics['dpp'].setText(f"{dpp:.2f}")
-        self.metrics['cost'].setText(f"{cost_per_shot:.4f}")
-        self.metrics['tt_return'].setText(f"{tt_return:.0f}%")
+        self.metrics["dps"].setText(f"{dps:.2f}")
+        self.metrics["dpp"].setText(f"{dpp:.2f}")
+        self.metrics["cost"].setText(f"{cost_per_shot:.4f}")
+        self.metrics["tt_return"].setText(f"{tt_return:.0f}%")
 
         # Calculate overall efficiency (normalized DPP)
         # Higher DPP = better efficiency
@@ -286,13 +288,9 @@ class EfficiencyComparison(QWidget):
         card.title_label.setText(name)
 
         self.cards_layout.addWidget(card)
-        self._weapons.append({
-            'name': name,
-            'type': weapon_type,
-            'dps': dps,
-            'dpp': dpp,
-            'cost': cost
-        })
+        self._weapons.append(
+            {"name": name, "type": weapon_type, "dps": dps, "dpp": dpp, "cost": cost}
+        )
 
         logger.debug(f"Added weapon to comparison: {name}")
 
@@ -310,12 +308,12 @@ class EfficiencyComparison(QWidget):
 
     def sort_by_dpp(self):
         """Sort weapons by DPP (best first)"""
-        self._weapons.sort(key=lambda x: x['dpp'], reverse=True)
+        self._weapons.sort(key=lambda x: x["dpp"], reverse=True)
         self._rebuild_cards()
 
     def sort_by_dps(self):
         """Sort weapons by DPS (best first)"""
-        self._weapons.sort(key=lambda x: x['dps'], reverse=True)
+        self._weapons.sort(key=lambda x: x["dps"], reverse=True)
         self._rebuild_cards()
 
     def _rebuild_cards(self):
@@ -329,8 +327,8 @@ class EfficiencyComparison(QWidget):
         # Re-add cards in sorted order
         for weapon in self._weapons:
             card = EfficiencyCard()
-            card.update_metrics(weapon['dps'], weapon['dpp'], weapon['cost'])
-            card.title_label.setText(weapon['name'])
+            card.update_metrics(weapon["dps"], weapon["dpp"], weapon["cost"])
+            card.title_label.setText(weapon["name"])
             self.cards_layout.addWidget(card)
 
 
@@ -485,12 +483,16 @@ class EfficiencyWidget(QWidget):
             elif "color: #E0E1E3" in style:
                 label.setStyleSheet(style.replace("#E0E1E3", metric_value_color))
 
-    def update_current_weapon(self, name: str, dps: float, dpp: float, cost: float, tt_return: float = 0):
+    def update_current_weapon(
+        self, name: str, dps: float, dpp: float, cost: float, tt_return: float = 0
+    ):
         """Update current weapon metrics"""
         self.current_card.title_label.setText(name)
         self.current_card.update_metrics(dps, dpp, cost, tt_return)
 
-    def add_comparison_weapon(self, name: str, weapon_type: str, dps: float, dpp: float, cost: float):
+    def add_comparison_weapon(
+        self, name: str, weapon_type: str, dps: float, dpp: float, cost: float
+    ):
         """Add weapon to comparison"""
         self.comparison.add_weapon(name, weapon_type, dps, dpp, cost)
 

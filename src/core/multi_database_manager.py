@@ -31,8 +31,7 @@ class MultiDatabaseManager:
 
         # Define database files
         self.databases = {
-            "user_data": self.db_dir
-            / "user_data.db",  # Sessions, events, user settings
+            "user_data": self.db_dir / "user_data.db",  # Sessions, events, user settings
             "weapons": self.db_dir / "weapons.db",  # Static weapon data
             "attachments": self.db_dir / "attachments.db",  # Scopes, sights, amplifiers
             "resources": self.db_dir / "resources.db",  # Resource pricing
@@ -155,21 +154,15 @@ class MultiDatabaseManager:
         """)
 
         # Indexes for performance
-        await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp)"
-        )
-        await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id)"
-        )
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id)")
         await db.execute(
             "CREATE INDEX IF NOT EXISTS idx_sessions_activity ON sessions(activity_type)"
         )
         await db.execute(
             "CREATE INDEX IF NOT EXISTS idx_session_loot_session ON session_loot_items(session_id)"
         )
-        await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_loadouts_name ON loadouts(name)"
-        )
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_loadouts_name ON loadouts(name)")
         await db.execute(
             "CREATE INDEX IF NOT EXISTS idx_custom_weapons_name ON custom_weapons(name)"
         )
@@ -194,9 +187,7 @@ class MultiDatabaseManager:
         """)
 
         await db.execute("CREATE INDEX IF NOT EXISTS idx_weapons_name ON weapons(name)")
-        await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_weapons_type ON weapons(weapon_type)"
-        )
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_weapons_type ON weapons(weapon_type)")
 
     async def _create_attachments_schema(self, db: aiosqlite.Connection):
         """Create attachments table (scopes, sights, amplifiers)"""
@@ -214,9 +205,7 @@ class MultiDatabaseManager:
             )
         """)
 
-        await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_attachments_name ON attachments(name)"
-        )
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_attachments_name ON attachments(name)")
         await db.execute(
             "CREATE INDEX IF NOT EXISTS idx_attachments_type ON attachments(attachment_type)"
         )
@@ -233,9 +222,7 @@ class MultiDatabaseManager:
             )
         """)
 
-        await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_resources_name ON resources(name)"
-        )
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_resources_name ON resources(name)")
 
     async def _create_crafting_schema(self, db: aiosqlite.Connection):
         """Create crafting tables"""
@@ -263,14 +250,14 @@ class MultiDatabaseManager:
             )
         """)
 
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_blueprints_name ON blueprints(name)")
         await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_blueprints_name ON blueprints(name)"
+            "CREATE INDEX IF NOT EXISTS idx_blueprint_materials_blueprint ON "
+            "blueprint_materials(blueprint_id)"
         )
         await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_blueprint_materials_blueprint ON blueprint_materials(blueprint_id)"
-        )
-        await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_blueprint_materials_material ON blueprint_materials(material_name)"
+            "CREATE INDEX IF NOT EXISTS idx_blueprint_materials_material ON "
+            "blueprint_materials(material_name)"
         )
 
     async def _migrate_all_json_data(self):
@@ -283,8 +270,7 @@ class MultiDatabaseManager:
             # Check if migration is needed
             counts = await self.get_all_counts()
             total_game_data = sum(
-                counts.get(key, 0)
-                for key in ["weapons", "attachments", "resources", "blueprints"]
+                counts.get(key, 0) for key in ["weapons", "attachments", "resources", "blueprints"]
             )
 
             if total_game_data == 0:
@@ -295,9 +281,7 @@ class MultiDatabaseManager:
                 logger.info(f"Game data already exists: {counts}")
 
         except ImportError:
-            logger.warning(
-                "Data migration service not available, using legacy migration"
-            )
+            logger.warning("Data migration service not available, using legacy migration")
 
     async def get_all_counts(self) -> dict[str, int]:
         """Get counts from all databases"""
@@ -566,9 +550,7 @@ class MultiDatabaseManager:
         """Delete a session and its events"""
         try:
             async with aiosqlite.connect(self.databases["user_data"]) as db:
-                await db.execute(
-                    "DELETE FROM events WHERE session_id = ?", (session_id,)
-                )
+                await db.execute("DELETE FROM events WHERE session_id = ?", (session_id,))
                 await db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
                 await db.commit()
 
@@ -629,7 +611,8 @@ class MultiDatabaseManager:
             async with aiosqlite.connect(self.databases["user_data"]) as db:
                 await db.execute(
                     """
-                    INSERT INTO events (timestamp, event_type, activity_type, raw_message, parsed_data, session_id)
+                    INSERT INTO events (timestamp, event_type, activity_type,
+                                        raw_message, parsed_data, session_id)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """,
                     (
@@ -657,7 +640,8 @@ class MultiDatabaseManager:
 
         async with aiosqlite.connect(self.databases["weapons"]) as db:
             cursor = await db.execute("""
-                SELECT id, name, ammo, decay, weapon_type, dps, eco, range_value, damage, reload_time
+                SELECT id, name, ammo, decay, weapon_type, dps, eco, range_value,
+                       damage, reload_time
                 FROM weapons
             """)
 
@@ -715,7 +699,8 @@ class MultiDatabaseManager:
             with sqlite3.connect(self.databases["user_data"]) as db:
                 db.execute(
                     """
-                    INSERT INTO sessions (id, start_time, activity_type, total_cost, total_return, total_markup)
+                    INSERT INTO sessions (id, start_time, activity_type,
+                                          total_cost, total_return, total_markup)
                     VALUES (?, ?, ?, 0, 0, 0)
                 """,
                     (session_id, datetime.now(), activity_type),
@@ -735,7 +720,8 @@ class MultiDatabaseManager:
             with sqlite3.connect(self.databases["user_data"]) as db:
                 db.execute(
                     """
-                    INSERT INTO events (timestamp, event_type, activity_type, raw_message, parsed_data, session_id)
+                    INSERT INTO events (timestamp, event_type, activity_type,
+                                        raw_message, parsed_data, session_id)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """,
                     (
@@ -769,15 +755,14 @@ class MultiDatabaseManager:
             with sqlite3.connect(self.databases["user_data"]) as db:
                 db.execute(
                     """
-                    INSERT OR REPLACE INTO session_loot_items (session_id, item_name, quantity, total_value, markup_percent)
+                    INSERT OR REPLACE INTO session_loot_items
+                    (session_id, item_name, quantity, total_value, markup_percent)
                     VALUES (?, ?, ?, ?, ?)
                 """,
                     (session_id, item_name, quantity, total_value, markup_percent),
                 )
                 db.commit()
-            logger.debug(
-                f"Saved loot item (sync): {item_name} for session {session_id}"
-            )
+            logger.debug(f"Saved loot item (sync): {item_name} for session {session_id}")
             return True
         except Exception as e:
             logger.error(f"Error saving session loot item (sync): {e}")
@@ -842,9 +827,7 @@ class MultiDatabaseManager:
                             )
                             combat_events.append(data)
                         except json.JSONDecodeError:
-                            logger.warning(
-                                f"Failed to parse combat data: {parsed_data}"
-                            )
+                            logger.warning(f"Failed to parse combat data: {parsed_data}")
 
         except Exception as e:
             logger.error(f"Error getting session combat events: {e}")

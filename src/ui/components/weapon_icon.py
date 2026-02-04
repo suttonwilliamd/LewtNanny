@@ -275,28 +275,19 @@ class WeaponIconLabel(QLabel):
         self.setFixedSize(size, size)
         self._update_icon()
 
-    def setWeaponType(self, weapon_type: str):
+    def setWeaponType(self, weapon_type: str):  # noqa: N802
         """Set weapon type and update icon"""
-        self._weapon_type = weapon_type
-        self._update_icon()
 
-    def setSize(self, size: int):
+    def setSize(self, size: int):  # noqa: N802
         """Set icon size"""
-        self._size = size
-        self.setFixedSize(size, size)
-        self._update_icon()
 
-    def setRarity(self, rarity: str):
+    def setRarity(self, rarity: str):  # noqa: N802
         """Set rarity level"""
-        self._rarity = rarity
-        self._update_icon()
 
-    def setSelected(self, selected: bool):
+    def setSelected(self, selected: bool):  # noqa: N802
         """Set selection state"""
-        self._selected = selected
-        self._update_icon()
 
-    def setTheme(self, theme: str):
+    def setTheme(self, theme: str):  # noqa: N802
         """Set theme (dark/light)"""
         self._theme = theme
         self._update_icon()
@@ -351,7 +342,7 @@ class WeaponIconDisplay(QWidget):
         """)
         layout.addWidget(self.type_label)
 
-    def setWeapon(self, name: str, weapon_type: str, rarity: str = "common"):
+    def setWeapon(self, name: str, weapon_type: str, rarity: str = "common"):  # noqa: N802
         """Set weapon information"""
         self._weapon_name = name
         self._weapon_type = weapon_type
@@ -362,11 +353,11 @@ class WeaponIconDisplay(QWidget):
         self.name_label.setText(name)
         self.type_label.setText(weapon_type)
 
-    def setSelected(self, selected: bool):
+    def setSelected(self, selected: bool):  # noqa: N802
         """Set selection state"""
         self.icon_label.setSelected(selected)
 
-    def setTheme(self, theme: str):
+    def setTheme(self, theme: str):  # noqa: N802
         """Set theme"""
         self._theme = theme
         self.icon_label.setTheme(theme)

@@ -45,7 +45,7 @@ class BorderlessLabel(QLabel):
         self.setFrameStyle(QFrame.Shape.NoFrame | QFrame.Shadow.Plain)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
-    def paintEvent(self, a0):
+    def paintEvent(self, a0):  # noqa: N802
         # Override to ensure no borders are drawn
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -111,14 +111,10 @@ class DraggableLogoLabel(QLabel):
         self.dragging = False
         self.drag_position = QPoint()
 
-    def mousePressEvent(self, ev):
+    def mousePressEvent(self, ev):  # noqa: N802
         """Logo mouse press - acts as drag handle"""
-        if ev.button() == Qt.MouseButton.LeftButton:
-            self.dragging = True
-            self.drag_position = ev.globalPosition().toPoint() - self.overlay_widget.pos()
-            ev.accept()
 
-    def mouseMoveEvent(self, ev):
+    def mouseMoveEvent(self, ev):  # noqa: N802
         """Logo mouse move - dragging functionality"""
         if ev.buttons() == Qt.MouseButton.LeftButton and self.dragging:
             new_pos = ev.globalPosition().toPoint() - self.drag_position
@@ -126,7 +122,7 @@ class DraggableLogoLabel(QLabel):
             self.overlay_widget.update_logo_position()
             ev.accept()
 
-    def mouseReleaseEvent(self, ev):
+    def mouseReleaseEvent(self, ev):  # noqa: N802
         """Logo mouse release - stop dragging"""
         if ev.button() == Qt.MouseButton.LeftButton:
             self.dragging = False
@@ -232,19 +228,16 @@ class StreamerOverlayWidget(QWidget):
         self.session_start_time = None
         self.session_active = False
 
-    def showEvent(self, a0):
+    def showEvent(self, a0):  # noqa: N802
         """Handle show event to show logo"""
-        super().showEvent(a0)
-        if hasattr(self, "logo_label"):
-            self.logo_label.show()
 
-    def hideEvent(self, a0):
+    def hideEvent(self, a0):  # noqa: N802
         """Handle hide event to hide logo"""
         super().hideEvent(a0)
         if hasattr(self, "logo_label"):
             self.logo_label.hide()
 
-    def closeEvent(self, a0):
+    def closeEvent(self, a0):  # noqa: N802
         """Handle close event to close logo"""
         if hasattr(self, "logo_label"):
             self.logo_label.close()
@@ -676,7 +669,7 @@ class StreamerOverlayWidget(QWidget):
             f"[OVERLAY] Current stats: globals={self._stats.get('globals')}, hofs={self._stats.get('hofs')}, items={self._stats.get('items')}, total_cost={float(self._stats.get('total_cost', Decimal('0'))):.3f}, total_return={float(self._stats.get('total_return', Decimal('0'))):.3f}"
         )
 
-    def mousePressEvent(self, a0):
+    def mousePressEvent(self, a0):  # noqa: N802
         """Mouse press for dragging or resizing"""
         if a0.button() == Qt.MouseButton.LeftButton:
             pos = a0.position().toPoint()
@@ -693,7 +686,7 @@ class StreamerOverlayWidget(QWidget):
                 self.drag_position = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
                 a0.accept()
 
-    def mouseMoveEvent(self, a0):
+    def mouseMoveEvent(self, a0):  # noqa: N802
         """Mouse move for dragging or resizing"""
         if a0.buttons() == Qt.MouseButton.LeftButton:
             if self.resizing:
@@ -719,7 +712,7 @@ class StreamerOverlayWidget(QWidget):
                 self.update_logo_position()
                 a0.accept()
 
-    def mouseReleaseEvent(self, a0):
+    def mouseReleaseEvent(self, a0):  # noqa: N802
         """Mouse release to stop dragging or resizing"""
         if a0.button() == Qt.MouseButton.LeftButton:
             self.resizing = False
@@ -728,8 +721,6 @@ class StreamerOverlayWidget(QWidget):
 
     def update_logo_position(self):
         """Handle resize event to update container and handle positions"""
-        super().resizeEvent(a0)
-
         # Update container geometry
         if hasattr(self, "container"):
             window_size = self.size()
