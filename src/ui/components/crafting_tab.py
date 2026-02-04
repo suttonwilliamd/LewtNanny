@@ -97,65 +97,50 @@ class CraftingTabWidget(QWidget):
             import aiosqlite
 
             async def load_and_populate():
-                async with aiosqlite.connect(self.db_manager.db_path) as db:
-                    # First try to load existing blueprints
+                # Get the correct database path
+                db_path = self.db_manager.databases.get("crafting")
+                if not db_path:
+                    logger.error("Crafting database path not found")
+                    return {}
+
+                async with aiosqlite.connect(db_path) as db:
+                    # Load blueprints with their materials from the new schema
                     cursor = await db.execute("""
-                        SELECT id, name, materials FROM crafting_blueprints
-                        WHERE materials IS NOT NULL AND materials != '[]' AND materials != ''
+                        SELECT b.name, bm.material_name, bm.quantity
+                        FROM blueprints b
+                        LEFT JOIN blueprint_materials bm ON b.name = bm.blueprint_id
+                        ORDER BY b.name, bm.id
                     """)
                     rows = await cursor.fetchall()
                     rows_list = list(rows) if rows else []
-                    logger.info(f"Database query returned {len(rows_list)} blueprint rows")
+                    logger.info(f"Database query returned {len(rows_list)} blueprint material rows")
 
+                    # Group materials by blueprint name
                     blueprints = {}
                     for row in rows_list:
-                        try:
-                            materials = json.loads(row[2]) if isinstance(row[2], str) else row[2]
-                            if materials and isinstance(materials, list) and len(materials) > 0:
-                                blueprints[row[1]] = materials  # Use name as key
-                            else:
-                                logger.debug(
-                                    f"Blueprint {row[1]} has no valid materials: {materials}"
-                                )
-                        except (json.JSONDecodeError, TypeError, IndexError) as e:
-                            logger.warning(f"Failed to parse materials for blueprint {row[1]}: {e}")
-                            continue
+                        blueprint_name = row[0]
+                        material_name = row[1]
+                        quantity = row[2]
+
+                        if blueprint_name not in blueprints:
+                            blueprints[blueprint_name] = []
+
+                        if material_name and quantity is not None:
+                            blueprints[blueprint_name].append([material_name, quantity])
+
+                    # Remove blueprints with no materials
+                    blueprints = {
+                        name: materials
+                        for name, materials in blueprints.items()
+                        if materials and len(materials) > 0
+                    }
 
                     logger.info(f"Parsed {len(blueprints)} valid blueprints from database")
 
-                    # If no blueprints, populate from JSON
-                    if not blueprints:
-                        logger.info("No blueprints found in database, populating from JSON")
-                        await self.populate_blueprints_from_json(db)
-
-                        # Reload after population
-                        cursor = await db.execute("""
-                            SELECT id, name, materials FROM crafting_blueprints
-                            WHERE materials IS NOT NULL AND materials != '[]' AND materials != ''
-                        """)
-                        rows = await cursor.fetchall()
-                        rows_list = list(rows) if rows else []
-                        logger.info(
-                            f"After population, database query returned {len(rows_list)} blueprint rows"
-                        )
-
-                        for row in rows_list:
-                            try:
-                                materials = (
-                                    json.loads(row[2]) if isinstance(row[2], str) else row[2]
-                                )
-                                if materials and isinstance(materials, list) and len(materials) > 0:
-                                    blueprints[row[1]] = materials
-                            except (json.JSONDecodeError, TypeError, IndexError) as e:
-                                logger.warning(
-                                    f"Failed to parse materials for blueprint {row[1]}: {e}"
-                                )
-                                continue
-
-                        logger.info(f"After population, parsed {len(blueprints)} valid blueprints")
-
                     return blueprints
 
+            # Create a new event loop to run the async loading function
+            # This is needed because load_blueprints_from_db is called from sync context
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
@@ -781,21 +766,6 @@ class CraftingTabWidget(QWidget):
         if self.blueprint_combo is None:
             logger.warning("blueprint_combo is None, skipping")
             return
-
-        self.blueprint_combo.clear()
-        self.blueprint_combo.addItem("Select Blueprint...", None)
-
-        count_added = 0
-        for bp_name in sorted(self.blueprints_data.keys()):
-            bp_data = self.blueprints_data[bp_name]
-            # Only include blueprints that have materials defined
-            if bp_data and isinstance(bp_data, list) and len(bp_data) > 0:
-                self.blueprint_combo.addItem(bp_name, bp_name)
-                count_added += 1
-
-        logger.info(
-            f"Added {count_added} blueprints to dropdown. Total items: {self.blueprint_combo.count()}"
-        )
 
         self.blueprint_combo.clear()
         self.blueprint_combo.addItem("Select Blueprint...", None)
