@@ -91,7 +91,7 @@ class TabbedMainWindow(QMainWindow):
         self.streamer_ui_btn: Optional[QPushButton] = None
         self.run_log_table: Optional[Any] = None
         self.item_breakdown_table: Optional[Any] = None
-        self.loot_summary_labels: list[QLabel] = []
+        self.loot_summary_labels: dict[str, Any] = {}
         self.chat_log_path: str = ""
         self.chat_location_text: Optional[Any] = None
         self.character_name: str = ""
@@ -405,7 +405,11 @@ class TabbedMainWindow(QMainWindow):
 
         chat_path = None
         if hasattr(self, "chat_log_path"):
-            chat_path = self.chat_log_path.text().strip()
+            chat_path = (
+                self.chat_log_path.strip()
+                if isinstance(self.chat_log_path, str)
+                else self.chat_log_path.text().strip()
+            )
 
         if not chat_path:
             with contextlib.suppress(Exception):
