@@ -935,3 +935,17 @@ class SessionOverlay:
         if self.overlay_widget:
             self.overlay_widget.set_cost_per_attack(cost)
         logger.info(f"SessionOverlay set cost per attack: {cost}")
+
+    def test_update(self):
+        """Test method to verify overlay updates correctly"""
+        if self.overlay_widget:
+            test_event = {
+                "event_type": "loot",
+                "parsed_data": {
+                    "value": 10.5,
+                    "item_name": "Test Item",
+                    "timestamp": datetime.now().isoformat(),
+                },
+            }
+            self.add_event(test_event)
+            logger.info("Test event sent to overlay")

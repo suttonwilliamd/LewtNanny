@@ -34,52 +34,86 @@ class ChatReader(QObject):
         self._file_change_queue = []
 
         # Regex patterns for parsing - updated for Entropia Universe format
+        # Pattern includes timestamp prefix: 2026-02-08 23:05:00 [Category] message
         self.patterns = {
-            "loot": re.compile(r"You\s+received\s+(.+?)\s+x\s*\((\d+)\)\s+Value:\s*([\d.]+)\s+PED"),
-            "damage": re.compile(r"You\s+inflicted\s+([\d.]+)\s+points\s+of\s+damage"),
-            "damage_taken": re.compile(r"You\s+took\s+([\d.]+)\s+points\s+of\s+damage"),
+            "loot": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*You\s+received\s+(.+?)\s+x\s*\(?(\d+)\)?\s*Value:\s*([\d.]+)\s+PED"
+            ),
+            "damage": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*You\s+inflicted\s+([\d.]+)\s+points\s+of\s+damage"
+            ),
+            "damage_taken": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*You\s+took\s+([\d.]+)\s+points\s+of\s+damage"
+            ),
             "critical": re.compile(  # noqa: E501
-                r"Critical\s+hit\s+-\s+Additional\s+damage!\s+You\s+inflicted\s+([\d.]+)\s+points\s+of\s+damage"
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*Critical\s+hit\s+-\s+Additional\s+damage!\s+You\s+inflicted\s+([\d.]+)\s+points\s+of\s+damage"
             ),
             "critical_armor": re.compile(  # noqa: E501
-                r"Critical\s+hit\s+-\s+Armor\s+penetration!\s+You\s+took\s+([\d.]+)\s+points\s+of\s+damage"
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*Critical\s+hit\s+-\s+Armor\s+penetration!\s+You\s+took\s+([\d.]+)\s+points\s+of\s+damage"
             ),
-            "miss": re.compile(r"The attack missed you"),
-            "dodge": re.compile(r".*Dodged.*your\s+attack"),
-            "evade": re.compile(r"You\s+Evaded\s+the\s+attack"),
-            "heal": re.compile(r"You\s+healed\s+yourself\s+([\d.]+)\s+points"),
-            "weapon": re.compile(r"You\s+equipped\s+(.+)"),
+            "miss": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*The attack missed you"
+            ),
+            "dodge": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*.*Dodged.*your\s+attack"
+            ),
+            "evade": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*You\s+Evaded\s+the\s+attack"
+            ),
+            "heal": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*You\s+healed\s+yourself\s+([\d.]+)\s+points"
+            ),
+            "weapon": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*You\s+equipped\s+(.+)"
+            ),
+            "skill": re.compile(  # noqa: E501
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*You\s+have\s+gained\s+([\d.]+)\s+experience\s+in\s+your\s+(.+?)\s+skill"
+            ),
+            "skill_alt": re.compile(  # noqa: E501
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*You\s+gained\s+([\d.]+)\s+(.+?)$"
+            ),
             "global": re.compile(
-                r"(\w*)\s+killed\s+a\s+creature\s+\((.+?)\)\s+with\s+a\s+value\s+of\s+(\d+)\s+PED!?"
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[Globals\] \[\]\s*(\w*)\s+killed\s+a\s+creature\s+\((.+?)\)\s+with\s+a\s+value\s+of\s+(\d+)\s+PED!?"
             ),
             "global_team": re.compile(  # noqa: E501
-                r'Team\s+"([^"]+)"\s+killed\s+a\s+creature\s+\((.+?)\)\s+with\s+a\s+value\s+of\s+(\d+)\s+PED!?'
+                r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[Globals\] \[\]\s*Team\s+"([^"]+)"\s+killed\s+a\s+creature\s+\((.+?)\)\s+with\s+a\s+value\s+of\s+(\d+)\s+PED!?'
             ),
             "global_craft": re.compile(
-                r"(\w+)\s+constructed\s+an\s+item\s+\((.+?)\)\s+worth\s+(\d+)\s+PED!"
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[Globals\] \[\]\s*(\w+)\s+constructed\s+an\s+item\s+\((.+?)\)\s+worth\s+(\d+)\s+PED!"
             ),
             "global_craft_team": re.compile(  # noqa: E501
-                r'Team\s+"([^"]+)"\s+constructed\s+an\s+item\s+\((.+?)\)\s+worth\s+(\d+)\s+PED!'
+                r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[Globals\] \[\]\s*Team\s+"([^"]+)"\s+constructed\s+an\s+item\s+\((.+?)\)\s+worth\s+(\d+)\s+PED!'
             ),
             "global_mine": re.compile(
-                r"(\w+)\s+found\s+a\s+deposit\s+\((.+?)\)\s+with\s+a\s+value\s+of\s+(\d+)\s+PED!"
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[Globals\] \[\]\s*(\w+)\s+found\s+a\s+deposit\s+\((.+?)\)\s+with\s+a\s+value\s+of\s+(\d+)\s+PED!"
             ),
             "global_mine_team": re.compile(  # noqa: E501
-                r'Team\s+"([^"]+)"\s+found\s+a\s+deposit\s+\((.+?)\)\s+with\s+a\s+value\s+of\s+(\d+)\s+PED!'
+                r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[Globals\] \[\]\s*Team\s+"([^"]+)"\s+found\s+a\s+deposit\s+\((.+?)\)\s+with\s+a\s+value\s+of\s+(\d+)\s+PED!'
             ),
             "global_hof": re.compile(
-                r"A\s+record\s+has\s+been\s+added\s+to\s+the\s+Hall\s+of\s+Fame!"
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[Globals\] \[\]\s*A\s+record\s+has\s+been\s+added\s+to\s+the\s+Hall\s+of\s+Fame!"
             ),
-            "global_spawn": re.compile(r"\[\]\s+(.+?)\s+has\s+been\s+challenged!"),
-            "global_spawn_team": re.compile(r'Team\s+"([^"]+)"\s+has\s+been\s+challenged!'),
-            "hof": re.compile(r"A\s+record\s+has\s+been\s+added\s+to\s+the\s+Hall\s+of\s+Fame!"),
-            "craft_success": re.compile(r"You\s+successfully\s+crafted\s+(.+)"),
-            "craft_fail": re.compile(r"You\s+failed\s+to\s+craft\s+(.+)"),
-            "skill": re.compile(  # noqa: E501
-                r"You\s+(?:have\s+)?gained\s+([\d.]+)\s+experience\s+in\s+your\s+(.+?)\s+skill"
+            "global_spawn": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[Globals\] \[\]\s*(.+?)\s+has\s+been\s+challenged!"
             ),
-            "picked_up": re.compile(r"Picked up (.+?)(?: \((\d+)\))?$"),
-            "trade": re.compile(r"\[#\]"),  # Trade channel messages start with [#]
+            "global_spawn_team": re.compile(
+                r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[Globals\] \[\]\s*Team\s+"([^"]+)"\s+has\s+been\s+challenged!'
+            ),
+            "hof": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[Globals\] \[\]\s*A\s+record\s+has\s+been\s+added\s+to\s+the\s+Hall\s+of\s+Fame!"
+            ),
+            "craft_success": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*You\s+successfully\s+crafted\s+(.+)"
+            ),
+            "craft_fail": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*You\s+failed\s+to\s+craft\s+(.+)"
+            ),
+            "picked_up": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[System\] \[\]\s*Picked up (.+?)(?: \((\d+)\))?$"
+            ),
+            "trade": re.compile(
+                r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \[#.+?\]"
+            ),  # Trade channel messages start with [#channel]
         }
 
         self.current_session_id = None
@@ -127,6 +161,11 @@ class ChatReader(QObject):
                 for line in new_lines:
                     line = line.strip()
                     if line:
+                        # Handle unicode characters by encoding errors
+                        try:
+                            line = line.encode("utf-8", errors="ignore").decode("utf-8")
+                        except Exception:
+                            line = str(line.encode("ascii", errors="ignore").decode("ascii"))
                         self.parse_line(line)
                     else:
                         logger.debug("[CHAT_READER] Skipping empty line")
@@ -314,6 +353,26 @@ class ChatReader(QObject):
                 "session_id": self.current_session_id,
             }
 
+        # Check for alternative skill gain format (like Serendipity)
+        skill_alt_match = self.patterns["skill_alt"].search(line)
+        if skill_alt_match and not event_data:
+            value = float(skill_alt_match.group(1))
+            skill = skill_alt_match.group(2).strip()
+            # Skip if this is a loot message in disguise
+            if not any(keyword in line.lower() for keyword in ["received", "value:", "ped"]):
+                logger.info(f"[CHAT_READER] Detected ALT SKILL event: {value} in {skill}")
+                event_data = {
+                    "event_type": EventType.SKILL_GAIN.value,
+                    "activity_type": self.current_activity.value,
+                    "raw_message": line,
+                    "parsed_data": {
+                        "experience": value,
+                        "skill": skill,
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                    "session_id": self.current_session_id,
+                }
+
         # Check for global/HOF events
         global_match = self.patterns["global"].search(line)
         if global_match and not event_data:
@@ -460,7 +519,16 @@ class ChatReader(QObject):
 
         if event_data:
             logger.info(f"[CHAT_READER] >>> EVENT DETECTED: {event_data['event_type']} <<<")
-            logger.info(f"[CHAT_READER] Event data: {event_data.get('parsed_data', {})}")
+            try:
+                # Clean unicode characters for logging
+                parsed_data = event_data.get("parsed_data", {})
+                safe_data = {
+                    k: str(v).encode("ascii", errors="ignore").decode("ascii")
+                    for k, v in parsed_data.items()
+                }
+                logger.info(f"[CHAT_READER] Event data: {safe_data}")
+            except Exception:
+                logger.info("[CHAT_READER] Event data: [unicode content filtered]")
             logger.info(f"[CHAT_READER] Session ID: {self.current_session_id}")
 
             # Save to database (synchronous)
