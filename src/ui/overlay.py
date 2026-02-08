@@ -168,6 +168,11 @@ class StreamerOverlayWidget(QWidget):
         self._cost_per_attack = Decimal("0")
         self._recent_loot_times = []  # Track timestamps of recent loot events for grouping
 
+        # Per-kill tracking variables
+        self._current_kill_cost = Decimal("0")  # Cost accumulated for current ongoing kill
+        self._last_kill_cost = Decimal("0")  # Cost of the last completed kill
+        self._last_kill_loot = Decimal("0")  # Loot value of the last completed kill
+
         self.setup_ui()
         self.setup_timers()
 
@@ -186,7 +191,7 @@ class StreamerOverlayWidget(QWidget):
 
     def setup_ui(self):
         """Setup the overlay UI"""
-        self.resize(210, 420)  # Use resize instead of setFixedSize to allow resizing
+        self.resize(250, 480)  # Increased size to accommodate new statistics
         self.move(100, 100)
 
         # Create resize handle
@@ -213,7 +218,7 @@ class StreamerOverlayWidget(QWidget):
 
         # Create the container box
         container = QFrame(self)
-        container.setGeometry(0, 110, 210, 240)  # Set to 110 as requested
+        container.setGeometry(0, 110, 250, 300)  # Increased size for new stats
         container.setStyleSheet("""
             QFrame {
                 background-color: rgba(20, 20, 30, 200);
@@ -344,6 +349,13 @@ class StreamerOverlayWidget(QWidget):
         self.kills_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.kills_label)
 
+        # Profit (Return - Spent)
+        self.profit_label = QLabel("Profit: 0.000 PED")
+        self.profit_label.setFont(QFont("Consolas", 10))
+        self.profit_label.setStyleSheet("color: #00ff00; border: none;")
+        self.profit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.profit_label)
+
         # Financial stats vertically
         self.total_return_label = QLabel("Return: 0.000 PED")
         self.total_return_label.setFont(QFont("Consolas", 10))
@@ -356,6 +368,32 @@ class StreamerOverlayWidget(QWidget):
         self.total_spent_label.setStyleSheet("color: #ff6b6b; border: none;")
         self.total_spent_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.total_spent_label)
+
+        # Average stats
+        self.avg_cost_per_kill_label = QLabel("Avg Cost/Kill: 0.000 PED")
+        self.avg_cost_per_kill_label.setFont(QFont("Consolas", 9))
+        self.avg_cost_per_kill_label.setStyleSheet("color: #ff9800; border: none;")
+        self.avg_cost_per_kill_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.avg_cost_per_kill_label)
+
+        self.avg_loot_per_kill_label = QLabel("Avg Loot/Kill: 0.000 PED")
+        self.avg_loot_per_kill_label.setFont(QFont("Consolas", 9))
+        self.avg_loot_per_kill_label.setStyleSheet("color: #4caf50; border: none;")
+        self.avg_loot_per_kill_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.avg_loot_per_kill_label)
+
+        # Last kill stats
+        self.last_kill_cost_label = QLabel("Last Kill Cost: 0.000 PED")
+        self.last_kill_cost_label.setFont(QFont("Consolas", 9))
+        self.last_kill_cost_label.setStyleSheet("color: #ff6b6b; border: none;")
+        self.last_kill_cost_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.last_kill_cost_label)
+
+        self.last_kill_loot_label = QLabel("Last Kill Loot: 0.000 PED")
+        self.last_kill_loot_label.setFont(QFont("Consolas", 9))
+        self.last_kill_loot_label.setStyleSheet("color: #00ff00; border: none;")
+        self.last_kill_loot_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.last_kill_loot_label)
 
         # Session Timer at bottom
         self.timer_label = QLabel("00:00:00")
@@ -406,6 +444,12 @@ class StreamerOverlayWidget(QWidget):
             }
             self._shots_taken = 0
             self._recent_loot_times = []
+
+            # Reset per-kill tracking
+            self._current_kill_cost = Decimal("0")
+            self._last_kill_cost = Decimal("0")
+            self._last_kill_loot = Decimal("0")
+
             logger.info(f"[OVERLAY] Stats reset to: {dict(self._stats)}")
 
         self.session_active = True
@@ -467,6 +511,14 @@ class StreamerOverlayWidget(QWidget):
             return_pct = 100.0
             return_pct_str = "100.00%"
 
+        # Calculate profit (Return - Spent)
+        profit = return_val - cost
+        profit_color = "#00ff00" if profit >= 0 else "#ff6b6b"
+
+        # Calculate average stats
+        avg_cost_per_kill = cost / kills if kills > 0 else Decimal("0")
+        avg_loot_per_kill = return_val / kills if kills > 0 else Decimal("0")
+
         logger.debug(
             f"[OVERLAY] Display update: {return_pct_str} return, spent={float(cost):.2f} PED, return={float(return_val):.3f} PED, kills={kills}"
         )
@@ -478,6 +530,10 @@ class StreamerOverlayWidget(QWidget):
 
         self.kills_label.setText(f"Loots: {kills}")
 
+        # Update profit
+        self.profit_label.setText(f"Profit: {float(profit):.3f} PED")
+        self.profit_label.setStyleSheet(f"color: {profit_color}; border: none;")
+
         if float(cost) > 0:
             self.total_spent_label.setText(f"Spent: {float(cost):.2f} PED")
         else:
@@ -487,6 +543,14 @@ class StreamerOverlayWidget(QWidget):
             self.total_return_label.setText(f"Return: {float(return_val):.2f} PED")
         else:
             self.total_return_label.setText("Return: 0.000 PED")
+
+        # Update average stats
+        self.avg_cost_per_kill_label.setText(f"Avg Cost/Kill: {float(avg_cost_per_kill):.3f} PED")
+        self.avg_loot_per_kill_label.setText(f"Avg Loot/Kill: {float(avg_loot_per_kill):.3f} PED")
+
+        # Update last kill stats
+        self.last_kill_cost_label.setText(f"Last Kill Cost: {float(self._last_kill_cost):.3f} PED")
+        self.last_kill_loot_label.setText(f"Last Kill Loot: {float(self._last_kill_loot):.3f} PED")
 
     def _schedule_screenshot(self, event_type: str, value: float, player: str):
         """Schedule a screenshot for global/HOF events"""
@@ -573,11 +637,33 @@ class StreamerOverlayWidget(QWidget):
                 time_since_last_loot = (loot_time - self._recent_loot_times[-1]).total_seconds()
                 if time_since_last_loot < 0.6:  # Within 0.6 seconds, consider same kill
                     is_new_kill = False
+
+            # If this is a new kill and we have accumulated cost from previous kill, finalize it
+            if is_new_kill and self._current_kill_cost > 0:
+                self._last_kill_cost = self._current_kill_cost
+                logger.debug(
+                    f"[OVERLAY] Finalized previous kill cost: {float(self._last_kill_cost):.3f} PED"
+                )
+
             if is_new_kill:
                 self._stats["kills"] = self._stats.get("kills", 0) + 1
                 logger.debug(
                     f"[OVERLAY] New kill detected from loot: total kills={self._stats['kills']}"
                 )
+                # Reset current kill cost tracking for new kill
+                self._current_kill_cost = Decimal("0")
+                # Store the loot value as last kill loot
+                self._last_kill_loot = Decimal(str(value))
+                logger.debug(
+                    f"[OVERLAY] Updated last kill loot: {float(self._last_kill_loot):.3f} PED"
+                )
+            elif not is_new_kill:
+                # Add to existing kill's loot if same kill
+                self._last_kill_loot += Decimal(str(value))
+                logger.debug(
+                    f"[OVERLAY] Added to existing kill loot: {float(self._last_kill_loot):.3f} PED"
+                )
+
             self._recent_loot_times.append(loot_time)
 
             self._stats["items"] = self._stats.get("items", 0) + 1
@@ -624,8 +710,12 @@ class StreamerOverlayWidget(QWidget):
                     new_total_cost = current_cost + shot_cost_increment
                     self._stats["total_cost"] = Decimal(str(new_total_cost))
                     new_cost = float(self._stats["total_cost"])
+
+                    # Also accumulate cost for current kill
+                    self._current_kill_cost += Decimal(str(shot_cost_increment))
+
                     logger.debug(
-                        f"[OVERLAY] Combat event processed: shots={self._shots_taken}, cost_per_attack={float(self._cost_per_attack):.6f}, current_cost={current_cost:.3f}, added_shot_cost={shot_cost_increment:.6f}, new total_cost: {new_cost:.3f}"
+                        f"[OVERLAY] Combat event processed: shots={self._shots_taken}, cost_per_attack={float(self._cost_per_attack):.6f}, current_cost={current_cost:.3f}, added_shot_cost={shot_cost_increment:.6f}, new total_cost: {new_cost:.3f}, current_kill_cost={float(self._current_kill_cost):.3f}"
                     )
                 else:
                     new_cost = float(self._stats.get("total_cost", Decimal("0")))
