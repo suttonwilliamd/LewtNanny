@@ -190,25 +190,28 @@ class StreamerOverlayWidget(QWidget):
         self._update_stats_display()
 
     def setup_ui(self):
-        """Setup the overlay UI"""
-        self.resize(250, 480)  # Increased size to accommodate new statistics
+        """Setup the overlay UI with modern glass-morphism design"""
+        self.resize(280, 540)  # Increased height to prevent text cutoff
         self.move(100, 100)
 
-        # Create resize handle
+        # Create resize handle with modern styling
         self.resize_handle = QLabel(self)
         self.resize_handle.setText("⋮")
-        self.resize_handle.setFixedSize(15, 15)
+        self.resize_handle.setFixedSize(18, 18)
         self.resize_handle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.resize_handle.setStyleSheet("""
             QLabel {
-                color: rgba(200, 200, 200, 150);
-                background: rgba(100, 100, 100, 100);
-                border: 1px solid rgba(150, 150, 150, 100);
-                border-radius: 3px;
+                color: rgba(200, 200, 200, 180);
+                background: rgba(40, 40, 50, 120);
+                border: 1px solid rgba(100, 100, 120, 140);
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: bold;
             }
             QLabel:hover {
-                color: rgba(255, 255, 255, 200);
-                background: rgba(150, 150, 150, 150);
+                color: rgba(255, 255, 255, 220);
+                background: rgba(60, 60, 70, 160);
+                border: 1px solid rgba(120, 120, 140, 180);
             }
         """)
         self.resize_handle.setCursor(Qt.CursorShape.SizeFDiagCursor)
@@ -216,20 +219,27 @@ class StreamerOverlayWidget(QWidget):
         # Position resize handle at bottom right corner
         self.update_resize_handle_position()
 
-        # Create the container box
+        # Create the modern glass-morphism container
         container = QFrame(self)
-        container.setGeometry(0, 110, 250, 300)  # Increased size for new stats
+        container.setGeometry(0, 110, 280, 430)  # Increased height to prevent text cutoff
         container.setStyleSheet("""
             QFrame {
-                background-color: rgba(20, 20, 30, 200);
-                border: 1px solid rgba(60, 60, 80, 180);
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 1,
+                    stop: 0 rgba(25, 25, 35, 230),
+                    stop: 0.5 rgba(20, 20, 30, 240),
+                    stop: 1 rgba(15, 15, 25, 230)
+                );
+                border: 1px solid rgba(100, 100, 120, 80);
+                border-radius: 12px;
+                backdrop-filter: blur(10px);
             }
         """)
         self.container = container
 
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(5, 5, 5, 5)
-        layout.setSpacing(5)
+        layout.setContentsMargins(12, 15, 12, 15)  # Increased top/bottom margins
+        layout.setSpacing(8)
 
         self.create_main_display(layout)
 
@@ -321,84 +331,195 @@ class StreamerOverlayWidget(QWidget):
             self.logo_label.show()
 
     def create_main_display(self, layout):
-        """Create main display with improved hierarchy and design"""
-        # Header with context
+        """Create modern main display with glass-morphism design"""
+        # Header with modern live indicator
         header_layout = QHBoxLayout()
         header_layout.addStretch()
 
-        self.live_label = QLabel("● LIVE SESSION")
-        self.live_label.setFont(QFont("Consolas", 10, QFont.Weight.Bold))
-        self.live_label.setStyleSheet("color: #00ff00;")
+        self.live_label = QLabel("● LIVE")
+        self.live_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        self.live_label.setStyleSheet("""
+            QLabel {
+                color: #00ff88;
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 0,
+                    stop: 0 rgba(0, 255, 136, 30),
+                    stop: 0.5 rgba(0, 255, 136, 50),
+                    stop: 1 rgba(0, 255, 136, 30)
+                );
+                border: 1px solid rgba(0, 255, 136, 80);
+                border-radius: 12px;
+                padding: 4px 12px;
+            }
+        """)
         self.live_label.setVisible(False)
         header_layout.addWidget(self.live_label)
 
         header_layout.addStretch()
         layout.addLayout(header_layout)
 
-        # Primary metric: large return percentage
+        # Primary metric: large return percentage with shadow effect
         self.return_percentage_label = BorderlessLabel("100.00%")
-        self.return_percentage_label.setFont(QFont("Consolas", 28))
-        self.return_percentage_label.setStyleSheet("color: #00ff00;")
+        self.return_percentage_label.setFont(QFont("Segoe UI", 32, QFont.Weight.Bold))
+        self.return_percentage_label.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                text-shadow: 0 0 20px rgba(0, 255, 136, 50);
+            }
+        """)
         self.return_percentage_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.return_percentage_label)
 
-        # Kills stat
+        # Divider line
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 1, y2: 0,
+                    stop: 0 rgba(100, 100, 120, 0),
+                    stop: 0.5 rgba(100, 100, 120, 60),
+                    stop: 1 rgba(100, 100, 120, 0)
+                );
+                height: 1px;
+                max-height: 1px;
+            }
+        """)
+        layout.addWidget(divider)
+
+        # Kills stat with modern styling
         self.kills_label = QLabel("Loots: 0")
-        self.kills_label.setFont(QFont("Consolas", 12))
-        self.kills_label.setStyleSheet("color: #ffffff; border: none;")
+        self.kills_label.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+        self.kills_label.setStyleSheet("""
+            QLabel {
+                color: rgba(255, 255, 255, 220);
+                background: rgba(60, 60, 80, 30);
+                border: 1px solid rgba(100, 100, 120, 40);
+                border-radius: 6px;
+                padding: 6px 12px;
+            }
+        """)
         self.kills_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.kills_label)
 
-        # Profit (Return - Spent)
+        # Profit (Return - Spent) with gradient background
         self.profit_label = QLabel("Profit: 0.000 PED")
-        self.profit_label.setFont(QFont("Consolas", 10))
-        self.profit_label.setStyleSheet("color: #00ff00; border: none;")
+        self.profit_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        self.profit_label.setStyleSheet("""
+            QLabel {
+                color: #00ff88;
+                background: qlineargradient(
+                    x1: 0, y1: 0, x2: 0, y2: 1,
+                    stop: 0 rgba(0, 255, 136, 20),
+                    stop: 1 rgba(0, 255, 136, 10)
+                );
+                border: 1px solid rgba(0, 255, 136, 40);
+                border-radius: 6px;
+                padding: 5px 10px;
+            }
+        """)
         self.profit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.profit_label)
 
-        # Financial stats vertically
+        # Financial stats with modern card design
+        fin_container = QFrame()
+        fin_container.setStyleSheet("""
+            QFrame {
+                background: rgba(40, 40, 50, 60);
+                border: 1px solid rgba(80, 80, 100, 40);
+                border-radius: 8px;
+                margin: 2px;
+            }
+        """)
+        fin_layout = QVBoxLayout(fin_container)
+        fin_layout.setContentsMargins(8, 8, 8, 8)
+        fin_layout.setSpacing(4)
+
         self.total_return_label = QLabel("Return: 0.000 PED")
-        self.total_return_label.setFont(QFont("Consolas", 10))
-        self.total_return_label.setStyleSheet("color: #00ff00; border: none;")
+        self.total_return_label.setFont(QFont("Segoe UI", 9))
+        self.total_return_label.setStyleSheet("color: #00ff88; border: none; padding: 2px;")
         self.total_return_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.total_return_label)
+        fin_layout.addWidget(self.total_return_label)
 
         self.total_spent_label = QLabel("Spent: 0.00 PED")
-        self.total_spent_label.setFont(QFont("Consolas", 10))
-        self.total_spent_label.setStyleSheet("color: #ff6b6b; border: none;")
+        self.total_spent_label.setFont(QFont("Segoe UI", 9))
+        self.total_spent_label.setStyleSheet("color: #ff6b6b; border: none; padding: 2px;")
         self.total_spent_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.total_spent_label)
+        fin_layout.addWidget(self.total_spent_label)
 
-        # Average stats
+        layout.addWidget(fin_container)
+
+        # Average stats with subtle styling
+        avg_container = QFrame()
+        avg_container.setStyleSheet("""
+            QFrame {
+                background: rgba(30, 30, 40, 40);
+                border: 1px solid rgba(70, 70, 90, 30);
+                border-radius: 6px;
+                margin: 2px;
+            }
+        """)
+        avg_layout = QVBoxLayout(avg_container)
+        avg_layout.setContentsMargins(6, 6, 6, 6)
+        avg_layout.setSpacing(3)
+
         self.avg_cost_per_kill_label = QLabel("Avg Cost/Kill: 0.000 PED")
-        self.avg_cost_per_kill_label.setFont(QFont("Consolas", 9))
-        self.avg_cost_per_kill_label.setStyleSheet("color: #ff9800; border: none;")
+        self.avg_cost_per_kill_label.setFont(QFont("Segoe UI", 8))
+        self.avg_cost_per_kill_label.setStyleSheet("color: #ff9800; border: none; padding: 1px;")
         self.avg_cost_per_kill_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.avg_cost_per_kill_label)
+        avg_layout.addWidget(self.avg_cost_per_kill_label)
 
         self.avg_loot_per_kill_label = QLabel("Avg Loot/Kill: 0.000 PED")
-        self.avg_loot_per_kill_label.setFont(QFont("Consolas", 9))
-        self.avg_loot_per_kill_label.setStyleSheet("color: #4caf50; border: none;")
+        self.avg_loot_per_kill_label.setFont(QFont("Segoe UI", 8))
+        self.avg_loot_per_kill_label.setStyleSheet("color: #4caf50; border: none; padding: 1px;")
         self.avg_loot_per_kill_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.avg_loot_per_kill_label)
+        avg_layout.addWidget(self.avg_loot_per_kill_label)
 
-        # Last kill stats
+        layout.addWidget(avg_container)
+
+        # Last kill stats with modern emphasis
+        last_container = QFrame()
+        last_container.setStyleSheet("""
+            QFrame {
+                background: rgba(35, 35, 45, 50);
+                border: 1px solid rgba(75, 75, 95, 35);
+                border-radius: 6px;
+                margin: 2px;
+            }
+        """)
+        last_layout = QVBoxLayout(last_container)
+        last_layout.setContentsMargins(6, 6, 6, 6)
+        last_layout.setSpacing(3)
+
         self.last_kill_cost_label = QLabel("Last Kill Cost: 0.000 PED")
-        self.last_kill_cost_label.setFont(QFont("Consolas", 9))
-        self.last_kill_cost_label.setStyleSheet("color: #ff6b6b; border: none;")
+        self.last_kill_cost_label.setFont(QFont("Segoe UI", 8))
+        self.last_kill_cost_label.setStyleSheet("color: #ff6b6b; border: none; padding: 1px;")
         self.last_kill_cost_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.last_kill_cost_label)
+        last_layout.addWidget(self.last_kill_cost_label)
 
         self.last_kill_loot_label = QLabel("Last Kill Loot: 0.000 PED")
-        self.last_kill_loot_label.setFont(QFont("Consolas", 9))
-        self.last_kill_loot_label.setStyleSheet("color: #00ff00; border: none;")
+        self.last_kill_loot_label.setFont(QFont("Segoe UI", 8))
+        self.last_kill_loot_label.setStyleSheet("color: #00ff88; border: none; padding: 1px;")
         self.last_kill_loot_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.last_kill_loot_label)
+        last_layout.addWidget(self.last_kill_loot_label)
 
-        # Session Timer at bottom
+        layout.addWidget(last_container)
+
+        # Add some stretch for better spacing
+        layout.addStretch()
+
+        # Session Timer at bottom with modern styling
         self.timer_label = QLabel("00:00:00")
-        self.timer_label.setFont(QFont("Consolas", 9))
-        self.timer_label.setStyleSheet("color: #888888; border: none;")
+        self.timer_label.setFont(QFont("Segoe UI", 8, QFont.Weight.Light))
+        self.timer_label.setStyleSheet("""
+            QLabel {
+                color: rgba(140, 140, 160, 180);
+                background: rgba(20, 20, 30, 60);
+                border: 1px solid rgba(60, 60, 80, 30);
+                border-radius: 4px;
+                padding: 2px 8px;
+            }
+        """)
         self.timer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.timer_label)
 
@@ -474,32 +595,32 @@ class StreamerOverlayWidget(QWidget):
         logger.info("Streamer overlay session stopped")
 
     def _get_return_color(self, return_pct: float) -> str:
-        """Get color based on return percentage"""
+        """Get modern color based on return percentage with enhanced visual feedback"""
         if return_pct < 10:
-            return "#000000"  # Black for single digit returns
+            return "#8b0000"  # Dark Red for single digit returns
         elif return_pct < 50:
-            return "#8B0000"  # Dark Red
+            return "#cc3333"  # Medium Red
         elif return_pct < 75:
-            return "#FF0000"  # Red
+            return "#ff6666"  # Light Red
         elif return_pct < 90:
-            return "#FF4500"  # Orange Red
+            return "#ffaa44"  # Orange
         elif return_pct < 100:
-            return "#FFA500"  # Orange
+            return "#ffdd44"  # Yellow Orange
         elif return_pct < 110:
-            return "#90EE90"  # Light Green
+            return "#88ff88"  # Light Green
         elif return_pct < 150:
-            return "#00FF00"  # Green
+            return "#00ff88"  # Bright Green
         elif return_pct < 200:
-            return "#00CED1"  # Dark Turquoise
+            return "#44ddff"  # Cyan
         elif return_pct < 300:
-            return "#FFD700"  # Gold
+            return "#ffcc00"  # Gold
         elif return_pct < 500:
-            return "#FF8C00"  # Dark Orange
+            return "#ff88cc"  # Pink
         else:
-            return "#FF1493"  # Deep Pink for huge returns
+            return "#ff44ff"  # Magenta for huge returns
 
     def _update_stats_display(self):
-        """Update statistics display with calculated values"""
+        """Update statistics display with modern styling"""
         cost = self._stats.get("total_cost", Decimal("0"))
         return_val = self._stats.get("total_return", Decimal("0"))
         kills = self._stats.get("kills", 0)
@@ -513,7 +634,6 @@ class StreamerOverlayWidget(QWidget):
 
         # Calculate profit (Return - Spent)
         profit = return_val - cost
-        profit_color = "#00ff00" if profit >= 0 else "#ff6b6b"
 
         # Calculate average stats
         avg_cost_per_kill = cost / kills if kills > 0 else Decimal("0")
@@ -523,17 +643,41 @@ class StreamerOverlayWidget(QWidget):
             f"[OVERLAY] Display update: {return_pct_str} return, spent={float(cost):.2f} PED, return={float(return_val):.3f} PED, kills={kills}"
         )
 
-        # Update percentage with dynamic color
+        # Update percentage with dynamic color and glow effect
         self.return_percentage_label.setText(return_pct_str)
         color = self._get_return_color(return_pct)
-        self.return_percentage_label.setStyleSheet(f"color: {color};")
+        self.return_percentage_label.setStyleSheet(f"""
+            QLabel {{
+                color: {color};
+                text-shadow: 0 0 20px {color}88;
+            }}
+        """)
 
+        # Update kills with modern styling
         self.kills_label.setText(f"Loots: {kills}")
 
-        # Update profit
-        self.profit_label.setText(f"Profit: {float(profit):.3f} PED")
-        self.profit_label.setStyleSheet(f"color: {profit_color}; border: none;")
+        # Update profit with gradient background
+        if profit >= 0:
+            profit_color = "#00ff88"
+            bg_gradient = f"qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(0, 255, 136, 20), stop: 1 rgba(0, 255, 136, 10))"
+            border_color = "rgba(0, 255, 136, 40)"
+        else:
+            profit_color = "#ff6b6b"
+            bg_gradient = f"qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 rgba(255, 107, 107, 20), stop: 1 rgba(255, 107, 107, 10))"
+            border_color = "rgba(255, 107, 107, 40)"
 
+        self.profit_label.setText(f"Profit: {float(profit):.3f} PED")
+        self.profit_label.setStyleSheet(f"""
+            QLabel {{
+                color: {profit_color};
+                background: {bg_gradient};
+                border: 1px solid {border_color};
+                border-radius: 6px;
+                padding: 5px 10px;
+            }}
+        """)
+
+        # Update financial stats
         if float(cost) > 0:
             self.total_spent_label.setText(f"Spent: {float(cost):.2f} PED")
         else:
@@ -823,7 +967,7 @@ class StreamerOverlayWidget(QWidget):
 
     def update_logo_position(self):
         """Handle resize event to update container and handle positions"""
-        # Update container geometry
+        # Update container geometry with modern positioning
         if hasattr(self, "container"):
             window_size = self.size()
             self.container.setGeometry(0, 110, window_size.width(), window_size.height() - 110)
